@@ -1,0 +1,19 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "timeout": {
+      "startup": 60000,
+      "catalog": 60000,
+      "execution": 600000,
+    },
+    "servers": {
+      "rfc": {
+        "type": "local",
+        "command": ["node", "dist/index.js"],
+        "cwd": ".",
+        "disabled": false,
+        "protocol": "auto",
+      },
+    },
+  },
+}

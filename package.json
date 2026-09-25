@@ -1,0 +1,64 @@
+{
+  "name": "rfc-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Evidence-first, read-only Model Context Protocol server for IETF RFCs: pinned snapshots, byte-exact citations, RFC 2119/8174 requirement extraction",
+  "type": "module",
+  "license": "Apache-2.0",
+  "author": "Vitaly Kuzyaev <vitkuz573@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vitkuz573/rfc-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vitkuz573/rfc-mcp/issues"
+  },
+  "homepage": "https://github.com/vitkuz573/rfc-mcp#readme",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ietf",
+    "rfc",
+    "rfc2119",
+    "rfc8174",
+    "standards",
+    "citations",
+    "opencode",
+    "llm"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "bin": {
+    "rfc-mcp": "dist/cli.js",
+    "rfc-mcp-server": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "format": "prettier --write \"**/*.{ts,json,jsonc,md,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,json,jsonc,md,yaml,yml}\"",
+    "inspect": "npx --yes @modelcontextprotocol/inspector dist/index.js",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "verify": "npm run format:check && npm run typecheck && npm run test && npm run build",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.1.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "prettier": "^3.9.9",
+    "typescript": "^5.9.0",
+    "vitest": "5.0.2"
+  }
+}

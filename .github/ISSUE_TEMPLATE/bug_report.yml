@@ -1,0 +1,65 @@
+name: Bug report
+description: Something behaves incorrectly, or a citation does not verify
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. If this is a citation problem, the `provenance.observed_at` and
+        `index_generation` fields make it reproducible.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened
+      description: What did you observe, and what did you expect instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: The tool call (or CLI command) and the full returned envelope, if applicable.
+      render: shell
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      options:
+        - MCP tool
+        - CLI (rfc-mcp)
+        - Corpus / storage
+        - Installation
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: rfc
+    attributes:
+      label: RFC number (if related to a specific document)
+      placeholder: "9110"
+
+  - type: textarea
+    id: envelope
+    attributes:
+      label: Envelope excerpt
+      description: Especially `status`, `provenance`, `warnings` and `limits`.
+      render: json
+
+  - type: input
+    id: node
+    attributes:
+      label: Node.js version
+      placeholder: "v24.x"
+
+  - type: textarea
+    id: anything
+    attributes:
+      label: Anything else
+      description: Logs, stack traces, screenshots.

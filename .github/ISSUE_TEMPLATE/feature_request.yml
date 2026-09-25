@@ -1,0 +1,55 @@
+name: Feature request
+description: Suggest a capability or a change in behaviour
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please open an issue before implementing anything substantial, so the design can be agreed
+        first. The project has a small number of hard promises (see CONTRIBUTING.md); a feature
+        that would break one of them is better discussed than patched.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What can't you do today? What breaks, and why does it matter?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: The smallest shape of the change that would solve it.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of change
+      options:
+        - New tool
+        - New resource or prompt
+        - Parser or extractor rule change
+        - New upstream source
+        - Storage or performance
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: promises
+    attributes:
+      label: Invariants
+      options:
+        - label: Analysis still runs only on immutable, content-addressed snapshots
+          required: true
+        - label: Every new derived fact is citable and verifiable
+          required: true
+        - label: Uncertainty is reported, never silently repaired
+          required: true
+        - label: The model-visible surface stays read-only
+          required: true

@@ -1,0 +1,19 @@
+# Configuration
+dist/
+node_modules/
+coverage/
+.cache/
+data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Editors
+.idea/
+.vscode/*
+!.vscode/extensions.json

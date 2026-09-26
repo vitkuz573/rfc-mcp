@@ -104,6 +104,15 @@ export const SearchInputSchema: z.ZodType<SearchInput> = z.strictObject({
     .max(20)
     .optional()
     .describe("Ingest these RFCs before searching; text search only covers ingested documents"),
+  ensure_top_catalog_hits: z
+    .number()
+    .int()
+    .min(1)
+    .max(20)
+    .optional()
+    .describe(
+      "Ingest the top N catalog matches for this query before searching their text, and report them with titles. Use this for 'which RFC describes X' instead of guessing a number.",
+    ),
   ...PageShape,
   context_chars: z.number().int().min(40).max(2000).optional(),
   block_kinds: z.array(z.string()).optional().describe("Restrict text search to block kinds, e.g. ['paragraph']"),
@@ -114,6 +123,14 @@ export const RequirementsInputSchema: z.ZodType<RequirementsInput> = z.strictObj
   scope: z.string().max(32).optional().describe("Restrict to a section number or prefix, e.g. '7' or '7.4'"),
   term: z.string().max(32).optional().describe("Exact keyword filter, e.g. MUST NOT"),
   keyword: z.string().max(64).optional().describe("Substring filter over the requirement text"),
+  role: z
+    .enum(["modal", "non_modal", "unknown"])
+    .optional()
+    .describe("Keep only non-strict candidates whose keyword is in modal position"),
+  shape: z
+    .enum(["demand", "description", "list_introducer", "indeterminate"])
+    .optional()
+    .describe("Keep only candidates of this functional shape, per the RFC 2119 §3 action-verb test"),
   ...PageShape,
   include_mentions: z.boolean().optional().describe("Include non-requirement mentions (default true)"),
   include_candidates: z
@@ -121,6 +138,12 @@ export const RequirementsInputSchema: z.ZodType<RequirementsInput> = z.strictObj
     .optional()
     .describe(
       "Include requirement-shaped statements the strict upper-case extractor rejected, e.g. 'Must be zero' (default true). Read these before concluding a document states no requirements.",
+    ),
+  include_provisional: z
+    .boolean()
+    .optional()
+    .describe(
+      "Also append the surviving candidates to `requirements`, each flagged provisional:true. For a document that predates RFC 2119 this is the only way to get a compliance list; they stay out of coverage.total_requirements.",
     ),
   max_candidates: z.number().int().min(1).max(2000).optional().describe("Cap on non-strict candidates (default 500)"),
   refresh: z.boolean().optional(),

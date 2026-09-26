@@ -25,6 +25,7 @@ import {
   type GraphResult,
   type HistoryEntry,
   type IndexStatus,
+  type NormativeCandidate,
   type Provenance,
   type ReadResult,
   type ResolveResult,
@@ -112,6 +113,16 @@ export interface SearchInput {
    * limited to whatever happens to be cached.
    */
   readonly ensure_rfcs?: number[];
+  /**
+   * Ingest the top N catalog matches for this query before searching their text.
+   *
+   * This closes the discovery loop. `ensure_rfcs` needs numbers the caller already
+   * has, which is no help for "which RFC describes X" over a corpus of 9842 entries
+   * of which 121 are ingested — and guessing a number is how a caller ends up reading
+   * RFC 4649 expecting DANE. The catalog indexes title, abstract, keywords, authors,
+   * status and stream for every document, so it can propose the numbers.
+   */
+  readonly ensure_top_catalog_hits?: number;
   readonly max_results?: number;
   readonly cursor?: string;
   readonly context_chars?: number;
@@ -122,11 +133,22 @@ export interface RequirementsInput extends Anchor {
   readonly scope?: string;
   readonly term?: string;
   readonly keyword?: string;
+  /** Keep only candidates whose keyword is in modal position. */
+  readonly role?: "modal" | "non_modal" | "unknown";
+  /** Keep only candidates of this functional shape (the RFC 2119 §3 action-verb test). */
+  readonly shape?: "demand" | "description" | "list_introducer" | "indeterminate";
   /**
    * Include requirement-shaped statements the strict upper-case extractor rejected.
    * Default true: without them a count of 0 cannot be told apart from a parser gap.
    */
   readonly include_candidates?: boolean;
+  /**
+   * Also return the surviving candidates in `requirements`, each flagged
+   * `provisional: true`. A document that predates RFC 2119 states its rules without
+   * the keywords, and a caller building a compliance list needs them; they stay
+   * out of `coverage.total_requirements` so no count is ever inflated.
+   */
+  readonly include_provisional?: boolean;
   readonly max_candidates?: number;
   readonly max_results?: number;
   readonly cursor?: string;
@@ -917,6 +939,26 @@ export class RfcService {
       }
     }
 
+    // "Which RFC describes X" over 9842 catalogued documents and 121 ingested ones
+    // needs a proposal step, not a guessed number. The catalog covers every document,
+    // so its top hits are the candidates to ingest. Reported with their titles, because
+    // the failure this prevents is reading the wrong document and not noticing.
+    let proposed: { rfc: number; title: string }[] = [];
+    if (input.ensure_top_catalog_hits !== undefined && input.ensure_top_catalog_hits > 0 && match !== null) {
+      const want = clamp(input.ensure_top_catalog_hits, 1, 20);
+      const catalogue = this.store.searchCatalog({ match, limit: want, offset: 0 });
+      proposed = catalogue.rows.map((row) => ({ rfc: row.rfc, title: row.title }));
+      for (const candidate of proposed) {
+        try {
+          const resolved = await this.ensureSnapshot(candidate.rfc, { signal: context.signal });
+          ensured.push(resolved.snapshot.rfc);
+        } catch (error) {
+          warnings.push(`ensure_catalog_hit_${candidate.rfc}_failed:${codeOf(error)}`);
+        }
+      }
+      warnings.push(`ingested_top_catalog_hits:${proposed.map((entry) => entry.rfc).join(",")}`);
+    }
+
     const generation = this.store.getGeneration();
     const binding = `${generation}|${input.scope ?? "auto"}|${stable(input.query)}|${limit}`;
     const offset = input.cursor ? decodeCursor(input.cursor, this.cursorSecret, binding).o : 0;
@@ -1066,6 +1108,7 @@ export class RfcService {
           coverage: `ingested_text_only:${ingestedDocuments}/${catalogDocuments}`,
         },
         ...(ensured.length > 0 ? { ensured_rfcs: ensured } : {}),
+        ...(proposed.length > 0 ? { catalog_hits_ingested: proposed } : {}),
       },
       { warnings, nextCursor, appliedLimits: { max_results: limit, context_chars: contextChars } },
     );
@@ -1270,30 +1313,80 @@ export class RfcService {
         ...(input.max_candidates !== undefined ? { limit: input.max_candidates } : {}),
       });
       const sectionById = new Map(sections.map((section) => [section.id, section.number]));
+      // Document order is the worst possible order for a lead list: the first page
+      // of RFC 1035 opened on "The optional completion services ... have been
+      // deleted". Rank by how likely a statement is to state an obligation, so the
+      // page a caller reads first is the page worth reading. Ties keep document
+      // order, so the ranking is a reordering and never a reordering-with-loss.
+      const ranked = [...analysis.candidates].sort(
+        (a, b) => this.candidateRank(b) - this.candidateRank(a) || a.char_start - b.char_start,
+      );
+      const filtered = ranked.filter(
+        (candidate) =>
+          (input.role === undefined || candidate.role === input.role) &&
+          (input.shape === undefined || candidate.shape === input.shape),
+      );
       const bySection: Record<string, number> = {};
-      for (const candidate of analysis.candidates) {
+      for (const candidate of filtered) {
         const key = sectionById.get(candidate.section_id) ?? candidate.section_id;
         bySection[key] = (bySection[key] ?? 0) + 1;
       }
+      const byShapeFiltered: Record<string, number> = {};
+      const byRoleFiltered: Record<string, number> = {};
+      for (const candidate of filtered) {
+        byShapeFiltered[candidate.shape] = (byShapeFiltered[candidate.shape] ?? 0) + 1;
+        byRoleFiltered[candidate.role] = (byRoleFiltered[candidate.role] ?? 0) + 1;
+      }
+      const filterApplied = input.role !== undefined || input.shape !== undefined;
       data.non_strict_candidates = {
         total: analysis.candidates.length,
+        returned: filtered.length,
+        filters: {
+          role: input.role ?? null,
+          shape: input.shape ?? null,
+          note: filterApplied
+            ? "Filters are applied server-side; the counts below describe the filtered set, and `total` still describes the document."
+            : "No candidate filter applied. Narrow with role and shape; role=modal AND shape=demand is the set that can state an obligation.",
+        },
         by_keyword: analysis.by_keyword,
         by_keyword_case: analysis.by_case,
         by_reason: analysis.by_reason,
-        by_role: analysis.by_role,
+        by_role: byRoleFiltered,
+        by_shape: byShapeFiltered,
         by_section: bySection,
         scanned_blocks: analysis.scanned_blocks,
         unreadable_blocks: analysis.unreadable_blocks,
-        candidates: analysis.candidates.map((candidate) => ({
+        ordering: "ranked: shape=demand first, then role=modal, then upper-case keywords, then document order",
+        candidates: filtered.map((candidate) => ({
           ...candidate,
           section: sectionById.get(candidate.section_id) ?? null,
         })),
-        note: "Requirement-shaped statements the strict upper-case extractor rejected. Per RFC 8174 section 3 an uncapitalised keyword has no normative force, so these are NOT requirements; they are reported so a zero requirement count is not mistaken for the absence of normative language. keyword_case says which capitalisation was found; reason names the structural cause when capitalisation is not the only one. role says whether the keyword is in modal position: filter on role=modal, but treat role=unknown as unresolved rather than as a rule, because the classifier is a shape heuristic and not a parser.",
+        note: "Requirement-shaped statements the strict upper-case extractor rejected. Per RFC 8174 section 3 an uncapitalised keyword has no normative force, so these are NOT requirements; they are reported so a zero requirement count is not mistaken for the absence of normative language. keyword_case says which capitalisation was found; reason names the structural cause when capitalisation is not the only one. role says whether the keyword is in modal position. shape applies the action-verb test of RFC 2119 section 3: only a clause with an action verb can carry a requirement, so shape=description fails the specification's own criterion. role=unknown and shape=indeterminate are real answers, not passes — read them.",
       };
       warningsOut.push(...analysis.warnings.map((warning) => `candidates:${warning}`));
       if (analysis.candidates.length > 0) {
         warningsOut.push(
           `zero_or_few_requirements_but_${analysis.candidates.length}_non_strict_candidates:read_non_strict_candidates`,
+        );
+      }
+      // A compliance list for a document that predates RFC 2119 needs the candidates
+      // in the requirement list itself. They are appended under an explicit flag so a
+      // count can never quietly absorb them.
+      if (input.include_provisional === true) {
+        const provisional = filtered.map((candidate) => ({
+          ...candidate,
+          section: sectionById.get(candidate.section_id) ?? null,
+          provisional: true as const,
+          parse_status: "provisional" as const,
+          confidence: candidate.role === "modal" && candidate.shape === "demand" ? 0.6 : 0.3,
+        }));
+        data.requirements = [...keywordFiltered, ...provisional];
+        const coverage = data.coverage as Record<string, unknown>;
+        coverage.provisional_returned = provisional.length;
+        coverage.provisional_note =
+          "Provisional entries are requirement-shaped statements the strict extractor rejected. They are NOT RFC 2119 requirements and are excluded from total_requirements.";
+        warningsOut.push(
+          `provisional_entries_included:${provisional.length}:not_rfc2119_requirements_excluded_from_total`,
         );
       }
     }
@@ -1312,6 +1405,20 @@ export class RfcService {
   }
 
   /* ---------------------------------------------------------------------- */
+  /**
+   * How likely a candidate is to state an obligation. Higher sorts first.
+   *
+   * `shape` is weighted above `role` because it is the criterion the specification
+   * itself states, and above case because RFC 8174's capitalisation rule is a matter
+   * of record rather than of judgement.
+   */
+  private candidateRank(candidate: NormativeCandidate): number {
+    const shape = candidate.shape === "demand" ? 8 : candidate.shape === "indeterminate" ? 3 : 0;
+    const role = candidate.role === "modal" ? 4 : candidate.role === "unknown" ? 1 : 0;
+    const letterCase = candidate.keyword_case === "upper" ? 2 : candidate.keyword_case === "title" ? 1 : 0;
+    return shape + role + letterCase;
+  }
+
   /* references                                                              */
   /* ---------------------------------------------------------------------- */
 
@@ -1988,6 +2095,13 @@ export class RfcService {
         "A snapshot id pins one derivation under one parser and extractor version. After a version bump the id is retired; the error names the document and its current id rather than reporting an unknown snapshot.",
       ],
       limits: this.config.limits,
+      limits_notes: {
+        maxQuoteChars:
+          "Advertised for compatibility and NOT enforced. No quote is ever truncated: a quote that no longer matches its bytes could not be verified, and the corpus contains requirement sentences of 2697 characters. Use read(max_output_bytes) with its byte_cursor to page through a long section instead.",
+        maxContextChars: "Enforced on search snippets, and overridable per call with context_chars (40..2000).",
+        maxOutputBytes:
+          "Enforced on read. A small budget narrows the answer and reports truncated; it never fails the call.",
+      },
       sources: [
         { name: "RFC Editor", hosts: ["www.rfc-editor.org"], role: "canonical metadata and publication files" },
         { name: "IETF Datatracker", hosts: ["datatracker.ietf.org"], role: "process metadata, relations, history" },

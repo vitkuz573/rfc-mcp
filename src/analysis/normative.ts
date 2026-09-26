@@ -19,6 +19,7 @@ import type {
   NormativeCandidateAnalysis,
   NormativeMention,
   Requirement,
+  RequirementShape,
   Section,
   Span,
 } from "../core/types.js";
@@ -122,6 +123,338 @@ const NON_MODAL: readonly { readonly keyword: string; readonly pattern: RegExp }
   // Plural noun: "many may ask", "few may object", "some may prefer".
   { keyword: "may", pattern: /\b(?:many|few|some|most|all|one|two|three)\s+$/iu },
 ];
+
+/**
+ * The action-verb test, taken from the specification itself.
+ *
+ * RFC 2119 section 3, restated by RFC 8174 section 3, defines when a keyword has
+ * effect at all. Rule 1: "MUST, SHALL, or REQUIRED ... only in a sentence that also
+ * contains an action verb". Rule 2: "...only where there is an explicit action to
+ * be prohibited". Rule 4: "MAY, OPTIONAL ... only where some action is
+ * permissible". So a sentence whose keyword governs a clause with no action verb
+ * is not a requirement *by the RFC's own definition* — which is a firmer ground
+ * than any judgement about modality.
+ *
+ * The verb lexicon below is deliberately domain-flavoured rather than general: RFC
+ * prose is full of protocol verbs, and a general English list would be both larger
+ * and less reliable. A clause that scans as verb-free is reported `description`; a
+ * clause that cannot be scanned confidently is `indeterminate` and is never folded
+ * into either bucket. The counts are reported so a caller can see how much of the
+ * list the lexicon actually decided.
+ */
+const FINITE_VERBS: ReadonlySet<string> = new Set([
+  // Auxiliaries and copulas: these are the ones that make a clause finite.
+  "is",
+  "are",
+  "was",
+  "were",
+  "be",
+  "been",
+  "being",
+  "am",
+  "has",
+  "have",
+  "had",
+  "does",
+  "did",
+  "do",
+  "will",
+  "would",
+  "can",
+  "could",
+  "shall",
+  "should",
+  "may",
+  "might",
+  "must",
+  "ought",
+  // Protocol and infrastructure vocabulary.
+  "accept",
+  "add",
+  "allow",
+  "announce",
+  "appear",
+  "apply",
+  "append",
+  "assign",
+  "assume",
+  "attach",
+  "authenticate",
+  "base",
+  "behave",
+  "bind",
+  "break",
+  "cache",
+  "calculate",
+  "carry",
+  "check",
+  "choose",
+  "cite",
+  "clear",
+  "close",
+  "compare",
+  "compile",
+  "compose",
+  "compute",
+  "conclude",
+  "conform",
+  "connect",
+  "consider",
+  "consist",
+  "construct",
+  "contain",
+  "control",
+  "convert",
+  "create",
+  "decode",
+  "decrypt",
+  "defer",
+  "define",
+  "delay",
+  "delete",
+  "deny",
+  "derive",
+  "describe",
+  "designate",
+  "detect",
+  "differ",
+  "discard",
+  "discuss",
+  "display",
+  "do",
+  "drop",
+  "duplicate",
+  "emit",
+  "enable",
+  "encode",
+  "encrypt",
+  "enforce",
+  "ensure",
+  "enter",
+  "establish",
+  "evaluate",
+  "exceed",
+  "exchange",
+  "exclude",
+  "execute",
+  "exhibit",
+  "exist",
+  "expect",
+  "expire",
+  "extend",
+  "fail",
+  "fetch",
+  "filter",
+  "find",
+  "follow",
+  "forward",
+  "gather",
+  "generate",
+  "give",
+  "handle",
+  "hold",
+  "identify",
+  "ignore",
+  "implement",
+  "imply",
+  "include",
+  "increase",
+  "indicate",
+  "infer",
+  "inform",
+  "inherit",
+  "initiate",
+  "insert",
+  "interpret",
+  "introduce",
+  "invoke",
+  "issue",
+  "keep",
+  "know",
+  "learn",
+  "leave",
+  "limit",
+  "list",
+  "listen",
+  "load",
+  "locate",
+  "look",
+  "maintain",
+  "make",
+  "manage",
+  "map",
+  "mark",
+  "match",
+  "mean",
+  "mention",
+  "merge",
+  "modify",
+  "monitor",
+  "move",
+  "must",
+  "name",
+  "need",
+  "negotiate",
+  "note",
+  "notice",
+  "observe",
+  "obtain",
+  "occur",
+  "offer",
+  "open",
+  "operate",
+  "order",
+  "override",
+  "pack",
+  "parse",
+  "pass",
+  "perform",
+  "permit",
+  "persist",
+  "place",
+  "point",
+  "populate",
+  "post",
+  "prefer",
+  "prepare",
+  "present",
+  "preserve",
+  "prevent",
+  "process",
+  "produce",
+  "promise",
+  "propagate",
+  "protect",
+  "provide",
+  "publish",
+  "query",
+  "queue",
+  "read",
+  "receive",
+  "record",
+  "reduce",
+  "refer",
+  "reflect",
+  "refresh",
+  "register",
+  "reject",
+  "relay",
+  "release",
+  "remain",
+  "remember",
+  "remove",
+  "render",
+  "repeat",
+  "replace",
+  "report",
+  "represent",
+  "request",
+  "require",
+  "reset",
+  "resolve",
+  "respond",
+  "restart",
+  "restore",
+  "restrict",
+  "result",
+  "retry",
+  "return",
+  "reuse",
+  "reverse",
+  "revoke",
+  "route",
+  "run",
+  "sample",
+  "schedule",
+  "search",
+  "see",
+  "select",
+  "send",
+  "separate",
+  "serialize",
+  "serve",
+  "set",
+  "show",
+  "signal",
+  "sign",
+  "specify",
+  "split",
+  "start",
+  "state",
+  "store",
+  "stream",
+  "submit",
+  "subscribe",
+  "substitute",
+  "support",
+  "suppress",
+  "suspend",
+  "switch",
+  "take",
+  "terminate",
+  "test",
+  "think",
+  "throw",
+  "trace",
+  "track",
+  "transfer",
+  "transform",
+  "translate",
+  "treat",
+  "trigger",
+  "trust",
+  "unregister",
+  "update",
+  "upgrade",
+  "use",
+  "validate",
+  "value",
+  "verify",
+  "wait",
+  "walk",
+  "want",
+  "warn",
+  "write",
+  "yield",
+]);
+
+/** Regular verb forms derived from a base form in the lexicon. */
+const VERB_FORMS: ReadonlySet<string> = (() => {
+  const forms = new Set<string>();
+  for (const base of FINITE_VERBS) {
+    forms.add(base);
+    forms.add(`${base}s`);
+    if (/(?:s|sh|ch|x|z|o)$/u.test(base)) forms.add(`${base}es`);
+    if (/e$/u.test(base)) {
+      forms.add(`${base}d`);
+      forms.add(`${base.slice(0, -1)}ing`);
+    } else if (/[^aeiou]y$/u.test(base)) {
+      forms.add(`${base.slice(0, -1)}ied`);
+      forms.add(`${base}ing`);
+    } else {
+      forms.add(`${base}ed`);
+      forms.add(`${base}ing`);
+    }
+  }
+  return forms;
+})();
+
+export function classifyRequirementShape(clause: string, keyword = ""): RequirementShape {
+  const trimmed = clause.trim();
+  if (trimmed === "") return "indeterminate";
+  if (/:\s*$/u.test(trimmed)) return "list_introducer";
+  const words = trimmed.toLowerCase().match(/[A-Za-z']+/gu);
+  if (!words || words.length === 0) return "indeterminate";
+  // The keyword itself is not the action: "must MUST be set" has no verb, and
+  // "a server must send" has one. Everything else in the clause counts, including
+  // the first word, because the commonest shape is the verb right after the keyword.
+  const skip = new Set(keyword.toLowerCase().split(/\s+/u).filter(Boolean));
+  for (const word of words) {
+    if (skip.has(word)) continue;
+    if (VERB_FORMS.has(word)) return "demand";
+  }
+  return "description";
+}
 
 /**
  * Sentences that say whether the document uses the requirement language at all.
@@ -407,6 +740,7 @@ export function analyzeNormativeCandidates(input: {
   const byCase: Record<string, number> = {};
   const byReason: Record<string, number> = {};
   const byRole: Record<string, number> = {};
+  const byShape: Record<string, number> = {};
   const warnings: string[] = [];
   const limit = input.limit ?? MAX_CANDIDATES;
   let scanned = 0;
@@ -444,6 +778,14 @@ export function analyzeNormativeCandidates(input: {
                 ? "title"
                 : "upper";
         const role = classifyCandidateRole(sentence.text, match.index ?? 0, keyword);
+        // The clause the keyword governs: from just after the keyword to the end of
+        // the sentence, or to a semicolon, which is where RFC prose starts a new
+        // independent clause.
+        const governed = sentence.text
+          .slice((match.index ?? 0) + raw.length)
+          .split(/;/u)[0]!
+          .trim();
+        const shape = classifyRequirementShape(governed, keyword);
         const reason: NormativeCandidate["reason"] = !isProse
           ? "non_prose_block"
           : inDefinitionSection
@@ -469,7 +811,9 @@ export function analyzeNormativeCandidates(input: {
           keyword: raw,
           keyword_case: keywordCase,
           role,
+          shape,
           reason,
+          char_start: charStart,
           exact_text: sentence.text,
           context: contextAround(sentence.text, match.index ?? 0, raw.length, 160),
           span: {
@@ -490,6 +834,7 @@ export function analyzeNormativeCandidates(input: {
         byKeyword[keyword] = (byKeyword[keyword] ?? 0) + 1;
         byCase[keywordCase] = (byCase[keywordCase] ?? 0) + 1;
         byRole[role] = (byRole[role] ?? 0) + 1;
+        byShape[shape] = (byShape[shape] ?? 0) + 1;
         if (reason !== null) byReason[reason] = (byReason[reason] ?? 0) + 1;
       }
     }
@@ -506,6 +851,7 @@ export function analyzeNormativeCandidates(input: {
     by_case: byCase,
     by_reason: byReason,
     by_role: byRole,
+    by_shape: byShape,
     unreadable_blocks: unreadable,
     scanned_blocks: scanned,
     warnings,

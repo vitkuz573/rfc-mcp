@@ -9,6 +9,84 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- The action-verb test of RFC 2119 section 3 is now applied to every non-strict candidate,
+  as `shape`. The specification defines when a keyword has effect: rule 1 admits MUST "only in
+  a sentence that also contains an action verb", rule 2 requires "an explicit action to be
+  prohibited", rule 4 requires "some action to be permissible". So a clause with no action verb
+  is not a requirement by the specification's own criterion, not by a judgement about mood.
+  Measured on RFC 1035: "Redesigned services may become available in the future" goes from
+  `modal` to `description`, and "This procedure should include:" to `list_introducer`.
+  "it may be unable to load zone data" stays `demand` — it is genuinely ambiguous, and the
+  `indeterminate` value exists so the lexicon's coverage is visible rather than assumed.
+- A form feed no longer hides from the furniture check. `isPageFurniture` tested the
+  *trimmed* line, and `trim()` removes U+000C as whitespace, so it was asking whether the
+  empty string is a form feed and the answer was always no. 1157 section texts carried a raw
+  `\f` — an invisible control character in text a caller copies into code. The line is now
+  recognised, reported in `page_furniture_lines`, and dropped from `text_clean`.
+- The column-0 warning no longer reads as data loss. It counted numbered lines not used as
+  headings and called them rejected, which is what a reader took it to mean. Those lines are
+  content by design and are kept as exact, searchable blocks: RFC 2119's five are the
+  definitions of MUST and MAY, and RFC 1034's nine are headings that were recovered. The
+  warning now says they were kept, and the loss-shaped signal is reported separately as
+  `toc_sections_without_a_heading` — a number the table of contents promises and no heading
+  supplies.
+- `maxQuoteChars` is no longer advertised as a limit that does not exist. It was declared in
+  `capabilities.limits` and enforced nowhere, while the corpus holds a requirement sentence of
+  2697 characters against an advertised 1200. Enforcing it would truncate a quote away from the
+  bytes it came from and make it unverifiable, so the limit is documented as not enforced and
+  `limits_notes` says to page with `read(max_output_bytes)` and its `byte_cursor` instead.
+
+### Added
+
+- `include_provisional` on `requirements`. A document that predates RFC 2119 states its rules
+  without the keywords, and the main normative API returned an empty list for the two most
+  important DNS documents; a compliance list was not generatable at all. The surviving
+  candidates are now appended to `requirements`, each flagged `provisional: true`, and stay
+  out of `coverage.total_requirements`. For RFC 1035 that is 135 entries against a strict count
+  of 0.
+- Server-side `role` and `shape` filters on `requirements`. The `note` had been telling callers
+  to filter on `role=modal` while the schema only accepted `scope`, `term` and `keyword`, so
+  the filtering was the caller's to do by hand.
+- Candidates are ranked rather than left in document order. The first page of RFC 1035 opened
+  on "The optional completion services ... have been deleted"; it now opens on statements that
+  can carry an obligation. Ties keep document order, so ranking reorders and never drops.
+- `ensure_top_catalog_hits` on `search`. `ensure_rfcs` needs numbers the caller already has,
+  which does not answer "which RFC describes X" over 9842 catalogued and 121 ingested documents
+  — and guessing a number is how a caller ends up reading RFC 4649 expecting DANE. The catalog
+  covers every document, so it now proposes the numbers, the server ingests them, and the
+  response reports each with its title.
+- `limits_notes` in `capabilities`, stating for each limit whether it is enforced.
+
+### Changed
+
+- Version 0.1.0 → 0.2.0. Three rounds of changes had shipped under an unchanged
+  `server.version`, so there was no signal that snapshot ids had been retired and callers had to
+  diff `parser_version` by hand to find out.
+- Parser `rfc-text-1.4.0` → `rfc-text-1.5.0`. See `snapshot_redirects` above: any historical pin
+  is one hop from the current id.
+- The `read` and `search` tool descriptions state the `text` / `text_clean` distinction, the
+  `include` / `source_map` matrix, and that a case-insensitive text hit is not a requirement.
+
+### Not changed, and why
+
+- A snapshot id is a hash of the document, its bytes and the rule versions that derived it, so
+  a parser or extractor bump retires every id. That is the property that makes an id mean
+  "these exact bytes under these exact rules", and weakening it to keep pins alive would let a
+  citation verify against a derivation it was not made from. What is fixed instead is the cost:
+  a retired pin now names the document and its current id, and redirects are rewritten
+  transitively so re-pinning is one call rather than one per release.
+- Whether a sentence is deontic or descriptive is not decidable from surface syntax.
+  "A server may be unable to load zone data" and "A server must handle queries concurrently"
+  are both modal with an action verb. The tool reports what it can decide and marks the rest
+  `indeterminate`; deciding intent needs a reader, not a lexicon.
+- Text search covers ingested documents only. Ingesting all 9842 is a storage and freshness
+  policy decision, not a code fix. The coverage is now stated in every response and
+  `ensure_top_catalog_hits` closes the discovery loop.
+- Errata remain an overlay and are never applied to publication text. Applying them would make
+  a citation unverifiable against the published file, which is the file a reader checks against.
+
+### Fixed (earlier in this release)
+
 - `errata` no longer returns an empty list for `status: "any"`, and `status:
   "held_for_document_update"` now matches. The filter was passed to SQL verbatim, so the
   explicit "every status" value matched nothing, and the enum's snake_case spelling never
@@ -83,8 +161,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - `non_strict_candidates` on `requirements` (see above).
-- `by_role` on the candidate analysis, so a caller can see how much of the list was actually
-  decided and discount the rest.
+- `by_role` and `by_shape` on the candidate analysis, so a caller can see how much of the list
+  was actually decided and discount the rest.
 - `keyword_usage` on `requirements`: whether a document disclaims the requirement language
   ("this memo does not use ... MUST") or adopts it, with a citation (see above).
 - `text_clean` and `page_furniture_lines` on a section read (see above).
@@ -95,11 +173,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Parser `rfc-text-1.2.0` → `rfc-text-1.4.0`, extractor `normative-2119-8174-1.4.0` →
+- Parser `rfc-text-1.2.0` → `rfc-text-1.5.0`, extractor `normative-2119-8174-1.4.0` →
   `normative-2119-8174-1.5.0`. Both are part of snapshot identity by design, so every
   `snp_<hash>` minted under the old versions is retired. `reanalyze --all` re-derives the
   corpus from stored bytes without re-fetching anything.
-
 - `resolve` with `with_xml` now stores the RFCXML asset for a document that is already cached.
   The flag was only honoured on the path that re-derives a document, so on an already-ingested
   RFC it returned the cached snapshot without the asset and the following

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   analyzeNormative,
   analyzeNormativeCandidates,
+  classifyRequirementShape,
   detectKeywordUsage,
   splitSentences,
 } from "../src/analysis/normative.js";
@@ -429,6 +430,50 @@ describe("non-strict normative candidates", () => {
       parserVersion: "test",
     });
     expect(detectKeywordUsage({ snapshotId: SNAPSHOT, blocks: parsed.blocks })).toHaveLength(0);
+  });
+
+  it("applies the RFC 2119 section 3 action-verb test", () => {
+    // The specification defines when a keyword has effect: rule 1 admits MUST only
+    // "in a sentence that also contains an action verb". A clause without one cannot
+    // be carrying a requirement, whatever its mood.
+    const analysis = candidates(
+      [
+        "2.  Rules",
+        "",
+        "   Name servers and resolvers must compare labels in a case-insensitive manner.",
+        "",
+        "   Redesigned services may become available in the future.",
+        "",
+        "   This procedure should include:",
+        "",
+        "   A resolver may need to retry the query.",
+        "",
+      ].join("\n"),
+    );
+    const shape = (fragment: string) => analysis.candidates.find((c) => c.exact_text.includes(fragment))?.shape;
+    expect(shape("must compare labels")).toBe("demand");
+    // Grammatically modal, but no action verb: the specification's own test excludes it.
+    expect(shape("Redesigned services may")).toBe("description");
+    expect(shape("This procedure should include")).toBe("list_introducer");
+    // Modal with an action verb, which is the shape a rule has.
+    expect(shape("may need to retry")).toBe("demand");
+    expect(analysis.by_shape.demand).toBe(2);
+    expect(analysis.by_shape.description).toBe(1);
+  });
+
+  it("recognises the inflected verb forms the test depends on", () => {
+    const cases: readonly [string, string][] = [
+      ["A server must retry the query.", "demand"],
+      ["A server must retries the query.", "demand"],
+      ["A server must retried the query.", "demand"],
+      ["A server must retrying the query.", "demand"],
+      ["A server must cached the answer.", "demand"],
+      ["The value is shown above.", "demand"],
+      ["The table of contents.", "description"],
+    ];
+    for (const [clause, expected] of cases) {
+      expect(classifyRequirementShape(clause), clause).toBe(expected);
+    }
   });
 
   it("bounds the candidate list and says so", () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parseRfcText } from "../src/parse/text.js";
+import { blankLines } from "../src/core/util.js";
 
 const FIXTURE = `Network Working Group                                   Example Editor
 Request for Comments: 9999                                 Example Org
@@ -146,9 +147,70 @@ describe("parseRfcText", () => {
       parserVersion: "test",
     });
     expect(result.sections.every((section) => section.number !== "1" && section.number !== "2")).toBe(true);
-    expect(result.warnings.some((warning) => warning.startsWith("col0_numbered_items_rejected"))).toBe(true);
-    expect(result.quality).toBe("degraded");
+    // The warning says the items were kept, not rejected: they are content by design
+    // and are still present as exact, searchable blocks. A warning that reads as data
+    // loss is a false alarm on RFC 2119, where the "list items" are the definitions
+    // of MUST and MAY themselves.
+    expect(result.warnings.some((warning) => warning.startsWith("col0_numbered_items_kept_as_blocks"))).toBe(true);
+    expect(result.warnings.some((warning) => warning.includes("rejected"))).toBe(false);
     expect(result.blocks.some((block) => block.text.startsWith("1. MUST"))).toBe(true);
+  });
+
+  it("reports a section the table of contents promises and no heading supplies", () => {
+    // The loss-shaped signal, as opposed to the benign one above: a number listed in
+    // the contents with no heading behind it. That is a caller-visible gap.
+    const withToc = Buffer.from(
+      [
+        "Table of Contents",
+        "",
+        "   1.  Present",
+        "   2.  Missing",
+        "",
+        "1.  Present",
+        "",
+        "   The body of section one.",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    const result = parseRfcText({
+      rfc: 4242,
+      snapshotId: "snp_222222222222222222222222",
+      raw: withToc,
+      parserVersion: "test",
+    });
+    expect(result.warnings.some((warning) => warning.includes("toc_sections_without_a_heading:2"))).toBe(true);
+  });
+
+  it("reports a form feed as furniture so it can be dropped from a copy", () => {
+    // A form feed is whitespace, so `trim()` empties it and a `\f`-only line used to
+    // look like any other blank line: it was excluded from blocks but left sitting in
+    // the section's verbatim slice, an invisible control character in text a caller
+    // copies into code. The slice stays verbatim; what changes is that the line is
+    // now named, so the cleaned rendering can drop it.
+    const withFormFeed = Buffer.from(
+      ["1.  Intro", "", "   Body text.", "", "\f", "", "   More body.", "", "1.1  Sub", "", "   Sub text.", ""].join(
+        "\n",
+      ),
+      "utf8",
+    );
+    const result = parseRfcText({
+      rfc: 4243,
+      snapshotId: "snp_333333333333333333333333",
+      raw: withFormFeed,
+      parserVersion: "test",
+    });
+    const intro = result.sections.find((section) => section.number === "1");
+    expect(intro).toBeDefined();
+    expect(intro!.furniture_lines.length).toBe(1);
+    expect(intro!.text).toContain("\f");
+    const clean = blankLines(intro!.text, intro!.furniture_lines, intro!.line_start);
+    expect(clean).not.toContain("\f");
+    expect(clean).toContain("Body text.");
+    // Line count is preserved, so the two renderings stay comparable line for line.
+    expect(clean.split("\n")).toHaveLength(intro!.text.split("\n").length);
+    // And a block never carries one.
+    expect(result.blocks.every((block) => !block.text.includes("\f"))).toBe(true);
   });
 
   it("keeps byte offsets aligned with a leading BOM", () => {

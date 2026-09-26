@@ -129,10 +129,18 @@ export function parseRfcText(input: ParseInput): ParsedDocument {
   const { headings, rejected } = findHeadings(lines, toc.numbers);
   rejectedColumnOneItems = rejected;
   if (headings.length === 0) warnings.push("no_section_headings_detected");
+  // The old warning counted column-0 numbered lines that were not used as headings
+  // and reported it as a rejection, which reads as data loss. It is not: those lines
+  // stay as exact, searchable blocks. RFC 1034's nine are headings that were
+  // recovered, and RFC 2119's five are the definitions of MUST and SHOULD, which are
+  // content by design. What would be a loss is a section the table of contents
+  // promises and no heading supplies, so that is what gets reported.
   if (rejectedColumnOneItems > 0) {
-    // Old RFCs such as RFC 2119 use column-1 numbered content items. They stay
-    // as exact blocks (never as sections) and the document is flagged.
-    warnings.push(`col0_numbered_items_rejected:${rejectedColumnOneItems}`);
+    warnings.push(`col0_numbered_items_kept_as_blocks:${rejectedColumnOneItems}`);
+  }
+  const missing = [...toc.numbers].filter((number) => !headings.some((heading) => heading.number === number));
+  if (missing.length > 0) {
+    warnings.push(`toc_sections_without_a_heading:${missing.slice(0, 20).join(",")}`);
   }
 
   const sectionIds = new Map<number, string>();
@@ -351,8 +359,12 @@ function splitLines(text: string): Line[] {
 }
 
 function isPageFurniture(line: Line): boolean {
+  // The form feed is tested against the raw value, before trimming. `trim()` removes
+  // U+000C as whitespace, so testing the trimmed line asks whether "" is a form feed
+  // and the answer is always no — which is why a page break could sit in a section's
+  // text while the parser believed it had found none.
+  if (/^\f+\s*$/u.test(line.value)) return true;
   const trimmed = line.value.trim();
-  if (/^\f\s*$/u.test(trimmed)) return true;
   return PAGE_FURNITURE.some((pattern) => pattern.test(trimmed));
 }
 
@@ -540,16 +552,22 @@ function collectLines(
     const line = lines[number - 1]!;
     if (number >= toc.startLine && number <= toc.endLine) continue;
     if (number === region.headingLine) continue;
-    // Blank lines are structural: they separate paragraphs.
-    if (isBlank(line)) {
-      out.push(line);
-      continue;
-    }
+    // Furniture is tested before blankness, and the order matters. A form feed is
+    // whitespace, so `trim()` empties it and a `\f`-only line looks like any other
+    // blank line. That is right for grouping — it separates blocks — but it left the
+    // raw byte inside the section's verbatim slice, where a caller copying `text`
+    // picked up an invisible control character. Marking it as furniture reports it
+    // and lets `text_clean` drop it.
     if (isPageFurniture(line)) {
       // Dropped furniture must still *separate* blocks, otherwise a block
       // would span bytes that are not in its text and a sentence crossing a
       // page break would not be contiguous in the raw file.
       out.push({ number, start: line.start, end: line.start, value: "", furniture: true });
+      continue;
+    }
+    // Blank lines are structural: they separate paragraphs.
+    if (isBlank(line)) {
+      out.push(line);
       continue;
     }
     out.push(line);

@@ -36,6 +36,12 @@ export interface AppConfig {
 export interface Limits {
   readonly maxSearchResults: number;
   readonly maxOutputBytes: number;
+  /**
+   * Not a truncation limit. Quotes are never cut, because a quote that no longer
+   * matches the bytes it came from cannot be verified — and the corpus holds
+   * requirement sentences well past any number a limit could name. `read` enforces
+   * `maxOutputBytes` and reports `truncated` with a `byte_cursor` instead.
+   */
   readonly maxQuoteChars: number;
   readonly maxContextChars: number;
   readonly maxBatchOperations: number;
@@ -122,7 +128,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     metadataCacheTtlMs: intEnv("RFC_MCP_METADATA_TTL_MS", 6 * 60 * 60 * 1000, 0, 7 * 24 * 60 * 60 * 1000),
     negativeCacheTtlMs: intEnv("RFC_MCP_NEGATIVE_TTL_MS", 60 * 60 * 1000, 0, 7 * 24 * 60 * 60 * 1000),
     limits: DEFAULT_LIMITS,
-    parserVersion: "rfc-text-1.4.0",
+    parserVersion: "rfc-text-1.5.0",
     extractorVersion: "normative-2119-8174-1.5.0",
   };
 }

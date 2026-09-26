@@ -195,6 +195,18 @@ export interface Snapshot {
 export type NormativeStrength = "absolute" | "recommendation" | "optional";
 export type NormativePolarity = "positive" | "negative";
 
+/**
+ * How an RFC 2119 keyword functions in the clause it governs, per the action-verb
+ * test in RFC 2119 section 3 (restated by RFC 8174 section 3).
+ *
+ * The specification defines when a keyword has effect: rule 1 admits MUST/SHALL/
+ * REQUIRED "only in a sentence that also contains an action verb", rule 2 requires
+ * "an explicit action to be prohibited", rule 4 requires "some action to be
+ * permissible". So the presence of an action verb is the spec's own criterion, not
+ * a stylistic judgement about it.
+ */
+export type RequirementShape = "demand" | "description" | "list_introducer" | "indeterminate";
+
 export const NORMATIVE_TERMS = Object.freeze({
   "MUST NOT": { strength: "absolute", polarity: "negative" },
   "SHALL NOT": { strength: "absolute", polarity: "negative" },
@@ -283,6 +295,12 @@ export interface NormativeCandidate {
    */
   readonly role: "modal" | "non_modal" | "unknown";
   /**
+   * How the keyword functions in its clause, under the action-verb test of RFC 2119
+   * section 3 (restated by RFC 8174 section 3). `demand` is the only shape that can
+   * state an obligation; `description` fails the specification's own test.
+   */
+  readonly shape: RequirementShape;
+  /**
    * Why the strict extractor left it out, when capitalisation was not the reason:
    * the block is not prose, or the section defines the requirement language. A
    * candidate can be both uncapitalised and non-prose; `reason` names the
@@ -292,6 +310,8 @@ export interface NormativeCandidate {
   readonly exact_text: string;
   readonly context: string;
   readonly span: Pick<Span, "byte_start" | "byte_end" | "char_start" | "char_end" | "line_start" | "line_end">;
+  /** Absolute character offset of the keyword, for stable ordering. */
+  readonly char_start: number;
   readonly citation_id: string;
 }
 
@@ -301,6 +321,7 @@ export interface NormativeCandidateAnalysis {
   readonly by_case: Readonly<Record<string, number>>;
   readonly by_reason: Readonly<Record<string, number>>;
   readonly by_role: Readonly<Record<string, number>>;
+  readonly by_shape: Readonly<Record<string, number>>;
   /** Blocks that could not be read as text at all; a coverage hole, not an absence. */
   readonly unreadable_blocks: number;
   readonly scanned_blocks: number;

@@ -362,6 +362,33 @@ export class CorpusStore {
   }
 
   /**
+   * Record where a document's outgoing snapshot ids went, before they are deleted.
+   *
+   * Two statements, and both are load-bearing. The insert covers the id being retired
+   * now. The update is what makes an *older* pin still resolve: a redirect created two
+   * releases ago points at an id that is itself being retired, so without rewriting
+   * every redirect that names it, a caller holding that pin would be sent to a dead id
+   * and told to try again. Rewriting transitively keeps every historical pin one hop
+   * from the current id, which is the whole point of keeping the table.
+   *
+   * Must run inside the same transaction as the delete, or a crash could leave a
+   * redirect pointing at a snapshot that no longer exists.
+   */
+  retireSnapshots(rfc: number, newId: string): void {
+    const retired = this.stmt("SELECT id FROM snapshots WHERE rfc = ? AND id != ?").all(rfc, newId) as unknown as {
+      id: string;
+    }[];
+    const now = isoNow();
+    for (const row of retired) {
+      this.stmt(
+        `INSERT INTO snapshot_redirects (old_id, new_id, rfc, created_at) VALUES (?, ?, ?, ?)
+           ON CONFLICT(old_id) DO UPDATE SET new_id = excluded.new_id, created_at = excluded.created_at`,
+      ).run(row.id, newId, rfc, now);
+      this.stmt("UPDATE snapshot_redirects SET new_id = ?, created_at = ? WHERE new_id = ?").run(newId, now, row.id);
+    }
+  }
+
+  /**
    * Where a retired snapshot id went, or null if it was never issued.
    *
    * A rule-version bump changes every snapshot id at once. A caller that pinned one
@@ -497,18 +524,7 @@ export class CorpusStore {
       // snapshot id also removes rows leaked by earlier generations under an id that
       // the new snapshot reproduces, which would otherwise double every hit.
       this.stmt("DELETE FROM blocks_fts WHERE rfc = ?").run(bundle.snapshot.rfc);
-      // Record where the ids being retired went, before they are gone. Same
-      // transaction as the delete, so a crash cannot leave a redirect to nothing.
-      const retired = this.stmt("SELECT id FROM snapshots WHERE rfc = ? AND id != ?").all(
-        bundle.snapshot.rfc,
-        bundle.snapshot.id,
-      ) as unknown as { id: string }[];
-      for (const row of retired) {
-        this.stmt(
-          `INSERT INTO snapshot_redirects (old_id, new_id, rfc, created_at) VALUES (?, ?, ?, ?)
-             ON CONFLICT(old_id) DO UPDATE SET new_id = excluded.new_id, created_at = excluded.created_at`,
-        ).run(row.id, bundle.snapshot.id, bundle.snapshot.rfc, isoNow());
-      }
+      this.retireSnapshots(bundle.snapshot.rfc, bundle.snapshot.id);
       this.stmt("DELETE FROM snapshots WHERE rfc = ?").run(bundle.snapshot.rfc);
       this.stmt(
         `INSERT INTO snapshots (id, rfc, format, raw_sha256, bytes, raw, retrieved_at, source_url, etag, last_modified,
@@ -541,8 +557,8 @@ export class CorpusStore {
       for (const section of bundle.sections) {
         this.stmt(
           `INSERT INTO sections (snapshot_id, id, rfc, number, title, kind, parent_id, ordinal, path_json, text,
-             text_sha256, byte_start, byte_end, char_start, char_end, codepoint_start, codepoint_end, line_start, line_end)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             text_sha256, furniture_lines_json, byte_start, byte_end, char_start, char_end, codepoint_start, codepoint_end, line_start, line_end)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         ).run(
           bundle.snapshot.id,
           section.id,
@@ -555,6 +571,7 @@ export class CorpusStore {
           JSON.stringify(section.path),
           section.text,
           section.text_sha256,
+          JSON.stringify(section.furniture_lines),
           section.byte_start,
           section.byte_end,
           section.char_start,
@@ -1652,6 +1669,7 @@ interface SectionRow {
   path_json: string;
   text: string;
   text_sha256: string;
+  furniture_lines_json: string;
   byte_start: number;
   byte_end: number;
   char_start: number;
@@ -1688,6 +1706,7 @@ function rowToSection(row: SectionRow): Section {
     path: parseJson(row.path_json) ?? [],
     text: row.text,
     text_sha256: row.text_sha256,
+    furniture_lines: (parseJson(row.furniture_lines_json) as number[] | null) ?? [],
     ...spanFromRow(row),
   };
 }

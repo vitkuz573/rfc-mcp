@@ -20,6 +20,7 @@ import type {
   NormativeMention,
   Requirement,
   Section,
+  Span,
 } from "../core/types.js";
 import { NORMATIVE_TERMS, type NormativePolarity, type NormativeStrength, type NormativeTerm } from "../core/types.js";
 import { citationId, quoteHash } from "./citation.js";
@@ -121,6 +122,81 @@ const NON_MODAL: readonly { readonly keyword: string; readonly pattern: RegExp }
   // Plural noun: "many may ask", "few may object", "some may prefer".
   { keyword: "may", pattern: /\b(?:many|few|some|most|all|one|two|three)\s+$/iu },
 ];
+
+/**
+ * Sentences that say whether the document uses the requirement language at all.
+ *
+ * A requirement count of 0 has two very different causes, and a document often
+ * states which one applies in its own text. RFC 2181 §1 opens with "This memo does
+ * not use the oft used expressions MUST, SHOULD, MAY, or their negative forms", so
+ * its zero is a disclaimer rather than a gap. RFC 2119 and its successors instead
+ * write "The key words MUST and MUST NOT ... are to be interpreted as described in
+ * RFC 2119", which means a low count is the surprising outcome and worth flagging.
+ *
+ * Both are reported as evidence with a citation, not as a verdict: the pattern
+ * decides only that the document discusses its own keyword usage, and the reader
+ * still decides what that means for the rules they are looking for.
+ */
+const KEYWORD_DISCLAIMER =
+  /\b(?:does not use|do not use|does not employ|avoids? the use of|without (?:using|employing))\b[^.]{0,120}\b(?:MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b/iu;
+const KEYWORD_ADOPTION =
+  /\bkey\s?words?\b[^.]{0,160}\b(?:are|is)\s+to\s+be\s+interpreted\b[^.]{0,80}\b(?:RFC\s*2119|RFC\s*8174|BCP\s*14)\b/iu;
+
+export interface KeywordUsageNote {
+  readonly stance: "disclaims" | "adopts";
+  readonly exact_text: string;
+  readonly citation_id: string;
+  readonly block_id: string;
+  readonly span: Pick<Span, "byte_start" | "byte_end" | "char_start" | "char_end" | "line_start" | "line_end">;
+}
+
+/**
+ * Find the sentences in which a document states its own stance on RFC 2119.
+ *
+ * Runs over the same blocks as the candidate pass, so it costs nothing extra and
+ * needs no re-ingest beyond the version that introduced it.
+ */
+export function detectKeywordUsage(input: {
+  readonly snapshotId: string;
+  readonly blocks: readonly Block[];
+  readonly limit?: number;
+}): KeywordUsageNote[] {
+  const notes: KeywordUsageNote[] = [];
+  const limit = input.limit ?? 5;
+  for (const block of input.blocks) {
+    if (notes.length >= limit) break;
+    for (const sentence of splitSentences(block.text)) {
+      if (notes.length >= limit) break;
+      const stance = KEYWORD_DISCLAIMER.test(sentence.text)
+        ? "disclaims"
+        : KEYWORD_ADOPTION.test(sentence.text)
+          ? "adopts"
+          : null;
+      if (stance === null) continue;
+      const charStart = block.char_start + sentence.start;
+      notes.push({
+        stance,
+        exact_text: sentence.text,
+        block_id: block.id,
+        span: {
+          byte_start: byteOffsetFromChar(block, charStart),
+          byte_end: byteOffsetFromChar(block, charStart + sentence.text.length),
+          char_start: charStart,
+          char_end: charStart + sentence.text.length,
+          line_start: block.line_start,
+          line_end: block.line_end,
+        },
+        citation_id: citationId({
+          snapshotId: input.snapshotId,
+          blockId: block.id,
+          byteStart: charStart,
+          quote: sentence.text,
+        }),
+      });
+    }
+  }
+  return notes;
+}
 
 /**
  * Classify a candidate keyword occurrence as modal or not, without a parser.

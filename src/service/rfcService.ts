@@ -36,7 +36,12 @@ import { canonicalErrataStatus, type ErrataStatus } from "../core/types.js";
 import { citationId, quoteHash } from "../analysis/citation.js";
 import { diffDocuments, type DiffMode, type DiffSide } from "../analysis/diff.js";
 import { analyzeReferences, buildGraph } from "../analysis/references.js";
-import { analyzeNormative, analyzeNormativeCandidates, splitSentences } from "../analysis/normative.js";
+import {
+  analyzeNormative,
+  analyzeNormativeCandidates,
+  detectKeywordUsage,
+  splitSentences,
+} from "../analysis/normative.js";
 import { parseRfcXmlOutline } from "../parse/rfcXml.js";
 import { parseRfcText } from "../parse/text.js";
 import { CorpusStore, catalogHash, type DocumentBundle } from "../store/database.js";
@@ -52,6 +57,7 @@ import {
   type UpstreamMetadata,
 } from "../upstream/sources.js";
 import {
+  blankLines,
   clamp,
   decodeCursor,
   encodeCursor,
@@ -827,6 +833,16 @@ export class RfcService {
       returnedBlocks = [];
     }
 
+    // `text` is a verbatim slice, and its char and byte span denote exactly the
+    // string reported next to them — that is what lets a caller locate what it read
+    // in the file. Page furniture therefore survives in it. Rather than break that
+    // invariant or leave the caller to guess which lines to distrust, the response
+    // carries the same text with those lines emptied, plus their numbers.
+    const furnitureLines = resolvedSection.furniture_lines ?? [];
+    if (furnitureLines.length > 0) {
+      warningsOut.push(`section_text_contains_page_furniture_on_lines:${furnitureLines.join(",")}:use_text_clean`);
+    }
+
     const data: ReadResult = {
       document: record,
       snapshot,
@@ -838,6 +854,12 @@ export class RfcService {
       section: include.has("source_map") ? resolvedSection : ({ ...resolvedSection, text: "" } as Section),
       blocks: returnedBlocks.map((block) => (include.has("source_map") ? block : ({ ...block, text: "" } as Block))),
       text,
+      ...(furnitureLines.length > 0 && text !== null
+        ? {
+            text_clean: blankLines(text, furnitureLines, resolvedSection.line_start),
+            page_furniture_lines: furnitureLines,
+          }
+        : {}),
       outline: null,
       truncated,
       byte_cursor: truncated ? resolvedSection.byte_end : null,
@@ -1220,6 +1242,18 @@ export class RfcService {
     // A zero requirement count is only a statement about absence once the reader can
     // see what was rejected. The candidate pass runs over the stored blocks, so it
     // needs no re-ingest and stays correct for every snapshot in the corpus.
+    const keywordBlocks = this.store.listBlocksWithKeywords(snapshot.id);
+    const usage = detectKeywordUsage({ snapshotId: snapshot.id, blocks: keywordBlocks });
+    if (usage.length > 0) {
+      data.keyword_usage = {
+        stance: usage[0]!.stance,
+        notes: usage,
+        meaning:
+          usage[0]!.stance === "disclaims"
+            ? "The document states that it does not use the RFC 2119 requirement language, so a zero requirement count is expected and is not a gap in extraction. Its normative statements are in non_strict_candidates."
+            : "The document adopts RFC 2119 / RFC 8174, so a low requirement count is the surprising outcome. Read coverage and non_strict_candidates before concluding there is little to implement.",
+      };
+    }
     if (input.include_candidates !== false) {
       const sections = this.store.getSections(snapshot.id);
       // A candidate list that ignored `scope` would answer a different question
@@ -1232,7 +1266,7 @@ export class RfcService {
         snapshotId: snapshot.id,
         rfc: record.rfc,
         sections: scopeSections,
-        blocks: this.store.listBlocksWithKeywords(snapshot.id).filter((block) => scopeIds.has(block.section_id)),
+        blocks: keywordBlocks.filter((block) => scopeIds.has(block.section_id)),
         ...(input.max_candidates !== undefined ? { limit: input.max_candidates } : {}),
       });
       const sectionById = new Map(sections.map((section) => [section.id, section.number]));

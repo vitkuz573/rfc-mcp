@@ -10,7 +10,7 @@
  *  - FTS5 tables are derived and can always be rebuilt from `blocks`.
  */
 
-export const SCHEMA_VERSION = "4";
+export const SCHEMA_VERSION = "5";
 
 /**
  * Schema migrations, applied in order to any existing corpus on open.
@@ -40,6 +40,11 @@ export interface SchemaMigration {
 }
 
 export const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
+  {
+    version: 5,
+    name: "section_furniture_lines",
+    columns: [["sections", "furniture_lines_json", "TEXT NOT NULL DEFAULT '[]'"]],
+  },
   {
     version: 4,
     name: "snapshot_redirects",
@@ -189,6 +194,9 @@ CREATE TABLE IF NOT EXISTS sections (
   path_json       TEXT NOT NULL,
   text            TEXT NOT NULL,
   text_sha256     TEXT NOT NULL,
+  -- Line numbers inside the text column that carry page furniture. The text is a
+  -- verbatim slice, so those lines remain in it; this is how a caller finds them.
+  furniture_lines_json TEXT NOT NULL DEFAULT '[]',
   byte_start      INTEGER NOT NULL,
   byte_end        INTEGER NOT NULL,
   char_start      INTEGER NOT NULL,

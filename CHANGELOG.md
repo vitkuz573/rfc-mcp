@@ -42,12 +42,29 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `read` accepts `max_output_bytes` from 64 instead of 1024. The floor was a page size, not a
   byte budget, and rejected a question the server can answer exactly; truncation was already
   reported, so a small budget narrows an answer instead of failing it.
+- A section read now carries `text_clean` and `page_furniture_lines` when the section has
+  page furniture, and warns with the line numbers. `text` remains a verbatim slice, because
+  its char and byte span have to denote exactly the string reported beside them — that
+  invariant is what lets a caller locate what it read — so the furniture stays in it. The
+  cleaned rendering is reported alongside, with the line count preserved, instead of leaving
+  the caller to guess which lines to distrust. A caller copying `text` into an implementation
+  was copying `Mockapetris    [Page 26]` into it.
+- `requirements` reports a document's own stance on the requirement language as
+  `keyword_usage`, with a citation. RFC 2181 §1 opens with "This memo does not use the oft
+  used expressions MUST, SHOULD, MAY, or their negative forms", which is why its requirement
+  count is legitimately zero; RFC 2119 and its successors instead adopt the language, where a
+  low count is the surprising outcome. A zero count that the document itself explains was
+  being indistinguishable from a zero count that hid a gap.
 - A read that lists blocks without `source_map` now warns. Such a response carries block rows
   whose `text` is empty, which is a success that answers a different question than the one
   asked; the default (`include` omitted) is unaffected and still returns the text.
-- A retired snapshot id explains itself. A rule-version bump re-derives every document under
-  a new id, and a caller holding an older pin got a bare `NOT_FOUND`. Retired ids are recorded
-  in `snapshot_redirects` and the error now names the document and its current id.
+- A retired snapshot id explains itself, and stays one hop from the current one. A
+  rule-version bump re-derives every document under a new id, and a caller holding an older pin
+  got a bare `NOT_FOUND`. Retired ids are recorded in `snapshot_redirects` and the error now
+  names the document and its current id. Redirects are rewritten transitively on replacement,
+  so a pin from three releases ago resolves to the current id in a single step rather than
+  walking a chain of intermediate ids — without that rewrite it resolved to an id that was
+  itself already retired, and the caller was told to try again.
 - Page furniture is recognised in both publication eras. RFCs predating the current plain-text
   format carry a running head (`Mockapetris      [Page 26]`) and a running foot
   (`RFC 1035   Domain Implementation and Specification   November 1987`); neither matched the
@@ -68,12 +85,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `non_strict_candidates` on `requirements` (see above).
 - `by_role` on the candidate analysis, so a caller can see how much of the list was actually
   decided and discount the rest.
+- `keyword_usage` on `requirements`: whether a document disclaims the requirement language
+  ("this memo does not use ... MUST") or adopts it, with a citation (see above).
+- `text_clean` and `page_furniture_lines` on a section read (see above).
+- `furniture_lines` on a stored section, with a migration.
 - `prose_block_count` on a snapshot, with a migration backfill, so a requirement count is
   reported next to the number of blocks it was derived from.
+- `snapshot_redirects`, so a retired snapshot id resolves to its replacement.
 
 ### Changed
 
-- Parser `rfc-text-1.2.0` → `rfc-text-1.3.0`, extractor `normative-2119-8174-1.4.0` →
+- Parser `rfc-text-1.2.0` → `rfc-text-1.4.0`, extractor `normative-2119-8174-1.4.0` →
   `normative-2119-8174-1.5.0`. Both are part of snapshot identity by design, so every
   `snp_<hash>` minted under the old versions is retired. `reanalyze --all` re-derives the
   corpus from stored bytes without re-fetching anything.

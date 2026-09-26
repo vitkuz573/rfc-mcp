@@ -61,6 +61,23 @@ export function truncateBytes(text: string, maxBytes: number): { text: string; t
   return { text: slice.subarray(0, end).toString("utf8"), truncated: true };
 }
 
+/**
+ * Empty the given absolute line numbers inside a verbatim text slice.
+ *
+ * Line numbers count from 1 over the whole document, so the offset into `text` is
+ * `lineNumber - firstLine + 1`. The lines are replaced rather than removed: keeping
+ * the line count stable means every other line keeps the number the caller already
+ * has, so a cleaned rendering and the exact one stay line-for-line comparable.
+ */
+export function blankLines(text: string, lineNumbers: readonly number[], firstLine: number): string {
+  if (lineNumbers.length === 0) return text;
+  const targets = new Set(lineNumbers.map((line) => line - firstLine + 1));
+  return text
+    .split("\n")
+    .map((line, index) => (targets.has(index + 1) ? "" : line))
+    .join("\n");
+}
+
 /** Neutralize control characters that could corrupt a transcript or log line. */
 export function sanitizeSnippet(text: string): string {
   let out = "";

@@ -37,6 +37,13 @@ interface Line {
   readonly start: number;
   readonly end: number;
   readonly value: string;
+  /**
+   * Set on the zero-width stand-in left behind by a dropped page-furniture line.
+   * It is geometrically identical to an empty source line, so the distinction has to
+   * be carried explicitly for the section text to be able to report which of its
+   * lines were printing artefacts.
+   */
+  readonly furniture?: true;
 }
 
 interface TocInfo {
@@ -188,6 +195,7 @@ export function parseRfcText(input: ParseInput): ParsedDocument {
     startLineNumber: number;
     endLineNumber: number;
     body: string;
+    furnitureLines: number[];
   }[] = [];
   const rawBlocks: {
     id: string;
@@ -203,6 +211,13 @@ export function parseRfcText(input: ParseInput): ParsedDocument {
 
   for (const region of regions) {
     const sectionLines = collectLines(lines, region.startLine, region.endLine, toc, region);
+    // The section body stays a verbatim slice, because its char and byte span have
+    // to denote exactly the text they are reported next to. Page furniture inside
+    // that span is therefore still present in the text, and a caller who copies
+    // `text` into an implementation would copy it. Recording which lines were
+    // dropped lets the service hand out a cleaned rendering beside the exact one
+    // instead of leaving the caller to guess which lines to distrust.
+    const furnitureLines = sectionLines.filter((line) => line.furniture === true).map((line) => line.number);
     let contentBoundary = sectionLines.filter((line) => !isBlank(line));
     if (contentBoundary.length === 0 && region.headingLine > 0) {
       // A heading with no body of its own (e.g. "19. References" immediately
@@ -222,6 +237,7 @@ export function parseRfcText(input: ParseInput): ParsedDocument {
       startLineNumber: first.number,
       endLineNumber: last.number,
       body,
+      furnitureLines,
     });
 
     const contentLines = sectionLines.filter((line) => line.number !== region.headingLine);
@@ -266,6 +282,7 @@ export function parseRfcText(input: ParseInput): ParsedDocument {
       path: section.region.path,
       text: section.body,
       text_sha256: sha256Hex(section.body),
+      furniture_lines: section.furnitureLines,
       ...span(start, end, section.start, section.end, section.startLineNumber, section.endLineNumber),
     };
   });
@@ -532,7 +549,7 @@ function collectLines(
       // Dropped furniture must still *separate* blocks, otherwise a block
       // would span bytes that are not in its text and a sentence crossing a
       // page break would not be contiguous in the raw file.
-      out.push({ number, start: line.start, end: line.start, value: "" });
+      out.push({ number, start: line.start, end: line.start, value: "", furniture: true });
       continue;
     }
     out.push(line);

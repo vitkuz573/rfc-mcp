@@ -146,6 +146,12 @@ export interface Section extends Span {
   readonly path: readonly string[];
   readonly text: string;
   readonly text_sha256: string;
+  /**
+   * Absolute line numbers inside `text` that hold page furniture rather than
+   * content. `text` is a verbatim slice, so those lines are still present in it;
+   * this list is what lets a caller render the section without them.
+   */
+  readonly furniture_lines: readonly number[];
 }
 
 export interface Block extends Span {
@@ -518,6 +524,14 @@ export interface ReadResult {
    * are deliberately not merged.
    */
   readonly xml_outline?: XmlDocumentOutline | null;
+  /**
+   * The same text as `text` with page-furniture lines emptied, present only when the
+   * section has any. `text` stays a verbatim slice so its offsets keep denoting it;
+   * this is the rendering to copy from when the furniture is in the way. Line counts
+   * match, so the two are comparable line for line.
+   */
+  readonly text_clean?: string;
+  readonly page_furniture_lines?: readonly number[];
   readonly truncated: boolean;
   readonly byte_cursor: number | null;
 }

@@ -60,6 +60,96 @@ describe("schema migrations", () => {
     // The migration runner skips a step whose table is absent, so a base schema missing a
     // table would silently skip a column forever. Guard the invariant explicitly.
     expect(SCHEMA_SQL).toContain("CREATE TABLE IF NOT EXISTS rfc_references");
+    expect(SCHEMA_SQL).toContain("CREATE TABLE IF NOT EXISTS snapshot_redirects");
+  });
+});
+
+describe("snapshot redirects", () => {
+  /** Seed a catalog row and one snapshot, the minimum `snapshots.rfc` will accept. */
+  function seed(store: CorpusStore, rfc: number, id: string): void {
+    const db = (store as unknown as { db: DatabaseSync }).db;
+    store.upsertCatalog([
+      {
+        rfc,
+        document_id: `rfc-${rfc}`,
+        title: "T",
+        abstract: null,
+        published: null,
+        pages: null,
+        status: null,
+        stream: null,
+        area: null,
+        group: null,
+        keywords: [],
+        authors: [],
+        obsoletes: [],
+        obsoleted_by: [],
+        updates: [],
+        updated_by: [],
+        subseries: [],
+        identifiers: [],
+        formats: ["txt"],
+        doi: null,
+        canonical_url: `https://www.rfc-editor.org/info/rfc${rfc}`,
+        source_url: `https://www.rfc-editor.org/info/rfc${rfc}`,
+        observed_at: "2026-01-01T00:00:00.000Z",
+        content_hash: "h",
+      },
+    ]);
+    db.prepare(
+      `INSERT OR REPLACE INTO snapshots (id, rfc, format, raw_sha256, bytes, raw, retrieved_at, source_url,
+         etag, last_modified, parser_version, extractor_version, quality, warnings_json, metadata_hash)
+       VALUES (?, ?, 'txt', ?, 0, X'', '2026-01-01T00:00:00Z', 'https://example.invalid', NULL, NULL, 'p', 'e', 'complete', '[]', 'm')`,
+    ).run(id, rfc, `${id}-raw`);
+  }
+
+  /** One rule-version bump: retire the outgoing id, install the new one. */
+  function bump(store: CorpusStore, rfc: number, newId: string): void {
+    const db = (store as unknown as { db: DatabaseSync }).db;
+    store.retireSnapshots(rfc, newId);
+    db.prepare("DELETE FROM snapshots WHERE rfc = ?").run(rfc);
+    seed(store, rfc, newId);
+  }
+
+  it("points a retired id at its replacement", () => {
+    const store = new CorpusStore(":memory:");
+    try {
+      seed(store, 1035, "snp_aaaaaaaaaaaa");
+      bump(store, 1035, "snp_bbbbbbbbbbbb");
+      expect(store.getSnapshotRedirect("snp_aaaaaaaaaaaa")).toEqual({ new_id: "snp_bbbbbbbbbbbb", rfc: 1035 });
+      expect(store.getSnapshotRedirect("snp_never_issued")).toBeNull();
+    } finally {
+      store.close();
+    }
+  });
+
+  it("collapses a chain of bumps into one hop", () => {
+    // The cost of a version bump is a caller re-pinning. A pin from three versions
+    // ago must therefore resolve to the current id in a single step, not by walking
+    // a chain of intermediate ids the caller cannot see.
+    const store = new CorpusStore(":memory:");
+    try {
+      seed(store, 1035, "snp_aaaaaaaaaaaa");
+      bump(store, 1035, "snp_bbbbbbbbbbbb");
+      bump(store, 1035, "snp_cccccccccccc");
+      bump(store, 1035, "snp_dddddddddddd");
+      for (const old of ["snp_aaaaaaaaaaaa", "snp_bbbbbbbbbbbb", "snp_cccccccccccc"]) {
+        expect(store.getSnapshotRedirect(old)?.new_id, old).toBe("snp_dddddddddddd");
+      }
+    } finally {
+      store.close();
+    }
+  });
+
+  it("does not redirect an id that is still current", () => {
+    const store = new CorpusStore(":memory:");
+    try {
+      seed(store, 1035, "snp_aaaaaaaaaaaa");
+      store.retireSnapshots(1035, "snp_aaaaaaaaaaaa");
+      expect(store.getSnapshotRedirect("snp_aaaaaaaaaaaa")).toBeNull();
+    } finally {
+      store.close();
+    }
   });
 });
 

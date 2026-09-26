@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { analyzeNormative, analyzeNormativeCandidates, splitSentences } from "../src/analysis/normative.js";
+import {
+  analyzeNormative,
+  analyzeNormativeCandidates,
+  detectKeywordUsage,
+  splitSentences,
+} from "../src/analysis/normative.js";
 import { parseRfcText } from "../src/parse/text.js";
+import { blankLines } from "../src/core/util.js";
 import type { Block, Section } from "../src/core/types.js";
 
 const SNAPSHOT = "snp_222222222222222222222222";
@@ -187,6 +193,33 @@ describe("RFC 2119 / 8174 extraction", () => {
     expect(blocks.some((block) => /on page 26 of the original memo/u.test(block.text))).toBe(true);
   });
 
+  it("records which section lines are furniture, so the exact text can be cleaned", () => {
+    // `text` must stay a verbatim slice for its offsets to denote it, so the
+    // furniture stays in it. The line numbers are what let a caller drop it.
+    const { sections, blocks } = analyze(
+      [
+        "2.  Rules",
+        "",
+        "   The first rule.",
+        "",
+        "Mockapetris                                                    [Page 26]",
+        "",
+        "   The second rule.",
+        "",
+      ].join("\n"),
+    );
+    const body = sections.find((section) => section.number === "2");
+    expect(body?.furniture_lines).toHaveLength(1);
+    expect(body?.text).toMatch(/Mockapetris/u);
+    const cleaned = blankLines(body!.text, body!.furniture_lines, body!.line_start);
+    expect(cleaned).not.toMatch(/Mockapetris/u);
+    expect(cleaned).toMatch(/The first rule\./u);
+    // Line counts match, so the two renderings stay comparable line for line.
+    expect(cleaned.split("\n")).toHaveLength(body!.text.split("\n").length);
+    // And the blocks were already free of it.
+    expect(blocks.every((block) => !/Mockapetris/u.test(block.text))).toBe(true);
+  });
+
   it("reports coverage instead of pretending completeness", () => {
     const { analysis } = analyze("2.  Rules\n\n   An implementation MUST emit the header.\n");
     expect(analysis.coverage.blocks_scanned).toBeGreaterThan(0);
@@ -340,6 +373,62 @@ describe("non-strict normative candidates", () => {
   it("never lets a role judgement change the requirement count", () => {
     const { analysis } = analyze("2.  Rules\n\n   Mail uses the recommended method for routing.\n");
     expect(analysis.requirements).toHaveLength(0);
+  });
+
+  it("reports a document that disclaims the requirement language", () => {
+    // RFC 2181 opens with exactly this sentence, which is why its requirement count
+    // is legitimately zero. The document says so; the response should too.
+    const parsed = parseRfcText({
+      rfc: 9999,
+      snapshotId: SNAPSHOT,
+      raw: Buffer.from(
+        [
+          "1.  Introduction",
+          "",
+          "   This memo does not use the oft used expressions MUST, SHOULD, MAY, or",
+          "   their negative forms.",
+          "",
+        ].join("\n"),
+        "utf8",
+      ),
+      parserVersion: "test",
+    });
+    const usage = detectKeywordUsage({ snapshotId: SNAPSHOT, blocks: parsed.blocks });
+    expect(usage).toHaveLength(1);
+    expect(usage[0]?.stance).toBe("disclaims");
+    expect(usage[0]?.exact_text).toMatch(/does not use/u);
+    expect(usage[0]?.citation_id).toMatch(/^cit_[0-9a-f]{24}$/u);
+  });
+
+  it("reports a document that adopts the requirement language", () => {
+    // The opposite case: adoption makes a low count the surprising outcome.
+    const parsed = parseRfcText({
+      rfc: 9999,
+      snapshotId: SNAPSHOT,
+      raw: Buffer.from(
+        [
+          "1.  Introduction",
+          "",
+          '   The key words "MUST", "MUST NOT", "SHOULD" and "MAY" in this document',
+          "   are to be interpreted as described in RFC 2119.",
+          "",
+        ].join("\n"),
+        "utf8",
+      ),
+      parserVersion: "test",
+    });
+    const usage = detectKeywordUsage({ snapshotId: SNAPSHOT, blocks: parsed.blocks });
+    expect(usage[0]?.stance).toBe("adopts");
+  });
+
+  it("does not invent a stance for a document that says nothing about it", () => {
+    const parsed = parseRfcText({
+      rfc: 9999,
+      snapshotId: SNAPSHOT,
+      raw: Buffer.from("1.  Introduction\n\n   A server must retry.\n", "utf8"),
+      parserVersion: "test",
+    });
+    expect(detectKeywordUsage({ snapshotId: SNAPSHOT, blocks: parsed.blocks })).toHaveLength(0);
   });
 
   it("bounds the candidate list and says so", () => {

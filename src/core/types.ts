@@ -186,6 +186,20 @@ export interface Snapshot {
   readonly reference_count: number;
   /** Blocks the normative extractor reads; the denominator behind a requirement count. */
   readonly prose_block_count: number;
+  /**
+   * Blocks the normative extractor does NOT read, and how many of them carry an RFC 2119
+   * keyword.
+   *
+   * Stored on the snapshot rather than counted per query. Counting it in SQL cost 5.7
+   * seconds on RFC 3261 - there is no index on `blocks.snapshot_id`, so the query scanned
+   * all 53 530 blocks in the corpus on every `requirements` call - which is a far worse
+   * problem than the silent loss it was meant to remove. The loss is a property of the
+   * derivation, not of the question, so it belongs where the derivation is written.
+   */
+  readonly unscanned_block_count: number;
+  readonly keyword_bearing_unscanned_block_count: number;
+  /** The same loss broken down by block kind, e.g. `{ table: 140, preformatted: 136 }`. */
+  readonly unscanned_block_kinds: Readonly<Record<string, number>>;
 }
 
 /* -------------------------------------------------------------------------- */

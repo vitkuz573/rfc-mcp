@@ -221,6 +221,37 @@ describe("RFC 2119 / 8174 extraction", () => {
     expect(blocks.every((block) => !/Mockapetris/u.test(block.text))).toBe(true);
   });
 
+  it("still finds every keyword after a document whose blocks were skipped", () => {
+    // A global regex is stateful, and `String.prototype.matchAll` copies its `lastIndex`
+    // into the clone it walks. So one boolean test of the shared keyword pattern moves
+    // the starting point of every later sentence scan in the same process. The loss
+    // counter did exactly that, and the symptom was two tests in this file that passed
+    // alone and failed together - the only shape this bug has, and the reason it
+    // survived five review rounds nobody could reproduce.
+    //
+    // The first document here is the trigger: its rules live in a table, so the strict
+    // pass skips the block and asks the shared pattern a yes/no question about it. The
+    // second document's requirements are only found if that question left no trace.
+    const skipped = analyze(
+      [
+        "2.  Rules",
+        "",
+        "   +----------------+--------+",
+        "   | Field          | MUST   |",
+        "   +----------------+--------+",
+        "",
+      ].join("\n"),
+    );
+    expect(skipped.analysis.coverage.blocks_skipped).toBeGreaterThan(0);
+
+    const after = analyze(["3.  More", "", "   An implementation MUST emit the header.", ""].join("\n"));
+    expect(after.analysis.requirements).toHaveLength(1);
+    expect(after.analysis.requirements[0]?.exact_text).toBe("An implementation MUST emit the header.");
+    // And the loss counter is what the trigger was for: the table holds a keyword and is
+    // out of scope, and the response says so rather than leaving the caller to guess.
+    expect(skipped.analysis.coverage.keyword_bearing_blocks_skipped).toBeGreaterThan(0);
+  });
+
   it("reports coverage instead of pretending completeness", () => {
     const { analysis } = analyze("2.  Rules\n\n   An implementation MUST emit the header.\n");
     expect(analysis.coverage.blocks_scanned).toBeGreaterThan(0);

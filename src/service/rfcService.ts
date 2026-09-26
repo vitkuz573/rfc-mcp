@@ -1284,6 +1284,18 @@ export class RfcService {
       warningsOut.push(`max_results_clamped:${asked}->${limit}:max_results_accepts_up_to_${ceiling}`);
     }
 
+    // The loss counter, raised on every response and not only at re-derivation: tables
+    // and preformatted text are out of scope by design, so a specification that states
+    // its rules in a field table reports a low count, and a caller can only tell that
+    // apart from an absence if the response says how much keyword-bearing text was not
+    // read.
+    const keywordBearingSkipped = snapshot.keyword_bearing_unscanned_block_count;
+    if (keywordBearingSkipped > 0) {
+      warningsOut.push(
+        `normative_text_in_unscanned_blocks:${keywordBearingSkipped}:out_of_scope_by_design:see_coverage_keyword_bearing_blocks_skipped`,
+      );
+    }
+
     const data: Record<string, unknown> = {
       document: record,
       snapshot_id: snapshot.id,
@@ -1296,6 +1308,15 @@ export class RfcService {
         keyword_filter: input.keyword ?? null,
         blocks_scanned: snapshot.block_count,
         prose_blocks_scanned: snapshot.prose_block_count,
+        blocks_skipped: snapshot.unscanned_block_count,
+        blocks_skipped_by_kind: snapshot.unscanned_block_kinds,
+        // The loss counter. Tables and preformatted text are out of scope by design, so a
+        // specification that states its rules in a field table reports a low count; a
+        // caller can only tell that apart from an absence if the response says how much
+        // keyword-bearing text was not read.
+        keyword_bearing_blocks_skipped: keywordBearingSkipped,
+        unscanned_note:
+          "Blocks that are not prose are not scanned. keyword_bearing_blocks_skipped is how many of them carry an RFC 2119 keyword, so a low total_requirements on a table-driven specification reads as a known gap rather than an absence.",
       },
       interpretation: {
         normative_terms: "RFC 2119 / RFC 8174, upper case only",

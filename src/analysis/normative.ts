@@ -32,6 +32,18 @@ export interface NormativeAnalysis {
   readonly coverage: {
     readonly blocks_scanned: number;
     readonly blocks_skipped: number;
+    /** Why each skipped block was skipped, as `kind` or `section:<kind>`. */
+    readonly blocks_skipped_by_kind: Readonly<Record<string, number>>;
+    /**
+     * How many of the skipped blocks carry an RFC 2119 keyword.
+     *
+     * This is the loss made visible. Tables, figures and preformatted text are out of
+     * scope by design, and a specification that states its rules in a field table will
+     * report a low count; that is a known gap and not an absence, and a caller can only
+     * act on the difference if the number is on the response. Corpus-wide it is 278
+     * blocks.
+     */
+    readonly keyword_bearing_blocks_skipped: number;
     readonly sentences_scanned: number;
     readonly mentions_found: number;
     readonly requirements_emitted: number;
@@ -46,6 +58,24 @@ const TERM_PATTERN = new RegExp(
     .join("|")})\\b`,
   "gu",
 );
+
+/**
+ * The same vocabulary, without the global flag, for a yes/no question.
+ *
+ * `TERM_PATTERN` carries `g`, and a global regex is stateful: `test()` advances
+ * `lastIndex`, and `String.prototype.matchAll` copies `lastIndex` into the clone it
+ * walks. So one `TERM_PATTERN.test(...)` anywhere - the loss counter below did exactly
+ * that - silently moved the starting point of every later sentence scan in the same
+ * process and requirements stopped being found. Two tests in this file passed alone and
+ * failed together, which is the only shape this bug has.
+ */
+const TERM_PROBE = new RegExp(TERM_PATTERN.source, "u");
+
+/** `matchAll` over the global pattern, immune to a `lastIndex` left by an earlier `test()`. */
+function matchTerms(text: string): RegExpExecArray[] {
+  TERM_PATTERN.lastIndex = 0;
+  return [...text.matchAll(TERM_PATTERN)];
+}
 
 const QUOTED_TERM = new RegExp(`(["'\`]\\s*\\b(?:${Object.keys(NORMATIVE_TERMS).join("|")})\\s*["'\`])`, "iu");
 const META_DISCUSSION =
@@ -609,6 +639,12 @@ const FIXED_BOILERPLATE: readonly RegExp[] = [
   /^Code Components extracted from this document must include (?:Revised|Simplified) BSD License text\b/u,
   /^This document is part of a family of documents defining\b/u,
   /^Code Components extracted from this document must include\b.*Trust Legal Provisions/u,
+  // The two other shapes the same legal notice is printed in. Found by measurement
+  // rather than by reading RFC 13: a 185-item hand-checked sample of the candidate list
+  // still carried 11 rows of them after the patterns above were in place, and they are
+  // the same notice with the same lack of anything to do with the protocol.
+  /^This document may contain material from IETF Documents or IETF Contributions\b/u,
+  /^The person\(s\) controlling the copyright in some of this material may not have granted the IETF Trust\b/u,
 ];
 
 export function isFixedBoilerplate(sentence: string): boolean {
@@ -629,6 +665,15 @@ export function analyzeNormative(input: {
   let blocksScanned = 0;
   let blocksSkipped = 0;
   let sentencesScanned = 0;
+  const blocksSkippedByKind: Record<string, number> = {};
+  // The loss counter. Tables and preformatted text are out of scope BY DESIGN, and a
+  // design decision that costs statements has to be visible: `blocks_skipped` says how
+  // much text was not read, and this says how much of that text carried an RFC 2119
+  // keyword. Corpus-wide, 278 non-prose blocks hold an upper-case keyword and none of
+  // them is scanned, so a zero count on a specification that states its rules in a field
+  // table is a known gap rather than an absence - which is the difference between a
+  // caller reading `read` and a caller being misled.
+  let keywordBearingBlocksSkipped = 0;
 
   for (const block of input.blocks) {
     const section = sectionsById.get(block.section_id);
@@ -636,13 +681,16 @@ export function analyzeNormative(input: {
     const sectionTitle = section?.title ?? "";
     if (!PROSE_BLOCK_KINDS.has(block.kind) || SKIPPED_SECTION_KINDS.has(sectionKind)) {
       blocksSkipped += 1;
+      const bucket = SKIPPED_SECTION_KINDS.has(sectionKind) ? `section:${sectionKind}` : block.kind;
+      blocksSkippedByKind[bucket] = (blocksSkippedByKind[bucket] ?? 0) + 1;
+      if (TERM_PROBE.test(block.text)) keywordBearingBlocksSkipped += 1;
       continue;
     }
     blocksScanned += 1;
 
     for (const sentence of splitSentences(block.text)) {
       sentencesScanned += 1;
-      const matches = [...sentence.text.matchAll(TERM_PATTERN)];
+      const matches = matchTerms(sentence.text);
       if (matches.length === 0) continue;
 
       const distinctTerms = new Set(
@@ -813,6 +861,11 @@ export function analyzeNormative(input: {
   }
 
   if (blocksScanned === 0) warnings.push("no_prose_blocks_scanned");
+  if (keywordBearingBlocksSkipped > 0) {
+    warnings.push(
+      `normative_text_in_unscanned_blocks:${keywordBearingBlocksSkipped}:these_blocks_carry_an_rfc2119_keyword_and_are_out_of_scope_by_design:read_the_section`,
+    );
+  }
 
   return {
     mentions,
@@ -820,6 +873,8 @@ export function analyzeNormative(input: {
     coverage: {
       blocks_scanned: blocksScanned,
       blocks_skipped: blocksSkipped,
+      blocks_skipped_by_kind: blocksSkippedByKind,
+      keyword_bearing_blocks_skipped: keywordBearingBlocksSkipped,
       sentences_scanned: sentencesScanned,
       mentions_found: mentions.length,
       requirements_emitted: requirements.length,

@@ -5,6 +5,67 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### Fixed, second pass
+
+The first pass was measured, and measuring it found four more problems, one of them a
+regression of its own making.
+
+- **A pipe table was read as a paragraph, and the whole table entered the requirement
+  list as one row.** RFC 5322's field table is 2 697 characters of `+---+` rules and
+  pipe-delimited cells. It sat at three columns of indent, and the prose test only ran on
+  blocks indented six or more, so `classifyBlock` returned `paragraph` without looking. A
+  contract line that is a table is worse than a missing one, because it gets quoted and
+  cited. `looksLikeNotation` - pipe cells, a `+---+` rule, a CDDL or schema rule header, a
+  block that is mostly one quoted string, box drawing - now runs at every indent, because
+  indent says where the typesetter put a block and not what the block is. RFC 9472's CDDL
+  data model, 2 031 characters, went the same way. The count is reported either way: RFC
+  5322 goes 265 -> 57 requirements, RFC 9110 430 -> 408, and those rows were never
+  obligations.
+- **A global regex was shared across analyses, and one boolean test moved the starting
+  point of every later scan.** `TERM_PATTERN` carries `g`; `test()` advances `lastIndex`,
+  and `String.prototype.matchAll` copies `lastIndex` into the clone it walks. The loss
+  counter added below called `TERM_PATTERN.test(...)`, and requirements silently stopped
+  being found in the same process. The symptom was two tests that passed alone and failed
+  together, which is the only shape this bug has and the reason five review rounds could
+  not reproduce it. Sentence scanning goes through `matchTerms()`, which resets
+  `lastIndex` first, and the boolean question uses a non-global clone.
+- **`coverage` now says how much text was not read, and how much of it mattered.**
+  `blocks_skipped_by_kind` and `keyword_bearing_blocks_skipped`, plus a
+  `normative_text_in_unscanned_blocks:N` warning on every response. Tables and preformatted
+  text are out of scope by design; a specification that states its rules in a field table
+  reports a low count, and until now nothing on the response distinguished that from an
+  absence. Corpus-wide, 278 non-prose blocks carry an RFC 2119 keyword and none of them is
+  scanned. RFC 1122: 312 blocks skipped, 19 of them keyword-bearing.
+- **The first version of that counter cost 29 seconds per `requirements` call, which is
+  worse than the silence it removed.** The per-kind breakdown ran on every call, and its
+  plan scanned all 53 530 blocks in the corpus and joined them to `sections`: 29 500 ms on
+  RFC 3261, measured, where the rest of the same query is 10 ms. Two things came out of
+  it. The counts are now written to the snapshot row at derivation time, beside
+  `prose_block_count` - the loss is a property of the derivation, not of the question. And
+  the migration that would have backfilled them does not: backfills re-run on **every**
+  open, so a slow one is not a one-time migration cost but a permanent tax on start, and
+  the honest version of this backfill took minutes per start. A version bump already
+  requires `reanalyze --all`, which is what populates them. RFC 3261: **29 000 ms -> 326
+  ms**, with the same numbers reported. The missing index was the obvious suspect and was
+  not the cause - `blocks_by_section` already leads with `snapshot_id`. It was the plan.
+- **Two more of the RFC Editor's fixed texts are excluded** from the candidate list - the
+  other two shapes of the same BCP-13 legal notice, found by measurement rather than by
+  reading RFC 13. They were 11 of 185 rows in a hand-checked sample.
+
+### Changed (breaking), second pass
+
+- `server.version` 0.5.0 -> 0.5.3, parser `1.7.0` -> `1.7.3`, extractor `1.6.0` -> `1.6.3`,
+  store schema 6 -> 7 (`snapshots.unscanned_block_count`,
+  `keyword_bearing_unscanned_block_count`, `unscanned_block_kinds_json`). Snapshots
+  re-derived for all 159 documents from stored bytes; no network fetch. Migration 7
+  carries no backfill on purpose, so a corpus that is not re-derived reports 0 for the new
+  counters; the version bump is what requires the re-derive.
+- `coverage` gains `blocks_skipped`, `blocks_skipped_by_kind`,
+  `keyword_bearing_blocks_skipped` and `unscanned_note`. Additive.
+- A `requirements` response on a document with keyword-bearing non-prose text now carries a
+  `normative_text_in_unscanned_blocks:N` warning. A caller that treats warnings as fatal
+  will see it on documents that were previously silent.
+
 ## [Unreleased]
 
 ### The bench came first

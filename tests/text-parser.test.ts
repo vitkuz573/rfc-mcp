@@ -391,6 +391,63 @@ describe("parseRfcText", () => {
     expect(result.sections.some((s) => s.number === "28")).toBe(false);
   });
 
+  it("keeps a pipe table and a CDDL model out of the prose blocks", () => {
+    // The regression the first version of the indent fix introduced. Deciding "prose"
+    // from "has sentences and is mostly words" let RFC 5322's field table - 2 697
+    // characters of `+---+` rules and pipe-delimited cells - through, and it entered
+    // the requirement list as ONE 2 697-character row. RFC 9472's CDDL data model came
+    // through the same way. A contract line that is a table is worse than a missing one,
+    // because it gets quoted and cited.
+    const table = Buffer.from(
+      [
+        "4.  Message Format",
+        "",
+        "   +----------------+--------+------------+----------------------------+",
+        "   | Field          | Min    | Max number | Notes                      |",
+        "   +----------------+--------+------------+----------------------------+",
+        "   | Local-part     | 1      | 64         |                            |",
+        "   | Domain         | 1      | 255        |                            |",
+        "   | Address-spec   | 1      | 255        | SHOULD be quoted           |",
+        "   +----------------+--------+------------+----------------------------+",
+        "",
+        "   A line of characters MUST be no more than 998 characters.",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    const cddl = Buffer.from(
+      [
+        "5.  Data Model",
+        "",
+        "   grouping transparency-extension {",
+        '     description "This grouping provides a means to describe transparency."',
+        '     description "A client indicates the value it would like to use."',
+        "   }",
+        "",
+        '   grouping signing-group { description "A group of signatures." }',
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    const t = parseRfcText({
+      rfc: 5322,
+      snapshotId: "snp_888888888888888888888888",
+      raw: table,
+      parserVersion: "test",
+    });
+    const tableBlock = t.blocks.find((b) => /\+---/u.test(b.text));
+    expect(tableBlock).toBeDefined();
+    expect(tableBlock!.kind).not.toBe("paragraph");
+    // The sentence beside the table is still prose, which is the part that matters: a
+    // fix that pushed the table out by rejecting the section would lose this.
+    expect(t.blocks.some((b) => b.kind === "paragraph" && /998 characters/u.test(b.text))).toBe(true);
+
+    const c = parseRfcText({ rfc: 9472, snapshotId: "snp_999999999999999999999999", raw: cddl, parserVersion: "test" });
+    const model = c.blocks.find((b) => /grouping transparency-extension/u.test(b.text));
+    expect(model).toBeDefined();
+    expect(model!.kind).not.toBe("paragraph");
+  });
+
   it("reports a document whose contents header it could not find", () => {
     const result = parseRfcText({
       rfc: 4245,

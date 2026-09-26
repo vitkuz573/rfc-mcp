@@ -771,21 +771,53 @@ function looksLikeProse(chunk: readonly Line[]): boolean {
     .filter((value) => value !== "")
     .join(" ");
   if (text === "") return false;
-  // Internal column alignment is the one signal strong enough to override a sentence
-  // ending: a two-column layout in RFC 822 headers is notation even when each cell
-  // ends in a full stop.
-  const aligned = chunk.filter((line) => / {3,}\S/u.test(line.value.trim())).length;
-  if (aligned / chunk.length > 0.6) return false;
-  if (/[+|]{2,}|[┌┐└┘├┤─│]/u.test(text)) return false;
+  if (looksLikeNotation(chunk)) return false;
   // Sentences, or the fragments a list item ends on. A chunk with neither is a table
   // row, a header field block, or pseudo-code.
-  if (!/[.!?](?:\s|$)/u.test(text) && !(/^[A-Z]/u.test(text) && /:\s*$/.test(chunk[chunk.length - 1]!.value.trim()))) {
+  if (!/[.!?](?:\s|$)/u.test(text) && !(/^[A-Z]/u.test(text) && /:\s*$/u.test(chunk[chunk.length - 1]!.value.trim()))) {
     return false;
   }
   const words = text.split(/\s+/u).filter((w) => w !== "");
   if (words.length === 0) return false;
   const wordish = words.filter((w) => /^[A-Za-z][A-Za-z'-]*[.,;:)]?$/u.test(w)).length;
   return wordish / words.length >= 0.5;
+}
+
+/**
+ * Structural notation, decided without reference to how far the block is indented.
+ *
+ * A pipe table, a `+---+` rule, a CDDL or schema rule header, a block that is mostly one
+ * quoted string, box drawing: none of those is a sentence at any column. RFC 5322's
+ * field table sat at three columns of indent and was read as a paragraph for exactly
+ * that reason, so the whole 2 697-character table entered the requirement list as one
+ * row. Indent says where the typesetter put a block, not what the block is.
+ */
+function looksLikeNotation(chunk: readonly Line[]): boolean {
+  const text = chunk
+    .map((line) => line.value.trim())
+    .filter((value) => value !== "")
+    .join(" ");
+  if (text === "") return true;
+
+  // A prose paragraph has pipes and internal alignment on a few lines at most; a table
+  // has them on nearly all of them.
+  const columnar = chunk.filter((line) => {
+    const value = line.value;
+    if (/^\s*\+[-=+]{3,}\+?\s*$/u.test(value)) return true;
+    if (value.includes("|")) return true;
+    if (/ {3,}\S/u.test(value.trim())) return true;
+    return false;
+  }).length;
+  if (columnar / chunk.length > 0.4) return true;
+
+  // CDDL, ABNF and schema blocks. RFC 9472's data model is 2 031 characters of rule
+  // headers and quoted descriptions; it is a model, not a sentence.
+  const ruleHeaders = chunk.filter((line) => /^\s*[\w.-]+(?:\s+[\w.-]+)*\s*=\s*[\[{]/u.test(line.value)).length;
+  if (ruleHeaders / chunk.length > 0.25) return true;
+  const quoted = (text.match(/"[^"]*"/gu) ?? []).join(" ").length;
+  if (quoted / text.length > 0.35) return true;
+
+  return /[┌┐└┘├┤─│]/u.test(text);
 }
 
 function classifyBlock(chunk: readonly Line[]): BlockKind {
@@ -797,10 +829,17 @@ function classifyBlock(chunk: readonly Line[]): BlockKind {
   if (chunk.every((line) => /^\s*\|/.test(line.value) || line.value.trim() === "|")) return "table";
   const indents = chunk.map((line) => indentWidth(line.value));
   const minIndent = Math.min(...indents);
+  // Notation is decided first and at any indent: a pipe table at three columns is still
+  // a pipe table, and RFC 5322's field table spent its life in the requirement list as
+  // one 2 697-character row because the old test only looked at blocks indented six
+  // columns or more.
+  if (looksLikeNotation(chunk)) {
+    const allPipes = chunk.every((line) => /\|/.test(line.value) || / {2,}\S/u.test(line.value.trim()));
+    return allPipes ? "table" : "preformatted";
+  }
   if (minIndent >= 6) {
-    if (chunk.every((line) => /\|/.test(line.value) || / {2,}\S/u.test(line.value.trim()))) return "table";
-    // Indented, yes; prose, only if it is made of sentences. The old test answered
-    // the first question with the second.
+    // Indented, yes; prose, only if it is made of sentences. The old test answered the
+    // first question with the second.
     return looksLikeProse(chunk) ? "paragraph" : "preformatted";
   }
   return "paragraph";

@@ -10,7 +10,7 @@
  *  - FTS5 tables are derived and can always be rebuilt from `blocks`.
  */
 
-export const SCHEMA_VERSION = "6";
+export const SCHEMA_VERSION = "7";
 
 /**
  * Schema migrations, applied in order to any existing corpus on open.
@@ -40,6 +40,26 @@ export interface SchemaMigration {
 }
 
 export const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
+  {
+    version: 7,
+    name: "snapshot_unscanned_block_counts",
+    columns: [
+      ["snapshots", "unscanned_block_count", "INTEGER NOT NULL DEFAULT 0"],
+      ["snapshots", "keyword_bearing_unscanned_block_count", "INTEGER NOT NULL DEFAULT 0"],
+      ["snapshots", "unscanned_block_kinds_json", "TEXT NOT NULL DEFAULT '{}'"],
+    ],
+    // No backfill here, deliberately. Backfills re-run on every open, and the honest
+    // version of this one - a correlated per-snapshot count over blocks whose text column
+    // is two orders of magnitude larger than the row count - cost minutes per start. The
+    // counts are properties of a derivation, and a derivation is what a version bump
+    // requires anyway: `contract-versions.json` couples them and `reanalyze --all`
+    // rewrites every document from stored bytes. A snapshot written by an older build
+    // reports 0, the same state `prose_block_count` was in before migration 3, and the
+    // changelog for the bump says to re-derive.
+    //
+    // The lesson recorded next to the code that needed it: `blocks_by_section` already
+    // leads with `snapshot_id`, so the missing index was never the problem. The plan was.
+  },
   {
     version: 6,
     name: "requirement_keywords",
@@ -172,7 +192,15 @@ CREATE TABLE IF NOT EXISTS snapshots (
   -- Blocks the normative extractor actually read. Without this a caller cannot tell
   -- "scanned 4 blocks, found nothing" from "scanned 900, found nothing", and the
   -- two support opposite conclusions about whether a document states any norms.
-  prose_block_count INTEGER NOT NULL DEFAULT 0
+  prose_block_count INTEGER NOT NULL DEFAULT 0,
+  -- The loss counter: blocks the normative extractor does not read, and how many of them
+  -- carry an RFC 2119 keyword. Stored rather than counted per query, because the count
+  -- cost 5.7 seconds on the largest document - blocks.snapshot_id is unindexed, so the
+  -- query scanned all 53 530 blocks in the corpus on every requirements call - and a
+  -- number that makes a response 5.7 seconds slower is worse than the silence it replaced.
+  unscanned_block_count INTEGER NOT NULL DEFAULT 0,
+  keyword_bearing_unscanned_block_count INTEGER NOT NULL DEFAULT 0,
+  unscanned_block_kinds_json TEXT NOT NULL DEFAULT '{}'
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS snapshots_content

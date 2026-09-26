@@ -526,11 +526,14 @@ export class CorpusStore {
       this.stmt("DELETE FROM blocks_fts WHERE rfc = ?").run(bundle.snapshot.rfc);
       this.retireSnapshots(bundle.snapshot.rfc, bundle.snapshot.id);
       this.stmt("DELETE FROM snapshots WHERE rfc = ?").run(bundle.snapshot.rfc);
+      const unscanned = countUnscannableBlocks(bundle.blocks, bundle.sections);
       this.stmt(
         `INSERT INTO snapshots (id, rfc, format, raw_sha256, bytes, raw, retrieved_at, source_url, etag, last_modified,
            parser_version, extractor_version, quality, warnings_json, metadata_hash, section_count, block_count,
-           requirement_count, reference_count, prose_block_count)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           requirement_count, reference_count, prose_block_count,
+           unscanned_block_count, keyword_bearing_unscanned_block_count,
+           unscanned_block_kinds_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).run(
         bundle.snapshot.id,
         bundle.snapshot.rfc,
@@ -552,6 +555,9 @@ export class CorpusStore {
         bundle.requirements.length,
         bundle.references.length,
         countProseBlocks(bundle.blocks, bundle.sections),
+        unscanned.unscanned,
+        unscanned.keywordBearing,
+        JSON.stringify(unscanned.byKind),
       );
 
       for (const section of bundle.sections) {
@@ -1089,6 +1095,33 @@ export class CorpusStore {
     return row.n;
   }
 
+  /**
+   * How much text the strict extractor did not read, and how much of it mattered.
+   *
+   * Read from the snapshot row, not counted. Counting it in SQL cost 5.7 seconds on
+   * RFC 3261 because `blocks.snapshot_id` carries no index, and a number that makes a
+   * response 5.7 seconds slower is a worse defect than the silence it removes. The loss
+   * is a property of the derivation, so it is stored by the derivation.
+   */
+  countUnscannedBlocks(snapshotId: string): number {
+    const row = this.stmt("SELECT unscanned_block_count AS n FROM snapshots WHERE id = ?").get(snapshotId) as
+      { n: number } | undefined;
+    return row?.n ?? 0;
+  }
+
+  countKeywordBearingUnscannedBlocks(snapshotId: string): number {
+    const row = this.stmt("SELECT keyword_bearing_unscanned_block_count AS n FROM snapshots WHERE id = ?").get(
+      snapshotId,
+    ) as { n: number } | undefined;
+    return row?.n ?? 0;
+  }
+
+  countUnscannedBlocksByKind(snapshotId: string): Record<string, number> {
+    const row = this.stmt("SELECT unscanned_block_kinds_json AS k FROM snapshots WHERE id = ?").get(snapshotId) as
+      { k: string } | undefined;
+    return (parseJson(row?.k ?? "{}") ?? {}) as Record<string, number>;
+  }
+
   getRequirementById(snapshotId: string, id: string): Requirement | null {
     const row = this.stmt("SELECT * FROM requirements WHERE snapshot_id = ? AND id = ?").get(snapshotId, id) as
       RequirementRow | undefined;
@@ -1614,6 +1647,9 @@ interface SnapshotRow {
   requirement_count: number;
   reference_count: number;
   prose_block_count: number;
+  unscanned_block_count: number;
+  keyword_bearing_unscanned_block_count: number;
+  unscanned_block_kinds_json: string;
 }
 
 /**
@@ -1632,6 +1668,44 @@ function countProseBlocks(blocks: readonly Block[], sections: readonly Section[]
     count += 1;
   }
   return count;
+}
+
+/** Non-global on purpose: a global regex is stateful, and `test()` on one leaks `lastIndex`. */
+const NORMATIVE_KEYWORD_PROBE =
+  /\b(?:MUST NOT|SHALL NOT|SHOULD NOT|NOT RECOMMENDED|MUST|SHALL|REQUIRED|SHOULD|RECOMMENDED|OPTIONAL|MAY)\b/u;
+
+/**
+ * The complement of `countProseBlocks`, and the part of it that matters.
+ *
+ * `unscanned` is a design fact: tables, figures and preformatted text are out of scope.
+ * `keywordBearing` is the cost of that decision - how much of the unread text carries an
+ * RFC 2119 keyword and would have stated a requirement had it been read. A specification
+ * that puts its rules in a field table reports a low count, and this is the number that
+ * says the count is low for a knowable reason.
+ *
+ * Counted here, at derivation, rather than per query: `blocks.snapshot_id` carries no
+ * index, so the SQL version scanned all 53 530 blocks in the corpus on every
+ * `requirements` call - 5.7 seconds on RFC 3261, which is a worse defect than the silence
+ * it was written to remove.
+ */
+function countUnscannableBlocks(
+  blocks: readonly Block[],
+  sections: readonly Section[],
+): { unscanned: number; keywordBearing: number; byKind: Record<string, number> } {
+  const kinds = new Map(sections.map((section) => [section.id, section.kind]));
+  let unscanned = 0;
+  let keywordBearing = 0;
+  const byKind: Record<string, number> = {};
+  for (const block of blocks) {
+    const sectionKind = kinds.get(block.section_id) ?? "unknown";
+    const sectionSkipped = SKIPPED_SECTION_KINDS.has(sectionKind);
+    if (!sectionSkipped && PROSE_BLOCK_KINDS.has(block.kind)) continue;
+    unscanned += 1;
+    const bucket = sectionSkipped ? `section:${sectionKind}` : block.kind;
+    byKind[bucket] = (byKind[bucket] ?? 0) + 1;
+    if (NORMATIVE_KEYWORD_PROBE.test(block.text)) keywordBearing += 1;
+  }
+  return { unscanned, keywordBearing, byKind };
 }
 
 function rowToSnapshot(row: SnapshotRow): Snapshot {
@@ -1655,6 +1729,9 @@ function rowToSnapshot(row: SnapshotRow): Snapshot {
     requirement_count: row.requirement_count,
     reference_count: row.reference_count,
     prose_block_count: row.prose_block_count,
+    unscanned_block_count: row.unscanned_block_count,
+    keyword_bearing_unscanned_block_count: row.keyword_bearing_unscanned_block_count,
+    unscanned_block_kinds: (parseJson(row.unscanned_block_kinds_json ?? "{}") ?? {}) as Record<string, number>,
   };
 }
 

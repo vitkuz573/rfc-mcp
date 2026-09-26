@@ -114,6 +114,13 @@ describe("external reference identity", () => {
         "[IEEE] Institute of Electrical and Electronics Engineers, <http://ieeexplore.ieee.org/document/1659158/>.",
         "http://ieeexplore.ieee.org/document/1659158/",
       ],
+      // A URL at the end of a sentence does not carry the sentence's punctuation.
+      [
+        "[CBCATT] Bodo Moeller, <http://www.openssl.org/~bodo/tls-cbc.txt>.",
+        "http://www.openssl.org/~bodo/tls-cbc.txt",
+      ],
+      ['[PAPER] Someone, "A study" (see http://example.org/paper.pdf).', "http://example.org/paper.pdf"],
+      ["[DICT] See http://example.org/dict.", "http://example.org/dict"],
     ];
     for (const [text, id] of cases) expect(classifyExternal(text)?.id, text).toBe(id);
   });

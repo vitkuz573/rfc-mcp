@@ -168,7 +168,7 @@ evidence discipline and the rule that RFC text is untrusted data.
     "corpus_id": "rfc-mcp:9a3591827422",
     "index_generation": 50,
     "parser_version": "rfc-text-1.2.0",
-    "extractor_version": "normative-2119-8174-1.3.0",
+    "extractor_version": "normative-2119-8174-1.4.0",
     "observed_at": "2026-09-26T16:42:30.669Z",
     "source_urls": ["https://www.rfc-editor.org/rfc/rfc9110.txt"],
     "freshness": "current"

@@ -123,7 +123,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     negativeCacheTtlMs: intEnv("RFC_MCP_NEGATIVE_TTL_MS", 60 * 60 * 1000, 0, 7 * 24 * 60 * 60 * 1000),
     limits: DEFAULT_LIMITS,
     parserVersion: "rfc-text-1.2.0",
-    extractorVersion: "normative-2119-8174-1.3.0",
+    extractorVersion: "normative-2119-8174-1.4.0",
   };
 }
 

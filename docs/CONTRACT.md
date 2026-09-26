@@ -15,7 +15,7 @@ policy inventory in machine-readable form.
     "corpus_id": "rfc-mcp:<hash>",
     "index_generation": 42,     // monotonic; changes invalidate cursors
     "parser_version": "rfc-text-1.2.0",
-    "extractor_version": "normative-2119-8174-1.3.0",
+    "extractor_version": "normative-2119-8174-1.4.0",
     "observed_at": "2026-09-25T16:04:08.222Z",   // RFC 3339 UTC
     "source_urls": ["https://www.rfc-editor.org/rfc/rfc9110.txt"],
     "freshness": "current" | "cached" | "stale" | "offline"

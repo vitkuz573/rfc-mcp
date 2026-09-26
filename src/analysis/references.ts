@@ -236,10 +236,23 @@ function urlFrom(text: string): string | null {
     // A URL broken across lines keeps a soft hyphen where the text wrapped; a hyphen that
     // is not followed by a line break is part of the URL and must survive.
     const joined = bracketed.replace(/-\s+(?=[a-z0-9/._~:])/giu, "").replace(/\s+/gu, "");
-    if (joined.length > "https://".length + 4) return joined;
+    const trimmed = trimUrl(joined);
+    if (trimmed) return trimmed;
   }
   const bare = BARE_URL_IN_TEXT.exec(text)?.[1];
-  return bare && bare.length > "https://".length + 4 ? bare : null;
+  return bare ? trimUrl(bare) : null;
+}
+
+/**
+ * A URL at the end of a sentence carries the sentence's punctuation. Trailing `.` `,` `;`
+ * `:` are stripped, as is a closing parenthesis that has no opening partner inside the URL.
+ */
+function trimUrl(url: string): string | null {
+  let trimmed = url.replace(/[.,;:]+$/u, "");
+  while (trimmed.endsWith(")") && (trimmed.match(/\(/gu)?.length ?? 0) < (trimmed.match(/\)/gu)?.length ?? 0)) {
+    trimmed = trimmed.slice(0, -1);
+  }
+  return trimmed.length > "https://".length + 4 ? trimmed : null;
 }
 
 function yearOf(designation: string): number | null {

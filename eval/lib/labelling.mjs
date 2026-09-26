@@ -49,6 +49,15 @@ export function modalToken(sentence) {
 // Section kinds that cannot hold a normative statement about an implementation, or
 // that are structural. Appendix is deliberately NOT here: appendices hold field
 // definitions, and those are exactly the sentences a keyword-driven pass misses.
+//
+// `references` and `authors` were added after measurement. The red-team audit counted 8
+// probes cut from `references` sections and 2 from `authors`, and the project's own
+// miss review had already classified all 8 of the bibliography ones `label_error` - the
+// project was counting its own labelling defect in the recall denominator and calling the
+// remainder a miss. A bibliography entry is a citation, not an obligation, and an author's
+// address is a postal address; neither is in the same category as a `Requirements`
+// section, and the fix is to the LABELLER rather than to the denominator, because the
+// sentences were never candidates. Appendix stays out of the skip list on purpose.
 const SKIP_KINDS = new Set([
   "front_matter",
   "status",
@@ -59,6 +68,8 @@ const SKIP_KINDS = new Set([
   "acknowledgments",
   "acknowledgements",
   "authors_address",
+  "authors",
+  "references",
   "index",
 ]);
 
@@ -222,6 +233,47 @@ export function whyFor(tier, kw, section) {
 export const SKIP_KINDS_FOR_PROBE = SKIP_KINDS;
 
 /**
+ * A line that begins with a dotted number and an upper-case word: the shape a typeset
+ * subsection title has. Loose on purpose, since an invariant tighter than the heading
+ * finder stops seeing what the finder dropped.
+ */
+const HEADING_SHAPE = /^[ ]{0,8}(\d+(?:\.\d+)+)\.?[ ]{1,4}([A-Z(].{0,70})$/u;
+
+/**
+ * A paragraph that opens with a section number and an RFC 2119 keyword is content, not
+ * a title: "3.3 MUST be set on every interface" is a sentence a document can write, and
+ * no typeset title begins with a keyword. The parser applies this same rule before it
+ * promotes an indented line, so a line the parser would never call a heading is a line
+ * this invariant must not report either: a false positive here sends the reader looking
+ * for a title that was never on the page, and a reader sent there once stops reading
+ * the output.
+ */
+const KEYWORD_LEAD =
+  /^(?:MUST NOT|SHALL NOT|SHOULD NOT|NOT RECOMMENDED|MUST|SHALL|REQUIRED|SHOULD|RECOMMENDED|MAY|OPTIONAL)\b[\s,]/u;
+
+const indentOf = (line) => line.length - line.trimStart().length;
+
+/**
+ * Is the line under this one a continuation of the same sentence?
+ *
+ * A wrapped paragraph is the other half of "a line that merely begins with a number":
+ * the line that opens it matches the heading shape and the line under it carries on at
+ * the same indent. A title is followed by a blank line or by body that steps in, which
+ * is the test the parser applies before it promotes an indented line - so this is the
+ * parser's condition inverted, and the invariant has to agree with the parser about
+ * what a title is. A sampled section that ends on its own title has no line to judge
+ * by, and absence of evidence is not evidence of a continuation.
+ */
+function continuesAtSameIndent(lines, index) {
+  for (let j = index + 1; j < lines.length; j += 1) {
+    const next = lines[j];
+    if (next.trim() === "") continue;
+    return indentOf(next) <= indentOf(lines[index]);
+  }
+  return false;
+}
+
+/**
  * Numbered subsection headings that the text shows and the outline does not list.
  *
  * This is a label-free invariant, and it exists because a bench that samples sections
@@ -234,14 +286,21 @@ export const SKIP_KINDS_FOR_PROBE = SKIP_KINDS;
 export function danglingHeadings(text, outlineNumbers) {
   const known = new Set(outlineNumbers);
   const found = new Map();
-  for (const line of String(text ?? "").split("\n")) {
-    const m = line.match(/^[ ]{0,8}(\d+(?:\.\d+)+)\.?[ ]{1,4}([A-Z(].{0,70})$/u);
+  const lines = String(text ?? "").split("\n");
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    const m = line.match(HEADING_SHAPE);
     if (!m) continue;
     const number = m[1];
     if (known.has(number)) continue;
-    // A sentence that merely starts with a number is not a heading; a heading is short
-    // and does not end in a full stop.
+    // A bare integer is already outside the shape (a level-1 title sits at column 0 and
+    // is in the outline anyway), and so is a lower-case continuation - "1983 must not be
+    // read as a section number" has neither a dotted number nor an upper-case first
+    // word. A heading is short, ends without a full stop, and does not open with a
+    // keyword.
+    if (KEYWORD_LEAD.test(m[2])) continue;
     if (/[.;,]$/u.test(line.trim())) continue;
+    if (continuesAtSameIndent(lines, i)) continue;
     if (!found.has(number)) found.set(number, line.trim());
   }
   return [...found.entries()].map(([number, title]) => ({ number, title }));
@@ -257,4 +316,76 @@ export function chooseSection(sections, textFor) {
     if (modalCandidates(text).length > 0) return { section: s, attempt: idx / eligible.length };
   }
   return null;
+}
+
+// -------------------------------------------------------------------------------------
+// Provenance: where in the bytes a probe was cut from.
+//
+// WHY THIS EXISTS. The golden set recorded a snapshot id per PROTOCOL and nothing at all
+// on the 260 rules that are actually scored - no snapshot, no offset, not a byte. A
+// golden set that cannot name the bytes it was cut from cannot be re-verified after a
+// re-sync, and it could not be: 95 of 95 protocols had drifted, drift was printed, and
+// nothing acted on it, so a stale probe was indistinguishable from a tool miss. Ten of the
+// old probes were not even reachable any more - RFC 959's G0004 claims section "5", which
+// now returns 30 characters, and a 30-character text cannot yield a 154-character probe.
+// Every rule now carries the snapshot, the section, and the character offsets in BOTH the
+// raw and the normalised view, so a rebuild after a re-sync either reproduces the rule or
+// names it.
+//
+// The mapping is built once per section rather than per probe: `norm` collapses runs of
+// whitespace to one space, so an index into the normalised text is not an index into the
+// raw text, and the two views have to be walked together to say where a probe came from.
+// -------------------------------------------------------------------------------------
+
+/**
+ * `normalised` plus, for each of its characters, the index of the raw character it came
+ * from. A collapsed whitespace run maps to its first character; leading and trailing
+ * whitespace contributes nothing, which is what `norm` does to it.
+ */
+export function normalisationMap(rawText) {
+  const raw = String(rawText ?? "");
+  const map = [];
+  let chars = "";
+  let seen = false;
+  let inRun = false;
+  for (let i = 0; i < raw.length; i += 1) {
+    if (raw[i].trim() === "") {
+      if (seen && !inRun) {
+        chars += " ";
+        map.push(i);
+        inRun = true;
+      }
+      continue;
+    }
+    chars += raw[i];
+    map.push(i);
+    seen = true;
+    inRun = false;
+  }
+  return { normalised: chars, map };
+}
+
+/**
+ * Where `probe` sits in `rawText`, in both views. Null when the probe is not in this text
+ * at all, which is the answer a rebuild after a re-sync has to be able to give. When it
+ * occurs more than once, the first occurrence is returned and `occurrences` says how many
+ * there were: a sentence that repeats inside a section is a real property of the text,
+ * and re-verification must not silently pick one of the places.
+ */
+export function locate(rawText, probe) {
+  const { normalised, map } = normalisationMap(rawText);
+  const needle = norm(probe);
+  if (needle.length === 0 || normalised.length !== map.length) return null;
+  const first = normalised.indexOf(needle);
+  if (first < 0) return null;
+  let occurrences = 0;
+  for (let at = first; at >= 0; at = normalised.indexOf(needle, at + 1)) occurrences += 1;
+  const last = first + needle.length - 1;
+  return {
+    norm_start: first,
+    norm_end: first + needle.length,
+    raw_start: map[first],
+    raw_end: (map[last] ?? map[map.length - 1] ?? 0) + 1,
+    occurrences,
+  };
 }

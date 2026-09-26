@@ -38,6 +38,14 @@ extractor's failure surface, not a generic taxonomy.
   field definition fragment, a fragment of a statement split by a page break.
 - `reference_or_bibliography` — an entry, a citation, an author's address, a credit.
 
+**Seven reasons, and only these seven.** `boilerplate` appears as a reason in
+`before-precision-labels-candidates.json` (46 uses) and `after-precision-labels-candidates.json`
+(11 uses), and it is not one of them. Those labels are not wrong — the RFC 2119 key-words
+paragraph really is boilerplate — but the reason is outside the taxonomy, so a later reader
+counting by reason cannot reproduce the judgement. Record `definition_of_keywords` for the
+key-words paragraph, `not_an_obligation` for a copyright notice, and leave a `note` when the
+sentence is genuinely a different thing.
+
 ## Verdicts for `kind: requirement`
 
 A `requirement` is emitted because an upper-case RFC 2119 keyword was found in a prose
@@ -59,6 +67,44 @@ candidate is a true positive when the sentence binds an implementer _and_ is not
 and note where they disagree with the verdict — a disagreement is a finding, not a
 reason to change the verdict.
 
+## The two lists are judged by different heads
+
+RFC 8174 §3: an uncapitalised keyword has no normative force. So the same sentence can be
+`true` as a `requirement` and `false` as a `non_strict_candidate`, and that is not an
+inconsistency — it is the two-headed standard above doing its job.
+
+Which is why the carry key in `eval/apply-labels.mjs` is `(rfc, kind, text)` and not
+`(rfc, text)`. The old key omitted `kind` and overwrote, so a contradiction between two
+label files was stored silently. There already is one: rfc 7872, `true` in
+`before-precision-labels.json` and `false` in `before-precision-labels-candidates.json`. The
+script now reports such a collision and refuses to pick a winner. If you disagree with a
+carried label, judge the sentence again and say so in a `note`; do not edit the earlier
+file.
+
+## The negative-probe rubric, for the one population that is not hand-labelled
+
+The negative probes — statements that must **not** be in a compliance list — are _not_
+hand-labelled. Each one is produced by a named mechanism test in `eval/lib/negative.mjs` and
+the label **is** the mechanism, so the set can be re-derived from the corpus by anyone. That
+is deliberate: a hand-picked negative is chosen by a person who has read the tool's output,
+and it drifts toward the sentences the tool already rejects, which would make the score
+flattering in exactly the way the positive set is.
+
+What a mechanism cannot do is judge grammar, so two things are stated rather than guessed:
+
+- A sentence carrying an **upper-case** RFC 2119 keyword is never labelled a descriptive
+  modal. RFC 8174 gives it force, and the bench has no mechanism to argue with that.
+- A sentence inside a **preformatted** block is reported as its own, contested class. RFC
+  1122 indents its body text at column 12 and is therefore typed preformatted wholesale; the
+  tool emitting its obligations is right, and a "never scan a non-prose block" rule would
+  call it a false positive. Both readings are defensible, so the bench prints the number and
+  asserts neither.
+
+If you want the upper-case descriptive modals measured — "The length MAY be zero" is the
+commonest false positive in RFC 2119 — they need a hand judgement, and the place to record
+it is here: a new class, a named mechanism, and the population it fires on. Not a regex
+borrowed from the extractor's own `shape` field, which is the claim under test.
+
 ## What to record
 
 ```json
@@ -73,3 +119,21 @@ or
 
 Precision is reported overall and split by `kind` and by `keyword_case`, because a
 number that is a weighted mix of a good list and a bad one hides which half is wrong.
+
+## The sample is deduped, and that changes what precision means
+
+22.6% of the rows the tool emits over the 100 measured protocols are duplicates of another
+row in the same document — the worst document repeats one sentence twelve times. An
+undeduped sample therefore labels the same sentence repeatedly, and its effective `n` is
+smaller than its printed `n` in a way no reader can see.
+
+Both samplers (`run-bench.mjs` and `precision-sample.mjs`) now dedupe on
+`(rfc, normalised text)` and print how many duplicate rows they skipped. Two consequences:
+
+- The reported precision is **sentence precision**, not row precision. A caller reading a
+  list cares about the sentence.
+- The carry-over rate in `apply-labels.mjs` is computed over distinct sentences, so it is
+  comparable with the label files above even where the underlying sample was not deduped.
+
+A change that raises recall and lowers the negative-probe score is overfitting, and both
+numbers are reported together for exactly that reason.

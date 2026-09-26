@@ -23,8 +23,9 @@ import type {
   Snapshot,
   Span,
 } from "../core/types.js";
-import { canonicalErrataStatus, errataStatusFilter } from "../core/types.js";
+import { canonicalErrataStatus, errataStatusFilter, NORMATIVE_TERMS } from "../core/types.js";
 import { PROSE_BLOCK_KINDS, SKIPPED_SECTION_KINDS } from "../analysis/normative.js";
+import { stableCitationId } from "../analysis/citation.js";
 import { contentHash, isoNow, sha256Hex, shortHash } from "../core/util.js";
 import { SCHEMA_MIGRATIONS, SCHEMA_SQL, SCHEMA_VERSION } from "./schema.js";
 import type { HttpCacheEntry } from "../upstream/http.js";
@@ -559,6 +560,9 @@ export class CorpusStore {
         unscanned.keywordBearing,
         JSON.stringify(unscanned.byKind),
       );
+      // The counters above are this build's, so stamp the predicate that produced them.
+      // A snapshot written without the stamp is what `ensureLossCounters` recomputes.
+      this.setMeta(lossCounterPredicateKey(bundle.snapshot.id), lossCounterPredicateId());
 
       for (const section of bundle.sections) {
         this.stmt(
@@ -619,13 +623,19 @@ export class CorpusStore {
         insertFts.run(bundle.snapshot.id, block.id, block.section_id, block.rfc, block.text);
       }
 
+      // The section NUMBER is not on a mention or a requirement row, it is on the section
+      // the block belongs to. Deriving it is the store's job, which is why the
+      // re-derivation-stable id is computed here and not by the extractor that produced
+      // the row.
+      const sectionNumbers = new Map(bundle.sections.map((section) => [section.id, section.number]));
       const insertMention = this.stmt(
         `INSERT INTO mentions (id, snapshot_id, rfc, section_id, block_id, term, strength, polarity, exact_text, context,
-           disposition, flags_json, citation_id, char_start, char_end, byte_start, byte_end, codepoint_start,
+           disposition, flags_json, citation_id, stable_citation_id, char_start, char_end, byte_start, byte_end, codepoint_start,
            codepoint_end, line_start, line_end)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       );
-      for (const mention of bundle.mentions) {
+      const mentionStableIds = stableCitationIdsFor(bundle.mentions, sectionNumbers);
+      for (const [index, mention] of bundle.mentions.entries()) {
         insertMention.run(
           mention.id,
           bundle.snapshot.id,
@@ -640,6 +650,7 @@ export class CorpusStore {
           mention.disposition,
           JSON.stringify(mention.flags),
           mention.citation_id,
+          mentionStableIds[index]!,
           mention.span.char_start,
           mention.span.char_end,
           mention.span.byte_start,
@@ -654,10 +665,11 @@ export class CorpusStore {
       const insertRequirement = this.stmt(
         `INSERT INTO requirements (id, snapshot_id, rfc, section_id, block_id, term, strength, polarity, exact_text,
            citation_id, parse_status, confidence, actor, condition_text, action, exception_text, flags_json,
-           keywords_json, char_start, char_end, byte_start, byte_end, codepoint_start, codepoint_end, line_start, line_end)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           keywords_json, stable_citation_id, char_start, char_end, byte_start, byte_end, codepoint_start, codepoint_end, line_start, line_end)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       );
-      for (const requirement of bundle.requirements) {
+      const requirementStableIds = stableCitationIdsFor(bundle.requirements, sectionNumbers);
+      for (const [index, requirement] of bundle.requirements.entries()) {
         insertRequirement.run(
           requirement.id,
           bundle.snapshot.id,
@@ -677,6 +689,7 @@ export class CorpusStore {
           requirement.clause.exception,
           JSON.stringify(requirement.flags),
           JSON.stringify(requirement.keywords),
+          requirementStableIds[index]!,
           requirement.span.char_start,
           requirement.span.char_end,
           requirement.span.byte_start,
@@ -919,6 +932,21 @@ export class CorpusStore {
     return row ? rowToSection(row) : null;
   }
 
+  // A section NUMBER is not unique inside a snapshot: 113 of the 159 ingested snapshots
+  // have at least one number that appears twice, and RFC 1350 has ten sections numbered
+  // "2". Resolving a stable citation id against the first match silently answered a
+  // question about a different section, so callers got not_found for a quote that is
+  // present, with a note implying the text had changed. The number is part of the id by
+  // design - it is what survives a re-parse - so the resolver has to consider every
+  // section the number names, and report more than one hit as what it is.
+  getSectionsByNumber(snapshotId: string, number: string): Section[] {
+    const rows = this.stmt("SELECT * FROM sections WHERE snapshot_id = ? AND number = ? ORDER BY ordinal").all(
+      snapshotId,
+      number,
+    ) as unknown as SectionRow[];
+    return rows.map(rowToSection);
+  }
+
   getSectionById(snapshotId: string, id: string): Section | null {
     const row = this.stmt("SELECT * FROM sections WHERE snapshot_id = ? AND id = ?").get(snapshotId, id) as
       SectionRow | undefined;
@@ -1122,6 +1150,94 @@ export class CorpusStore {
     return (parseJson(row?.k ?? "{}") ?? {}) as Record<string, number>;
   }
 
+  /**
+   * The stored loss counters for a snapshot, recomputed if an earlier build wrote them.
+   *
+   * The counters are a function of `countUnscannableBlocks`, not of the snapshot
+   * identity, so `reanalyze` leaves them alone: a corpus whose counters were written by
+   * an older predicate keeps reporting the older numbers through every re-derive, and the
+   * only documented remedy - a parser or extractor version bump - re-mints every snapshot
+   * id in the corpus and retires every pinned citation with it. That is a large, visible
+   * cost to pay for a number that is wrong by a factor of three.
+   *
+   * So the repair happens where the number is read, at most once per snapshot, and says
+   * it happened. `repaired` is not a detail: a caller comparing counts across two
+   * documents is comparing two derivations of a predicate, and the response has to be
+   * able to say which.
+   *
+   * The write deliberately does NOT bump `index_generation`. The generation exists so a
+   * cursor or a cached search detects that the corpus changed underneath it, and this
+   * changes no indexed text and no document: it corrects a reported number in a column
+   * nothing else reads. Bumping it would invalidate every outstanding cursor for a change
+   * no caller could perceive.
+   */
+  ensureLossCounters(
+    snapshotId: string,
+  ): { repaired: boolean; unscanned: number; keywordBearing: number; byKind: Record<string, number> } | null {
+    const stored = this.stmt(
+      `SELECT unscanned_block_count, keyword_bearing_unscanned_block_count, unscanned_block_kinds_json
+         FROM snapshots WHERE id = ?`,
+    ).get(snapshotId) as
+      | {
+          unscanned_block_count: number;
+          keyword_bearing_unscanned_block_count: number;
+          unscanned_block_kinds_json: string;
+        }
+      | undefined;
+    if (!stored) return null;
+    const byKind = (parseJson(stored.unscanned_block_kinds_json ?? "{}") ?? {}) as Record<string, number>;
+    if (this.getMeta(lossCounterPredicateKey(snapshotId)) === lossCounterPredicateId()) {
+      return {
+        repaired: false,
+        unscanned: stored.unscanned_block_count,
+        keywordBearing: stored.keyword_bearing_unscanned_block_count,
+        byKind,
+      };
+    }
+    const fresh = countUnscannableBlocks(this.listBlocks(snapshotId), this.getSections(snapshotId));
+    this.stmt(
+      `UPDATE snapshots
+          SET unscanned_block_count = ?, keyword_bearing_unscanned_block_count = ?, unscanned_block_kinds_json = ?
+        WHERE id = ?`,
+    ).run(fresh.unscanned, fresh.keywordBearing, JSON.stringify(fresh.byKind), snapshotId);
+    this.setMeta(lossCounterPredicateKey(snapshotId), lossCounterPredicateId());
+    return { repaired: true, ...fresh };
+  }
+
+  /**
+   * Requirement rows that declare themselves fragments, over the whole document.
+   *
+   * Counted in SQL and not read off the page because `coverage` describes the document
+   * while `requirements` is one page of it: a page-2 caller would otherwise be told the
+   * document has no fragments because page 1 held none.
+   *
+   * `parse_status = "fragment"` is a value `analyzeNormative` does not emit yet. It is
+   * the value the diagnosis for Y2 specifies - a sentence a page break cut in half, which
+   * the strict pass reports today as `complete` with `confidence: 0.9` and `flags: []` on
+   * 274 rows across 38 documents - and it is counted here the day it is written, so that
+   * `coverage.completeness` reacts to the fix without being changed by it. Until then the
+   * count is 0, and 0 is a true statement about rows that declare themselves fragments,
+   * not a claim that the document has none.
+   */
+  countFragmentRequirements(snapshotId: string, filter: { term?: string; sectionPrefix?: string | null }): number {
+    const conditions = ["snapshot_id = ?", "parse_status = 'fragment'"];
+    const params: (string | number)[] = [snapshotId];
+    if (filter.term) {
+      conditions.push("term = ?");
+      params.push(filter.term);
+    }
+    if (filter.sectionPrefix) {
+      conditions.push(
+        `section_id IN (SELECT id FROM sections WHERE snapshot_id = ? AND (number = ? OR number LIKE ?))`,
+      );
+      params.push(snapshotId, filter.sectionPrefix, `${filter.sectionPrefix}.%`);
+    }
+    const row = this.stmt(`SELECT COUNT(*) AS n FROM requirements WHERE ${conditions.join(" AND ")}`).get(
+      ...params,
+    ) as { n: number };
+    return row.n;
+  }
+
   getRequirementById(snapshotId: string, id: string): Requirement | null {
     const row = this.stmt("SELECT * FROM requirements WHERE snapshot_id = ? AND id = ?").get(snapshotId, id) as
       RequirementRow | undefined;
@@ -1138,6 +1254,32 @@ export class CorpusStore {
   }
 
   /**
+   * Which snapshots minted a re-derivation-stable id, and where.
+   *
+   * The stable id itself is a hash and cannot be inverted, so the only record of where
+   * an id came from is the rows that carry it. That record is what separates "this text
+   * is in the snapshot you pinned" from "this text is in the document": a sentence is
+   * stable across a parser bump, so a stable id resolves in a snapshot that never minted
+   * it, and the answer there is `stale` with the minting snapshot named. A parser bump
+   * deletes the snapshot it retired, so the row is the ONLY trace left, and losing it
+   * would turn "here is where your citation came from" into "not found".
+   */
+  stableCitationOrigins(
+    stableId: string,
+  ): { readonly snapshot_id: string; readonly kind: "requirement" | "mention" }[] {
+    const out: { snapshot_id: string; kind: "requirement" | "mention" }[] = [];
+    for (const table of ["requirements", "mentions"] as const) {
+      const rows = this.stmt(
+        `SELECT DISTINCT snapshot_id FROM ${table} WHERE stable_citation_id = ? AND stable_citation_id != ''`,
+      ).all(stableId) as { snapshot_id: string }[];
+      for (const row of rows) {
+        out.push({ snapshot_id: row.snapshot_id, kind: table === "requirements" ? "requirement" : "mention" });
+      }
+    }
+    return out;
+  }
+
+  /**
    * Blocks whose text contains an RFC 2119 keyword in any case.
    *
    * `requirements` is the strict, upper-case-only reading of RFC 8174. A zero there
@@ -1146,18 +1288,21 @@ export class CorpusStore {
    * to an implementer and neither is a requirement by the letter of the spec. The
    * candidates have to be reachable, or a caller can only conclude "no norms" from
    * a number that means "no upper-case norms".
+   *
+   * The predicate is `NORMATIVE_KEYWORD_STEMS`, the same list `carriesNormativeKeyword`
+   * tests, so the loss counter and this selector cannot disagree about which blocks carry
+   * a keyword. The seven hand-written stems this replaced were a narrower spelling of the
+   * same question and nothing kept them in step with `NORMATIVE_TERMS`.
    */
   listBlocksWithKeywords(snapshotId: string, limit = 5000): Block[] {
     return (
       this.stmt(
         `SELECT * FROM blocks
           WHERE snapshot_id = ?
-            AND (lower(text) LIKE '%must%' OR lower(text) LIKE '%shall%' OR lower(text) LIKE '%should%'
-                 OR lower(text) LIKE '%may%' OR lower(text) LIKE '%required%' OR lower(text) LIKE '%recommend%'
-                 OR lower(text) LIKE '%optional%')
+            AND (${NORMATIVE_KEYWORD_LIKE_CLAUSE})
           ORDER BY ordinal
           LIMIT ?`,
-      ).all(snapshotId, limit) as unknown as BlockRow[]
+      ).all(snapshotId, ...NORMATIVE_KEYWORD_STEMS.map((stem) => `%${stem}%`), limit) as unknown as BlockRow[]
     ).map(rowToBlock);
   }
 
@@ -1670,23 +1815,123 @@ function countProseBlocks(blocks: readonly Block[], sections: readonly Section[]
   return count;
 }
 
-/** Non-global on purpose: a global regex is stateful, and `test()` on one leaks `lastIndex`. */
-const NORMATIVE_KEYWORD_PROBE =
-  /\b(?:MUST NOT|SHALL NOT|SHOULD NOT|NOT RECOMMENDED|MUST|SHALL|REQUIRED|SHOULD|RECOMMENDED|OPTIONAL|MAY)\b/u;
+/**
+ * The RFC 2119 keyword predicate, in one list, with one case semantic.
+ *
+ * Two passes read a document and each chose its block set with a different spelling
+ * of the same question. The counter tested `TERM_PROBE`, which is upper case and
+ * case-SENSITIVE; the candidate pass selects its blocks with `lower(text) LIKE
+ * '%must%'`, which is not. So the loss counter counted only what the strict pass
+ * would have scanned, and a body block holding "the receiver must discard the
+ * datagram" was dropped by the candidate pass, uncounted by the counter and
+ * unwarned: the counter was blind to exactly the class of loss it was added to
+ * expose. Measured over the 182-document corpus, 448 blocks were counted and 1 471
+ * carry a keyword in any case. RFC 2328 goes from 0 to 84, and its 244 pages of
+ * tabular protocol specification are the document the scenario walkthrough called a
+ * certificate of absence in a typed field.
+ *
+ * Both sides are now generated from the keyword list itself, so a keyword added to
+ * `NORMATIVE_TERMS` cannot leave the counter and the selector disagreeing again: the
+ * list is the single source, and the case semantics are the same in both.
+ */
+export const NORMATIVE_KEYWORD_STEMS: readonly string[] = Object.keys(NORMATIVE_TERMS)
+  .map((term) => term.toLowerCase())
+  .sort((left, right) => right.length - left.length);
+
+/**
+ * Word-bounded, and case-insensitive. Non-global on purpose: a global regex is
+ * stateful, and `test()` on one leaks `lastIndex` into every later `matchAll` in
+ * the process, which is the defect that once stopped requirements being found.
+ */
+const NORMATIVE_KEYWORD_PROBE = new RegExp(
+  `\\b(?:${NORMATIVE_KEYWORD_STEMS.map((stem) => stem.replace(/ /gu, "\\s+")).join("|")})\\b`,
+  "iu",
+);
+
+/** Whether a block's text carries an RFC 2119 keyword in any capitalisation. */
+export function carriesNormativeKeyword(text: string): boolean {
+  return NORMATIVE_KEYWORD_PROBE.test(text);
+}
+
+/**
+ * The same predicate as a SQL guard, generated from the same list.
+ *
+ * A substring net on purpose, because this is a PREFILTER: it decides which blocks
+ * get loaded, and the candidate pass re-tests every sentence it is handed with its
+ * own word-bounded regex, so a block selected here for containing "mustard" yields
+ * no rows and costs one string test. Measured over the corpus that residual is 101
+ * blocks against 1 471 that carry a keyword. Word boundaries in SQL would mean
+ * locating every occurrence in SQL, which is the shape of query that cost 29 500 ms
+ * on RFC 3261.
+ */
+const NORMATIVE_KEYWORD_LIKE_CLAUSE = NORMATIVE_KEYWORD_STEMS.map(() => "lower(text) LIKE ?").join(" OR ");
+
+/**
+ * Which predicate wrote the stored loss counters of one snapshot.
+ *
+ * The counters live in columns, not in the snapshot identity, so nothing downstream of a
+ * rule change can tell that they were produced by a different rule. This is that record,
+ * and it is PER SNAPSHOT rather than per corpus: a single corpus-wide flag repairs the
+ * first snapshot read after the change and then declares the other 181 up to date, which
+ * is the same silent staleness with a smaller number. `meta.key` is the primary key, so
+ * the lookup is indexed and the cost is one row.
+ */
+function lossCounterPredicateKey(snapshotId: string): string {
+  return `loss_counter_predicate:${snapshotId}`;
+}
+
+function lossCounterPredicateId(): string {
+  return `stems:${NORMATIVE_KEYWORD_STEMS.join("|")}|case:insensitive`;
+}
+
+/**
+ * The re-derivation-stable id for every stored row, in one pass.
+ *
+ * Computed here, at write, because the section NUMBER is the one input the row does not
+ * carry: it lives on the section the block belongs to, and a requirement is stored with
+ * a section_id, not a number. Everything else in the id is content the RFC published.
+ *
+ * `occurrence` is left at 0 on purpose. A sentence that appears twice in one section gets
+ * ONE id on purpose too, because one id with two referents is the honest state of the
+ * evidence — and `verify_citation` answers `ambiguous` for it, naming both byte spans,
+ * instead of returning the first match and letting a caller quote one of two places it
+ * never chose. A caller that counted can mint occurrence 1 for the second copy; that id
+ * resolves to the same sentence, and still names both places.
+ *
+ * A row whose section is absent from the bundle gets `""`, not a guess. "Never minted"
+ * and "minted from a section number nobody can name" are different states and the column
+ * has to be able to say so.
+ */
+function stableCitationIdsFor(
+  rows: readonly { readonly rfc: number; readonly section_id: string; readonly exact_text: string }[],
+  sectionNumbers: ReadonlyMap<string, string>,
+): string[] {
+  return rows.map((row) => {
+    const sectionNumber = sectionNumbers.get(row.section_id);
+    if (sectionNumber === undefined) return "";
+    return stableCitationId({ rfc: row.rfc, sectionNumber, quote: row.exact_text });
+  });
+}
 
 /**
  * The complement of `countProseBlocks`, and the part of it that matters.
  *
  * `unscanned` is a design fact: tables, figures and preformatted text are out of scope.
  * `keywordBearing` is the cost of that decision - how much of the unread text carries an
- * RFC 2119 keyword and would have stated a requirement had it been read. A specification
- * that puts its rules in a field table reports a low count, and this is the number that
- * says the count is low for a knowable reason.
+ * RFC 2119 keyword, in ANY capitalisation, and would have stated a requirement had it been
+ * read. A specification that puts its rules in a field table reports a low count, and this
+ * is the number that says the count is low for a knowable reason. It counts a keyword in a
+ * bibliography entry too, because the counter cannot tell a modal in a citation from a
+ * modal in a rule; `unscanned_block_kinds` splits the two by section, and
+ * `coverage.completeness` is what weighs them.
  *
  * Counted here, at derivation, rather than per query: `blocks.snapshot_id` carries no
  * index, so the SQL version scanned all 53 530 blocks in the corpus on every
  * `requirements` call - 5.7 seconds on RFC 3261, which is a worse defect than the silence
- * it was written to remove.
+ * it was written to remove. The cost of storing it is that the counter is a function of THIS
+ * function and not of the snapshot identity, so `reanalyze` does not rewrite it: see
+ * `ensureLossCounters`, which is the only path that brings an older corpus onto a corrected
+ * predicate without a version bump and without re-minting every pinned snapshot id.
  */
 function countUnscannableBlocks(
   blocks: readonly Block[],
@@ -1703,7 +1948,7 @@ function countUnscannableBlocks(
     unscanned += 1;
     const bucket = sectionSkipped ? `section:${sectionKind}` : block.kind;
     byKind[bucket] = (byKind[bucket] ?? 0) + 1;
-    if (NORMATIVE_KEYWORD_PROBE.test(block.text)) keywordBearing += 1;
+    if (carriesNormativeKeyword(block.text)) keywordBearing += 1;
   }
   return { unscanned, keywordBearing, byKind };
 }
@@ -1824,6 +2069,7 @@ interface RequirementRow {
   exception_text: string | null;
   flags_json: string;
   keywords_json: string;
+  stable_citation_id: string;
   char_start: number;
   char_end: number;
   byte_start: number;
@@ -1863,6 +2109,11 @@ function rowToRequirement(row: RequirementRow, _snapshotId: string): Requirement
     disposition: "requirement",
     flags: parseJson(row.flags_json) ?? [],
     citation_id: row.citation_id,
+    // A row written before the column existed holds '', which is reported as "no
+    // re-derivation-stable id was minted for this row" rather than reconstructed: the
+    // section number it needs is not on the row, and `reanalyze --all` is what puts it
+    // there.
+    stable_citation_id: row.stable_citation_id,
     clause: {
       actor: row.actor,
       condition: row.condition_text,
@@ -1888,6 +2139,7 @@ interface MentionRow {
   disposition: string;
   flags_json: string;
   citation_id: string;
+  stable_citation_id: string;
   char_start: number;
   char_end: number;
   byte_start: number;
@@ -1923,6 +2175,7 @@ function rowToMention(row: MentionRow, _snapshotId: string): NormativeMention {
     disposition: row.disposition as NormativeMention["disposition"],
     flags: parseJson(row.flags_json) ?? [],
     citation_id: row.citation_id,
+    stable_citation_id: row.stable_citation_id,
   };
 }
 

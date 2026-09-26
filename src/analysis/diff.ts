@@ -25,16 +25,74 @@ export interface DiffSide {
 
 const MAX_DIFF_LINES = 2000;
 
+/**
+ * What the pass actually did, as opposed to what it was asked to do.
+ *
+ * This exists because the explanation was being computed and thrown away. The line diff
+ * gives up above a per-side ceiling, falls back to `diffStructure`, and wrote
+ * `documents_too_large_for_line_diff_use_structure_mode` into a local `notes` array that
+ * `DiffResult` has no field for. So `diff(5246, 8446, "text")` returned 107 changes, every
+ * one of them `section_renamed` / `section_added` / `section_removed` / `section_moved`,
+ * byte-identical to `mode: "structure"` on the same pair, and the only thing the caller was
+ * told was that a text diff is not a semantic diff. Measured on the corpus: RFC 5246 is
+ * 5 828 lines, 8446 is 8 964, 2178 is 11 820, 2328 is 12 202, 959 is 3 934 - all over the
+ * ceiling, so the fallback is the normal case for `text` mode and not an edge case.
+ *
+ * `requested_mode` and `mode` are both here because they are the same string in every case
+ * except one, and that one is the whole finding: a caller who asked for a text diff and got
+ * a structural one has to be able to see that from the result, not infer it from the change
+ * kinds. The numbers are here so a caller can tell "over the ceiling" from "under it, and
+ * the two texts really are identical".
+ *
+ * `notes` keeps the machine-readable key the fallback has always used, so a caller that
+ * switches on a string is not broken by this.
+ */
+export interface DiffRun {
+  /** The mode the caller asked for. */
+  readonly requested_mode: DiffMode;
+  /** The mode the returned changes were produced by. Differs only on the line-diff fallback. */
+  readonly mode: DiffMode;
+  /** True only for `mode: "text"`, and true whether or not the ceiling stopped it. */
+  readonly line_diff_attempted: boolean;
+  /** False when the line diff gave up and the changes are structural. */
+  readonly line_diff_within_ceiling: boolean;
+  readonly left_lines: number;
+  readonly right_lines: number;
+  /** The ceiling itself, published so a caller can predict the fallback. */
+  readonly max_lines_per_side: number;
+  /** Machine-readable reasons, empty when the requested mode is the mode that ran. */
+  readonly notes: readonly string[];
+}
+
+/**
+ * A `DiffResult` that says what it did.
+ *
+ * `DiffResult` is declared in `src/core/types.ts`, which this file does not own, and the
+ * fix belongs here rather than there: the knowledge is here. The added field is
+ * `readonly run: DiffRun`, and whoever owns `types.ts` should add it to `DiffResult` as
+ * `readonly run?: DiffRun` so that it is visible on the declared type - see the report.
+ * Until then this subtype is what `diffDocuments` returns, and because it extends
+ * `DiffResult` every existing caller keeps type-checking unchanged, including the one in
+ * `src/service/rfcService.ts` that spreads the result and adds its own `coverage`.
+ */
+export interface DiffOutcome extends DiffResult {
+  readonly run: DiffRun;
+}
+
 export function diffDocuments(input: {
   readonly left: DiffSide;
   readonly right: DiffSide;
   readonly mode: DiffMode;
   readonly maxChanges: number;
   readonly maxOutputBytes: number;
-}): DiffResult {
+}): DiffOutcome {
   const changes: DiffChange[] = [];
   const summary: Record<string, number> = {};
+  // The note is a return value, not a local. See `DiffRun`.
   const notes: string[] = [];
+  let mode: DiffMode = input.mode;
+  let lineDiffAttempted = false;
+  let lineDiffWithinCeiling = true;
 
   const add = (
     kind: string,
@@ -63,7 +121,11 @@ export function diffDocuments(input: {
       break;
     }
     case "text": {
-      diffText(input, add, notes);
+      lineDiffAttempted = true;
+      const outcome = diffText(input, add);
+      notes.push(...outcome.notes);
+      lineDiffWithinCeiling = outcome.notes.length === 0;
+      if (!lineDiffWithinCeiling) mode = "structure";
       break;
     }
     case "requirements": {
@@ -88,6 +150,16 @@ export function diffDocuments(input: {
     changes,
     summary,
     truncated: changes.length >= input.maxChanges,
+    run: {
+      requested_mode: input.mode,
+      mode,
+      line_diff_attempted: lineDiffAttempted,
+      line_diff_within_ceiling: lineDiffWithinCeiling,
+      left_lines: input.left.lines.length,
+      right_lines: input.right.lines.length,
+      max_lines_per_side: MAX_DIFF_LINES,
+      notes,
+    },
   };
 }
 
@@ -138,17 +210,25 @@ function sectionView(section: Section): Record<string, unknown> {
   };
 }
 
-function diffText(
-  input: { left: DiffSide; right: DiffSide; maxOutputBytes: number },
-  add: AddFn,
-  notes: string[],
-): void {
+/**
+ * The line diff, or the structural diff standing in for it.
+ *
+ * The reason for standing in is returned, not accumulated into a local the caller cannot
+ * see: see `DiffRun` for what the fallback costs and what it was measured at.
+ */
+function diffText(input: { left: DiffSide; right: DiffSide; maxOutputBytes: number }, add: AddFn): { notes: string[] } {
   const left = input.left.lines;
   const right = input.right.lines;
   if (left.length > MAX_DIFF_LINES || right.length > MAX_DIFF_LINES) {
-    notes.push("documents_too_large_for_line_diff_use_structure_mode");
     diffStructure(input, add);
-    return;
+    return {
+      notes: [
+        "documents_too_large_for_line_diff_use_structure_mode",
+        `left_lines:${left.length}`,
+        `right_lines:${right.length}`,
+        `max_lines_per_side:${MAX_DIFF_LINES}`,
+      ],
+    };
   }
   const ops = lcsOps(left, right, (line) => line);
   let buffer: string[] = [];
@@ -170,6 +250,7 @@ function diffText(
     buffer.push(`${op.op === "remove" ? "-" : "+"} ${op.value}`);
   }
   flush();
+  return { notes: [] };
 }
 
 interface DiffOp {

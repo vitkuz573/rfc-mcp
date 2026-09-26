@@ -1,4 +1,18 @@
 {
+ "$comparability": {
+  "comparable_with": "eval/results/<new-tag>.json: NO",
+  "golden_set_measured_against": "eval/golden-baseline-2026-09-26.json (status: historical_baseline)",
+  "why": "This file was measured against the previous golden set, which is not a golden set: 33 of its 100 protocols are not what the published stratified rule produces from the committed 159-document corpus, 95 of 95 protocols had drifted, 0 of 260 rules carried a snapshot id or a character offset, and 10 probes were unreachable in the section they named. node eval/build-golden.mjs did not reproduce it. These numbers are NOT comparable to any run made against eval/golden.json.",
+  "what_changed_in_the_instrument": [
+   "RECALL is now reported under a BOUNDED matcher (the emitted row may not exceed the probe by more than 1.5x) beside the containment matcher that was used here; both are in every new results file.",
+   "RECALL is now reported beside its own FLOOR (three deliberately trivial extractors) and marked VOID where the floor beats it.",
+   "VERIFY is now one number per verdict condition, not one pooled percentage of the store against itself.",
+   "CALLS is now over three divisors, with the harness auditing calls separated from the calls a caller pays.",
+   "NEGATIVE PROBES and CONSERVATION are new; neither has a counterpart in this file."
+  ],
+  "supersedes_note": "Nothing in this file is wrong about the build it measured. It is simply measured against a set that cannot be rebuilt, and a number without a rebuildable denominator is an anecdote with decimals.",
+  "tag_of_record": "before-miss-review"
+ },
  "$comment": [
   "Hand review of every BEFORE miss, so a recall number is not read as a defect count.",
   "The harness cannot do this: whether a missed sentence binds an implementer is a",
@@ -18,7 +32,15 @@
   "label_error": 20,
   "unreachable_class": 12,
   "tool_defect": 11,
-  "probe_artifact": 5
+  "probe_artifact": 5,
+  "by_verdict": {
+   "label_error": 20,
+   "unreachable_class": 12,
+   "tool_defect": 8,
+   "resolved": 3,
+   "probe_artifact": 5
+  },
+  "note": "totals describe the BEFORE run and do not move. Verdicts were re-examined on 2026-09-26 against the current build by eval/results/strict-miss-diagnosis.md: 2 were never misses in that build (closed), 2 carried wrong attributions (re-attributed with a mechanism), 4 are tool defects with a localised mechanism."
  },
  "corrected_recall": {
   "rule": "A miss counts against recall only when the sentence binds an implementer and the tool returned it nowhere. `probe_artifact` means the tool DID return the statement and the probe over-captured it, so it moves to the numerator. `label_error` and `unreachable_class` leave the denominator.",
@@ -101,7 +123,9 @@
    "rfc": 1812,
    "class": "uppercase-modal",
    "verdict": "tool_defect",
-   "why": "Upper-case MUST in a section the outline lists. Not reproduced by the fixes in this round; open."
+   "why": "Upper-case MUST in a listed section. Mechanism localised 2026-09-26: a page break ends the block mid-sentence, splitSentences runs per block, so the strict pass emits the first half as a complete requirement. 274 corpus rows in 38 documents are page-break first halves, 220 unflagged. See eval/results/pending-fixes.md Y1.",
+   "mechanism": "block_boundary_sentence_split",
+   "diagnosed_at": "2026-09-26"
   },
   {
    "id": "G0024",
@@ -142,15 +166,19 @@
    "id": "G0040",
    "rfc": 2865,
    "class": "uppercase-modal",
-   "verdict": "tool_defect",
-   "why": "'It is intended to be human readable and MUST NOT affect operation of the protocol.' Anaphoric: 'It' points at the attribute two lines above. A miss caused by anaphora is the documented boundary of the automation, not a defect - recorded so the count is honest."
+   "verdict": "resolved",
+   "why": "CLOSED 2026-09-26: not a miss in the current build. Emitted verbatim as req_bd53b91b5c5c7a2b, flags [], parse_status complete, span 88230-88433. The earlier note calling this anaphoric and a documented boundary was WRONG: the sentence is emitted whole and its subject is inside it. The same wording also occurs in 2865 5.11 and 5.18, which is faithful, not a defect.",
+   "mechanism": null,
+   "diagnosed_at": "2026-09-26"
   },
   {
    "id": "G0041",
    "rfc": 2865,
    "class": "uppercase-modal",
-   "verdict": "tool_defect",
-   "why": "'Whenever the gateway address is specified as \"0.0.0.0\" the IP address of the user SHOULD be used as the gateway address.' Self-contained. Open."
+   "verdict": "resolved",
+   "why": "CLOSED 2026-09-26: not a miss in the current build. Emitted verbatim as req_e936227f15d10948, flags [], span 89039-89165.",
+   "mechanism": null,
+   "diagnosed_at": "2026-09-26"
   },
   {
    "id": "G0042",
@@ -184,8 +212,10 @@
    "id": "G0058",
    "rfc": 3501,
    "class": "uppercase-modal",
-   "verdict": "tool_defect",
-   "why": "'...in particular, EXAMINE MUST NOT cause messages to lose the \\Recent flag.' Self-contained. Open."
+   "verdict": "resolved",
+   "why": "CLOSED 2026-09-26: not a miss in the current build. Emitted verbatim as req_ef57b5b5a4df0dd4, flags [], span 76590-76765. The pre-round state that produced the miss is not re-derivable (one snapshot per RFC, re-derived after the before run), so it is closed rather than re-examined.",
+   "mechanism": null,
+   "diagnosed_at": "2026-09-26"
   },
   {
    "id": "G0059",
@@ -213,7 +243,9 @@
    "rfc": 4343,
    "class": "lowercase-modal",
    "verdict": "tool_defect",
-   "why": "'However, to optimize output, indirect labels may be used to point to names elsewhere in the DNS answer.' A permission. Open."
+   "why": "Lower-case permission inside a whole section that is a quotation of STD13. Mechanism localised 2026-09-26: classifyBlock types any block opening with a bracketed tag as reference_entry, so the paragraph is dropped by both passes before sentence splitting. 184 such blocks sit outside bibliographies in 45 documents; 22 carry a modal. See pending-fixes.md X3.",
+   "mechanism": "body_prose_typed_reference_entry",
+   "diagnosed_at": "2026-09-26"
   },
   {
    "id": "G0089",
@@ -234,7 +266,9 @@
    "rfc": 5155,
    "class": "uppercase-modal",
    "verdict": "tool_defect",
-   "why": "A real upper-case MUST inside a bulleted list of conditions. The list marker costs it. Open."
+   "why": "Upper-case MUST closing a bulleted condition list. Mechanism localised 2026-09-26: the four blank-line-separated blocks make the list four blocks, splitSentences runs per block, and only the clause carrying the keyword survives; condition is null. The earlier note attributing this to the list marker was a MISATTRIBUTION - reclassifying the o-markers as list_item would not merge blocks. See pending-fixes.md Y1 and X4.",
+   "mechanism": "block_boundary_sentence_split",
+   "diagnosed_at": "2026-09-26"
   },
   {
    "id": "G0113",
@@ -360,7 +394,9 @@
    "rfc": 9117,
    "class": "lowercase-modal",
    "verdict": "tool_defect",
-   "why": "'If the latter applies, a network should be designed so it has a congruent topology amongst unicast routes and Flow Specification routes.' A real obligation on lower-case should. Open."
+   "why": "Lower-case should in ordinary body prose at the same indent as every other paragraph of the section. Mechanism localised 2026-09-26: the block opens [RFC8955] and is typed reference_entry, so it is dropped before any deontic judgement was attempted. Same defect as G0085. See pending-fixes.md X3.",
+   "mechanism": "body_prose_typed_reference_entry",
+   "diagnosed_at": "2026-09-26"
   },
   {
    "id": "G0235",
@@ -390,5 +426,16 @@
    "verdict": "label_error",
    "why": "Bibliography entry."
   }
- ]
+ ],
+ "diagnosis": {
+  "at": "2026-09-26",
+  "report": "eval/results/strict-miss-diagnosis.md",
+  "golden_probe_errors": 0,
+  "documented_boundaries": 0,
+  "by_mechanism": {
+   "block_boundary_sentence_split": 2,
+   "body_prose_typed_reference_entry": 2,
+   "not_a_miss_in_current_build": 2
+  }
+ }
 }

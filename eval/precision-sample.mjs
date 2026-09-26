@@ -104,12 +104,28 @@ const pools = await mapLimit(
 );
 
 const sample = [];
+const seen = new Set();
+let duplicates = 0;
 let progressed = true;
 while (sample.length < N && progressed) {
   progressed = false;
   for (const pool of pools) {
     const item = pool.items.shift();
     if (!item) continue;
+    // Dedupe on (rfc, normalised text). The same sentence is emitted up to twelve times in
+    // one document and the candidate list is 22.6% duplicates within the 100 measured
+    // protocols, so an undeduped draw labels one sentence repeatedly and the effective n
+    // is smaller than the printed n - which is a number the reader cannot see. The count of
+    // what was skipped is printed, because the row-level and the sentence-level precision
+    // figures are different figures.
+    const key = `${item.rfc}|${String(item.text ?? "")
+      .replace(/\s+/gu, " ")
+      .trim()}`;
+    if (seen.has(key)) {
+      duplicates += 1;
+      continue;
+    }
+    seen.add(key);
     progressed = true;
     sample.push({
       sample_id: `${TAG}-${KIND === "requirement" ? "REQ" : "CAND"}${String(sample.length + 1).padStart(3, "0")}`,
@@ -121,6 +137,9 @@ while (sample.length < N && progressed) {
 const file = `eval/results/${TAG}-precision-${KIND}.json`;
 writeFileSync(file, `${JSON.stringify(sample, null, 1)}\n`);
 console.log(`${file}: ${sample.length} items from ${pools.filter((p) => p.items.length >= 0).length} protocols`);
+console.log(
+  `${duplicates} duplicate (rfc, text) rows skipped: the same sentence is emitted up to 12 times in one document, so an undeduped draw has an effective n smaller than its printed n.`,
+);
 console.log(
   `by shape: ${JSON.stringify(sample.reduce((a, i) => ({ ...a, [i.shape ?? "none"]: (a[i.shape ?? "none"] ?? 0) + 1 }), {}))}`,
 );

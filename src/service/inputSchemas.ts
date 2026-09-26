@@ -130,7 +130,9 @@ export const RequirementsInputSchema: z.ZodType<RequirementsInput> = z.strictObj
   shape: z
     .enum(["demand", "description", "list_introducer", "indeterminate"])
     .optional()
-    .describe("Keep only candidates of this functional shape, per the RFC 2119 §3 action-verb test"),
+    .describe(
+      "Keep only candidates of this functional shape, under the action-verb test (a convention, not a rule of RFC 2119 - section 3 is the list of keyword definitions)",
+    ),
   ...PageShape,
   include_mentions: z.boolean().optional().describe("Include non-requirement mentions (default true)"),
   include_candidates: z
@@ -146,6 +148,15 @@ export const RequirementsInputSchema: z.ZodType<RequirementsInput> = z.strictObj
       "Also append the surviving candidates to `requirements`, each flagged provisional:true. For a document that predates RFC 2119 this is the only way to get a compliance list; they stay out of coverage.total_requirements.",
     ),
   max_candidates: z.number().int().min(1).max(2000).optional().describe("Cap on non-strict candidates (default 500)"),
+  declarative_limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(2000)
+    .optional()
+    .describe(
+      "Cap on the keyword-free channel, non_strict_candidates.declarative_specifications (default 200). Separate from max_candidates because the two are different questions: statements with a keyword in the wrong case, and specifications with no keyword at all. A clamp is reported in warnings.",
+    ),
   refresh: z.boolean().optional(),
 });
 

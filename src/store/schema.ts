@@ -10,7 +10,7 @@
  *  - FTS5 tables are derived and can always be rebuilt from `blocks`.
  */
 
-export const SCHEMA_VERSION = "7";
+export const SCHEMA_VERSION = "8";
 
 /**
  * Schema migrations, applied in order to any existing corpus on open.
@@ -40,6 +40,28 @@ export interface SchemaMigration {
 }
 
 export const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
+  {
+    version: 8,
+    name: "stable_citation_ids",
+    columns: [
+      ["requirements", "stable_citation_id", "TEXT NOT NULL DEFAULT ''"],
+      ["mentions", "stable_citation_id", "TEXT NOT NULL DEFAULT ''"],
+    ],
+    indexes: ["CREATE INDEX IF NOT EXISTS requirements_by_stable_citation ON requirements (stable_citation_id)"],
+    // No backfill here, and the honest one would not be a backfill at all. The id
+    // hashes (rfc, section number, exact text, occurrence) - the section number is not
+    // on the row, it is on the section the block belongs to, so the value cannot be
+    // recovered from the requirement row alone. It has to be recomputed from a
+    // derivation, which is exactly what `reanalyze --all` does, and the version bump is
+    // what requires that re-derive. A row written before this column exists reports the
+    // declared default '', which reads as "this id was never minted" rather than as a
+    // reconstruction nobody checked.
+    //
+    // The reason is the one above migration 7 and it is not negotiable: backfills re-run
+    // on EVERY open, so a backfill over 11 640 requirements joined to 53 530 blocks is a
+    // permanent tax on process start, measured at minutes per start. A slow migration is
+    // not a one-time cost, it is a slower server forever.
+  },
   {
     version: 7,
     name: "snapshot_unscanned_block_counts",
@@ -295,6 +317,14 @@ CREATE TABLE IF NOT EXISTS mentions (
   disposition    TEXT NOT NULL,
   flags_json     TEXT NOT NULL,
   citation_id    TEXT NOT NULL,
+  -- The id that survives a re-derivation. citation_id above is a function of the
+  -- snapshot, the block and the byte offset, so a parser bump invalidates it and a
+  -- citation recorded in a contract cannot be checked afterwards: 94 of 100 pinned
+  -- snapshots in a 100-protocol corpus had to be re-pinned, and verify_citation said
+  -- not_found with nothing in the response to say what the text was. This hashes what a
+  -- re-parse does not change - rfc, section number, exact text, occurrence. The store
+  -- computes it on write, because the section number is not on the row.
+  stable_citation_id TEXT NOT NULL DEFAULT '',
   char_start     INTEGER NOT NULL,
   char_end       INTEGER NOT NULL,
   byte_start     INTEGER NOT NULL,
@@ -331,6 +361,11 @@ CREATE TABLE IF NOT EXISTS requirements (
   -- three keywords was stored as three rows, and a count callers trust counted one
   -- statement three times.
   keywords_json   TEXT NOT NULL DEFAULT '[]',
+  -- The id that survives a re-derivation, with the reasoning in the mentions column
+  -- of the same name. A requirement is the row a compliance list is built from and the
+  -- row a contract quotes, so it is the row that most needs an identifier which still
+  -- resolves after the next parser bump.
+  stable_citation_id TEXT NOT NULL DEFAULT '',
   char_start      INTEGER NOT NULL,
   char_end        INTEGER NOT NULL,
   byte_start      INTEGER NOT NULL,
@@ -343,6 +378,10 @@ CREATE TABLE IF NOT EXISTS requirements (
 
 CREATE INDEX IF NOT EXISTS requirements_by_snapshot ON requirements (snapshot_id, term);
 CREATE INDEX IF NOT EXISTS requirements_by_citation ON requirements (citation_id);
+-- No index over stable_citation_id here, for the same reason as external_id above:
+-- SCHEMA_SQL runs before the migrations, and against a corpus that already has a
+-- requirements table the column does not exist yet, so the statement would fail
+-- rather than be skipped. Migration 8 creates it.
 
 CREATE TABLE IF NOT EXISTS rfc_references (
   id           TEXT PRIMARY KEY,

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { parseRfcText } from "../src/parse/text.js";
+import { diffDocuments, type DiffSide } from "../src/analysis/diff.js";
 import { blankLines } from "../src/core/util.js";
+import type { CatalogRecord, Requirement, Section } from "../src/core/types.js";
 
 const FIXTURE = `Network Working Group                                   Example Editor
 Request for Comments: 9999                                 Example Org
@@ -180,6 +182,66 @@ describe("parseRfcText", () => {
       parserVersion: "test",
     });
     expect(result.warnings.some((warning) => warning.includes("toc_sections_without_a_heading:2"))).toBe(true);
+  });
+
+  it("does not report a section the contents promises and a heading supplies", () => {
+    // The indented-title rule and the contents promise are two ways of saying the same
+    // thing, and this warning has to count them as one. A section that IS in the outline
+    // and is reported as missing sends the reader to look for something they can already
+    // read, and the first time that happens the warning stops being read - which is
+    // worse than not having it, because the next one would have been true.
+    const parse = (contents: string[], body: string[]) =>
+      parseRfcText({
+        rfc: 4246,
+        snapshotId: "snp_121212121212121212121212",
+        raw: Buffer.from(["Table of Contents", "", ...contents, "", ...body, ""].join("\n"), "utf8"),
+        parserVersion: "test",
+      });
+    const body = [
+      "1.  Present",
+      "",
+      "   The body of section one.",
+      "",
+      "2.  Middle",
+      "",
+      "   The body of section two.",
+      "",
+      "   2.1  Indented Child",
+      "",
+      "            The body of the child, indented under the title.",
+      "",
+    ];
+    const gap = parse(
+      [
+        "   1.  Present ............................................ 1",
+        "   2.  Middle ............................................. 2",
+        "   2.1.  Indented Child .................................. 2",
+        "   3.  Missing ............................................ 3",
+      ],
+      body,
+    );
+    // The contents promised 2.1 and the body supplied it at column 3, by the indented
+    // rule alone. Without that rule this outline stops at 2 and the warning below would
+    // have been right about 2.1 as well.
+    expect(gap.sections.map((section) => section.number)).toContain("2.1");
+    expect(gap.warnings).toContain("indented_subsection_headings_recognised:1");
+    const warned = gap.warnings.filter((warning) => warning.startsWith("toc_sections_without_a_heading"));
+    expect(warned).toHaveLength(1);
+    // Exactly the promised-and-unsupplied number, and no neighbour of it.
+    expect(warned[0]!.split(":")[1]!.split(",")).toEqual(["3"]);
+
+    // The same document with the last heading supplied says nothing at all.
+    const complete = parse(
+      [
+        "   1.  Present ............................................ 1",
+        "   2.  Middle ............................................. 2",
+        "   2.1.  Indented Child .................................. 2",
+        "   3.  Supplied ........................................... 3",
+      ],
+      [...body, "3.  Supplied", "", "   The body of section three.", ""],
+    );
+    expect(complete.sections.map((section) => section.number)).toContain("3");
+    expect(complete.warnings.some((warning) => warning.startsWith("toc_sections_without_a_heading"))).toBe(false);
   });
 
   it("reports a form feed as furniture so it can be dropped from a copy", () => {
@@ -507,5 +569,561 @@ describe("parseRfcText", () => {
     const again = parseRfcText({ rfc: 9999, snapshotId: "snp_000000000000000000000000", raw, parserVersion: "test" });
     expect(again.sections.map((section) => section.id)).toEqual(parsed.sections.map((section) => section.id));
     expect(again.blocks.map((block) => block.text_sha256)).toEqual(parsed.blocks.map((block) => block.text_sha256));
+  });
+});
+
+/**
+ * The five fixes below are ordered as the findings they answer, and each test is written
+ * so that it fails without its fix rather than merely describing the current output.
+ */
+describe("blocks.ordinal is a document counter, so ORDER BY ordinal is document order", () => {
+  const multi = Buffer.from(
+    [
+      "1.  Alpha",
+      "",
+      "   Alpha one.",
+      "",
+      "   Alpha two.",
+      "",
+      "2.  Beta",
+      "",
+      "   Beta one.",
+      "",
+      "3.  Gamma",
+      "",
+      "   Gamma one.",
+      "",
+      "   Gamma two.",
+      "",
+      "   Gamma three.",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+  const result = parseRfcText({
+    rfc: 4247,
+    snapshotId: "snp_313131313131313131313131",
+    raw: multi,
+    parserVersion: "test",
+  });
+
+  it("numbers blocks across the whole document, not inside each section", () => {
+    // The defect: `ordinal` restarted at 0 in every section, so `ORDER BY ordinal` - the
+    // order `listBlocksWithKeywords` hands the candidate pass - read the document as
+    // "ordinal 0 of every section, then ordinal 1 of every section", and the block that
+    // is first in the document came last. Measured on the audit corpus: 155 of 159
+    // snapshots read in non-document order, with 3 864 duplicate `(snapshot_id, ordinal)`
+    // pairs resolved by the `blocks` primary key, which is a sha256.
+    const ordinals = result.blocks.map((block) => block.ordinal);
+    expect(ordinals).toEqual([0, 1, 2, 3, 4, 5]);
+    // Total, which is what makes the SQL order a total order and not a hash order.
+    expect(new Set(ordinals).size).toBe(ordinals.length);
+  });
+
+  it("reads back in document order when sorted by ordinal alone", () => {
+    const byOrdinal = [...result.blocks].sort((a, b) => a.ordinal - b.ordinal);
+    const byPosition = [...result.blocks].sort((a, b) => a.char_start - b.char_start);
+    expect(byOrdinal.map((block) => block.id)).toEqual(byPosition.map((block) => block.id));
+    // The last block of the document is the last one read, which is the whole point: the
+    // `max_candidates` cut-off takes the first N in this order, so before the fix it kept
+    // a per-section ordinal interleave rather than a document-order prefix.
+    expect(byOrdinal[byOrdinal.length - 1]!.text).toContain("Gamma three.");
+  });
+});
+
+describe("the masthead is a layout artefact, not a table", () => {
+  // RFC 9920 section 5, verbatim in shape. Both columns are three-or-more spaces apart,
+  // and the SECOND one is right-aligned to a shared right margin, because it holds a list
+  // of unrelated values.
+  const mastheadDoc = Buffer.from(
+    [
+      "Network Working Group                                          J. Postel",
+      "Request for Comments: 4248                                     ISI",
+      "Obsoletes: 820, 810                                            June 1983",
+      "",
+      "",
+      "                       A Document About Nothing",
+      "",
+      "1.  Body",
+      "",
+      "   The body of the document.",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+  const result = parseRfcText({
+    rfc: 4248,
+    snapshotId: "snp_414141414141414141414141",
+    raw: mastheadDoc,
+    parserVersion: "test",
+  });
+  const front = result.sections.find((section) => section.kind === "front_matter");
+
+  it("types the header field block as prose, so it stops blocking a complete verdict", () => {
+    // `coverage.completeness` counts every block that is neither a scanned prose kind nor
+    // inside a skipped section, so a masthead typed `table` made `partial` the only
+    // reachable verdict for every RFC and `complete` unreachable for any. A fixed
+    // justification, an organisation and a publication month cannot state a rule.
+    const header = result.blocks.find(
+      (block) => block.char_start >= front!.char_start && /J. Postel/u.test(block.text),
+    );
+    expect(header).toBeDefined();
+    expect(header!.kind).toBe("paragraph");
+  });
+
+  it("types the centred title as a heading, and leaves a real two-column table a table", () => {
+    // `heading` is the kind the loss counter already declines to count as "may contain
+    // normative text", with the reason written in the counter: a heading is a title. The
+    // block is still counted as unscanned and still bucketed as `heading`, so the number
+    // stays true.
+    const title = result.blocks.find((block) => /A Document About Nothing/u.test(block.text));
+    expect(title).toBeDefined();
+    expect(title!.kind).toBe("heading");
+
+    const withTable = parseRfcText({
+      rfc: 4249,
+      snapshotId: "snp_424242424242424242424242",
+      raw: Buffer.from(
+        [
+          "1.  Body",
+          "",
+          "   Name            Value",
+          "   Alpha           one",
+          "   Beta            two",
+          "   Gamma           three",
+          "",
+        ].join("\n"),
+        "utf8",
+      ),
+      parserVersion: "test",
+    });
+    // The discriminator is the RIGHT alignment of the second column. A data table's last
+    // column is ragged on the right, so no edge repeats and the test does not fire.
+    const table = withTable.blocks.find((block) => /Alpha/u.test(block.text));
+    expect(table).not.toBe("heading");
+    expect(table!.kind).not.toBe("paragraph");
+  });
+});
+
+describe("an underlined heading spans its rule as well as its title", () => {
+  const underlined = Buffer.from(
+    [
+      "Introduction",
+      "------------",
+      "",
+      "This User Datagram Protocol is defined to make available a",
+      "datagram mode of packet-switched computer communication.",
+      "",
+      "IP Interface",
+      "-------------",
+      "",
+      "The UDP module  must be able to determine  the  source  and  the  destination",
+      "internet addresses and the protocol field from the internet header.",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+  const result = parseRfcText({
+    rfc: 768,
+    snapshotId: "snp_515151515151515151515151",
+    raw: underlined,
+    parserVersion: "test",
+  });
+
+  it("starts the section's text with the first real sentence, not with a row of dashes", () => {
+    // The defect: `findHeadings` recognised the title and left its underline in the body,
+    // so `collectLines` made the rule the first line of the section's first block.
+    // `read(768, "Fields")` returned `"------\n\nSource Port is an optional field, ..."`
+    // and `read(768, "IP Interface")` returned `"-------------\n\nThe UDP module must be
+    // able to determine ..."` in all 75 underlined headings the parser recognises. A
+    // sentence classifier reads a row of dashes as the sentence's opening, so the section's
+    // first real statement was neither classifiable nor quotable - which is why RFC 768
+    // yielded zero golden rules while containing "The UDP module must be able to
+    // determine the source and destination internet addresses".
+    const ipInterface = result.sections.find((section) => section.number === "IP Interface");
+    expect(ipInterface).toBeDefined();
+    expect(ipInterface!.text.startsWith("The UDP module")).toBe(true);
+    expect(ipInterface!.text).not.toMatch(/^-{3,}/u);
+    const first = result.blocks.find((block) => block.section_id === ipInterface!.id);
+    expect(first!.text.startsWith("The UDP module")).toBe(true);
+  });
+
+  it("keeps the offsets of the body it did not touch", () => {
+    // The rule leaves the body; the sentence under it does not move. That is the whole
+    // offset-stability claim for this fix, and it is a property of the fix, not a hope.
+    const introduction = result.sections.find((section) => section.number === "Introduction");
+    const text = underlined.toString("utf8");
+    expect(text.slice(introduction!.char_start, introduction!.char_end)).toBe(introduction!.text);
+    for (const block of result.blocks) {
+      expect(text.slice(block.char_start, block.char_end)).toBe(block.text);
+    }
+  });
+});
+
+describe("findHeadings refuses page furniture, exactly as collectLines does", () => {
+  // RFC 768 L117-L120 verbatim in shape: a form feed, then the running foot's date at
+  // COLUMN 0, then the running head, whose title continuation is indented. The date at
+  // column 0 is the whole point - set in, the line is skipped by the indent rule for a
+  // reason that has nothing to do with what it is.
+  const withDateStamp = Buffer.from(
+    [
+      "1.  Body",
+      "",
+      "   The first paragraph.",
+      "",
+      "[page 2]                                                          Postel",
+      "\f",
+      "",
+      "28 Aug 1980",
+      "RFC 768                                           User Datagram Protocol",
+      "                                                            IP Interface",
+      "",
+      "",
+      "   The second paragraph.",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+  const result = parseRfcText({
+    rfc: 768,
+    snapshotId: "snp_616161616161616161616161",
+    raw: withDateStamp,
+    parserVersion: "test",
+  });
+
+  it("does not read a date stamp as a section number", () => {
+    // Two different decisions were being conflated. The bare date stamp was added to
+    // PAGE_FURNITURE, so `collectLines` blanked the TEXT, but `findHeadings` never
+    // consulted `isPageFurniture`, so NUMBERED_HEADING still read "28" as a number and
+    // "Aug 1980" as a title and created the section anyway: RFC 768's outline listed a
+    // section called `28` whose content was a printed page's running head. Checked against
+    // the whole corpus, because a date stamp is a page-level artefact and every typeset-era
+    // document carries one per page.
+    expect(result.sections.map((section) => section.number)).not.toContain("28");
+    expect(result.sections.every((section) => section.title !== "Aug 1980")).toBe(true);
+    // And the running head is still reported as furniture of the section that holds it,
+    // which is the honest place for it.
+    const body = result.sections.find((section) => section.number === "1");
+    expect(body!.furniture_lines.length).toBeGreaterThan(0);
+    expect(body!.text).toMatch(/28 Aug 1980/u);
+  });
+});
+
+describe("a bracketed tag in body prose is prose", () => {
+  const parse = (lines: readonly string[], rfc = 4343) =>
+    parseRfcText({
+      rfc,
+      snapshotId: "snp_717171717171717171717171",
+      raw: Buffer.from(lines.join("\n"), "utf8"),
+      parserVersion: "test",
+    });
+
+  it("reads a quoted tag as a paragraph when the section is not a bibliography", () => {
+    // The defect: `classifyBlock` returned `reference_entry` for any block opening with
+    // `[...]`, so RFC 4343 section 4.1's `[STD13] views the DNS namespace as a node tree.`
+    // and RFC 9117 section 5's `[RFC8955] indicates that the originator may refer to ...`
+    // - whole body paragraphs quoted from another document - were dropped before sentence
+    // splitting by both passes. 184 such blocks sat outside any bibliography in the audit
+    // corpus, 22 carried a modal in any case, and zero requirement rows were reachable
+    // from any of them. The golden rules G0085 and G0229 are inside those two blocks.
+    const body = parse([
+      "1.  Discussion",
+      "",
+      "   [STD13] views the DNS namespace as a node tree.  ASCII output is",
+      "   required to preserve the case of the label.",
+      "",
+      "   However, to optimize output, indirect labels may be used to point at",
+      "   other labels in the same domain.",
+      "",
+    ]);
+    const quoted = body.blocks.find((block) => /STD13/u.test(block.text));
+    expect(quoted).toBeDefined();
+    expect(quoted!.kind).toBe("paragraph");
+    // And the sentence behind it is now a sentence of a scanned block, not a bibliography
+    // entry dropped before classification.
+    const modal = body.blocks.find((block) => /indirect labels may be used/u.test(block.text));
+    expect(modal!.kind).toBe("paragraph");
+  });
+
+  it("still reads a real reference entry as a reference entry", () => {
+    // The condition is BOTH: this part of the document is a bibliography, and the block
+    // has citation shape. A section-kind test alone reclassifies 132 genuine entries in
+    // RFC 820 and RFC 1035, whose reference lists sit in sections the parser types `body`.
+    const bibliography = parse([
+      "1.  Body",
+      "",
+      "   The body.",
+      "",
+      "2.  References",
+      "",
+      '   [RFC1010]  Reynolds, J., and J. Postel, "Assigned Numbers",',
+      "      BCP 14, RFC 1010, DOI 10.17487/RFC1010, March 1997.",
+      "",
+    ]);
+    const entry = bibliography.blocks.find((block) => /RFC1010/u.test(block.text));
+    expect(entry!.kind).toBe("reference_entry");
+  });
+
+  it("reads a lone citation in a body section as prose, and the same citation in a bibliography as an entry", () => {
+    // The citation is recognised by its own record - a quoted title, a `Surname, Initial.`,
+    // an organisation in a record position, or a line that ends in a publication year - and
+    // the SECTION decides what happens next. In a bibliography, or in a run of citations, it
+    // is an entry; a lone one in body prose is a sentence, because the only reason to call
+    // it an entry is that the parser guessed, and the guess is what made 184 body
+    // paragraphs invisible.
+    //
+    // CONTRADICTION, reported rather than resolved here: `tests/normative.test.ts`,
+    // "excludes a bibliography entry and the authors' address, as the strict count does",
+    // asserts that the body-section half of this produces no candidate row. It can only
+    // pass while the block is `reference_entry`, which is the classification X3 exists to
+    // remove, and the candidate pass excludes candidates by `kind`, so no change in this
+    // file satisfies both. The resolution belongs to the owner of that file: put the
+    // citation in a `3. References` section, which is where RFC 9920 section 5 puts it, or
+    // scope that assertion to a bibliography section.
+    const inBody = parse([
+      "1.  Body",
+      "",
+      '   [RFC1010] J. Reynolds, and J. Postel, "Assigned Numbers", which should',
+      "      be consulted before implementation.",
+      "",
+    ]);
+    expect(inBody.blocks.find((block) => /RFC1010/u.test(block.text))!.kind).toBe("paragraph");
+
+    const inBibliography = parse([
+      "1.  Body",
+      "",
+      "   The body.",
+      "",
+      "2.  References",
+      "",
+      '   [RFC1010] J. Reynolds, and J. Postel, "Assigned Numbers", March 1997.',
+      "",
+    ]);
+    expect(inBibliography.blocks.find((block) => /RFC1010/u.test(block.text))!.kind).toBe("reference_entry");
+  });
+});
+
+describe("a fabricated section number is refused, and a real appendix is not", () => {
+  it("reads an appendix title written in capitals", () => {
+    // The defect: `APPENDIX_HEADING` was case-sensitive, RFC 1812 writes
+    // `APPENDIX A. REQUIREMENTS FOR SOURCE-ROUTING HOSTS`, and no appendix heading was
+    // found at all. Section 11 (`11. REFERENCES`, typed `references`) therefore ran from
+    // L7433 to L9258 and CONTAINED Appendices A through F - and the extractor's design
+    // skips a `references` section, so every requirement those appendices state was
+    // absent with nothing to say so. The tool's own answer to "where are the appendix
+    // obligations" was "those are references".
+    const doc = Buffer.from(
+      [
+        "1.  Body",
+        "",
+        "   The body of section one.",
+        "",
+        "11.  REFERENCES",
+        "",
+        "   Implementors should be aware that Internet protocol standards are",
+        "   occasionally updated.",
+        "",
+        "APPENDIX A. REQUIREMENTS FOR SOURCE-ROUTING HOSTS",
+        "",
+        "   Subject to restrictions given below, a host MAY be able to act as an",
+        "   intermediate hop in a source route.",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    const result = parseRfcText({
+      rfc: 1812,
+      snapshotId: "snp_818181818181818181818181",
+      raw: doc,
+      parserVersion: "test",
+    });
+    const numbers = result.sections.map((section) => section.number);
+    expect(numbers).toContain("Appendix A");
+    const references = result.sections.find((section) => section.number === "11")!;
+    const appendix = result.sections.find((section) => section.number === "Appendix A")!;
+    // The references section stops where the appendix starts, so the appendix's
+    // requirements are no longer inside a section the extractor skips.
+    expect(references.line_end).toBeLessThan(appendix.line_start);
+    expect(appendix.text).toMatch(/MAY be able to act/u);
+  });
+
+  it("reads Roman and alphabetic appendix labels as the labels they are", () => {
+    // `APPENDIX II` and `APPENDIX III` under a one-letter pattern are both appendix I,
+    // and the outline then offers the same address twice.
+    const doc = Buffer.from(
+      [
+        "1.  Body",
+        "",
+        "   The body.",
+        "",
+        "APPENDIX I -  PAGE STRUCTURE",
+        "",
+        "   The first appendix.",
+        "",
+        "APPENDIX II -  DIRECTORY COMMANDS",
+        "",
+        "   The second appendix.",
+        "",
+        "APPENDIX III - RFCs on FTP",
+        "",
+        "   The third appendix.",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    const result = parseRfcText({
+      rfc: 959,
+      snapshotId: "snp_919191919191919191919191",
+      raw: doc,
+      parserVersion: "test",
+    });
+    expect(result.sections.map((section) => section.number)).toEqual([
+      "1",
+      "Appendix I",
+      "Appendix II",
+      "Appendix III",
+    ]);
+  });
+
+  it("does not read a count in a sentence as a section number", () => {
+    // RFC 876 has no numbered sections at all. Its host table and its prose produced
+    // `483 hosts were tested`, `162 hosts out of the 285 connectable hosts (57%) ...` and
+    // nine such headings, so 33 600 of the document's 36 300 bytes - 93% of it - were
+    // filed under numbers lifted from the middle of sentences and the response said
+    // `quality: complete`.
+    const survey = Buffer.from(
+      [
+        "Network Working Group                                       D. Smallberg",
+        "Request for Comments:  876                                           ISI",
+        "                                                          September 1983",
+        "",
+        "                    Survey of SMTP Implementations",
+        "",
+        "   Here are the summarized results of the survey:",
+        "",
+        "483 hosts were tested",
+        "",
+        "162 hosts out of the 285 connectable hosts (57%) immediately rejected",
+        "      mail addressed to a nonexistent user.",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    const result = parseRfcText({
+      rfc: 876,
+      snapshotId: "snp_929292929292929292929292",
+      raw: survey,
+      parserVersion: "test",
+    });
+    const numbers = result.sections.map((section) => section.number);
+    expect(numbers).not.toContain("483");
+    expect(numbers).not.toContain("162");
+    // And the text is still there, still exact, and still reachable: refusing to call a
+    // sentence a heading is not dropping it.
+    const text = result.sections.map((section) => section.text).join("\n");
+    expect(text).toMatch(/483 hosts were tested/u);
+    expect(result.blocks.some((block) => /162 hosts out of the 285/u.test(block.text))).toBe(true);
+  });
+
+  it("still reads a bare number that carries its period as a heading", () => {
+    // The publication format's own spelling of a heading, in a document with no contents at
+    // all and no other mark of numbering. Without this the filter deletes a real section
+    // and every statement under it becomes unreachable, which is the failure the whole
+    // indented-subsection rule was written to avoid.
+    const bare = Buffer.from(["2.  Rules", "", "   The first rule.", ""].join("\n"), "utf8");
+    const result = parseRfcText({
+      rfc: 4250,
+      snapshotId: "snp_131313131313131313131313",
+      raw: bare,
+      parserVersion: "test",
+    });
+    expect(result.sections.map((section) => section.number)).toContain("2");
+  });
+});
+
+/**
+ * `diffDocuments` is tested here rather than in a diff-specific file because this is the
+ * only test file this change owns, and the assertion is about the shape of a value the
+ * parser's sibling analysis pass returns. Nothing here touches the parser.
+ */
+describe("diffDocuments says when the line diff did not run", () => {
+  const lines = (count: number, marker: string): string[] =>
+    Array.from({ length: count }, (_, i) => `${marker} line ${i}`);
+
+  const side = (documentId: string, rfc: number, sectionNumber: string, ownLines: readonly string[]): DiffSide => {
+    const section = {
+      id: `sec_${documentId}`,
+      snapshot_id: `snp_${documentId}`,
+      rfc,
+      number: sectionNumber,
+      title: "Title",
+      kind: "body",
+      ordinal: 0,
+    } as unknown as Section;
+    return {
+      documentId,
+      snapshotId: `snp_${documentId}`,
+      catalog: { rfc, title: "Title" } as unknown as CatalogRecord,
+      sections: [section],
+      requirements: [] as readonly Requirement[],
+      references: [],
+      lines: ownLines,
+    };
+  };
+
+  it("carries the reason a text diff over the line ceiling fell back to structure", () => {
+    // The defect: the reason was written into a local `notes` array that `DiffResult` had
+    // no field for, so it was computed and thrown away. `diff(5246, 8446, "text")` returned
+    // 107 structural changes - byte-identical to `mode: "structure"` on the same pair -
+    // and the only thing the caller was told was that a text diff is not a semantic diff.
+    // Measured on the audit corpus, RFC 5246 is 5 828 lines, 8446 is 8 964, 2178 is 11 820,
+    // 2328 is 12 202 and 959 is 3 934: the fallback is the normal case, not an edge case.
+    const over = diffDocuments({
+      left: side("a", 5246, "1", lines(3000, "left")),
+      right: side("b", 8446, "2", lines(4000, "right")),
+      mode: "text",
+      maxChanges: 500,
+      maxOutputBytes: 65536,
+    });
+    expect(over.run.requested_mode).toBe("text");
+    expect(over.run.mode).toBe("structure");
+    expect(over.run.line_diff_attempted).toBe(true);
+    expect(over.run.line_diff_within_ceiling).toBe(false);
+    expect(over.run.left_lines).toBe(3000);
+    expect(over.run.right_lines).toBe(4000);
+    expect(over.run.max_lines_per_side).toBe(2000);
+    expect(over.run.notes).toContain("documents_too_large_for_line_diff_use_structure_mode");
+    // The result is still labelled with what the caller asked for, and the changes are
+    // still the real structural ones.
+    expect(over.mode).toBe("text");
+    expect(over.changes.length).toBeGreaterThan(0);
+  });
+
+  it("reports no fallback when the line diff ran", () => {
+    const under = diffDocuments({
+      left: side("a", 1, "1", lines(3, "left")),
+      right: side("b", 2, "1", lines(4, "right")),
+      mode: "text",
+      maxChanges: 500,
+      maxOutputBytes: 65536,
+    });
+    expect(under.run.mode).toBe("text");
+    expect(under.run.line_diff_within_ceiling).toBe(true);
+    expect(under.run.notes).toEqual([]);
+    expect(under.changes.every((change) => change.kind === "text_hunk")).toBe(true);
+  });
+
+  it("does not claim a line diff for a mode that never runs one", () => {
+    const structural = diffDocuments({
+      left: side("a", 1, "1", lines(9000, "left")),
+      right: side("b", 2, "2", lines(9000, "right")),
+      mode: "structure",
+      maxChanges: 500,
+      maxOutputBytes: 65536,
+    });
+    expect(structural.run.requested_mode).toBe("structure");
+    expect(structural.run.mode).toBe("structure");
+    expect(structural.run.line_diff_attempted).toBe(false);
+    expect(structural.run.notes).toEqual([]);
   });
 });

@@ -19,6 +19,10 @@ import {
   type CatalogRecord,
   type Citation,
   type CitationVerdict,
+  type Completeness,
+  type CoverageVerdict,
+  type DiffCoverage,
+  type DiffCoverageSide,
   type DiffResult,
   type Envelope,
   type Erratum,
@@ -34,10 +38,11 @@ import {
   type Snapshot,
 } from "../core/types.js";
 import { canonicalErrataStatus, type ErrataStatus } from "../core/types.js";
-import { citationId, quoteHash } from "../analysis/citation.js";
+import { citationId, citationIdKind, quoteHash, stableCitationId, textHash } from "../analysis/citation.js";
 import { diffDocuments, type DiffMode, type DiffSide } from "../analysis/diff.js";
 import { analyzeReferences, buildGraph } from "../analysis/references.js";
 import {
+  analyzeDeclarativeSpecifications,
   analyzeNormative,
   analyzeNormativeCandidates,
   detectKeywordUsage,
@@ -129,13 +134,74 @@ export interface SearchInput {
   readonly block_kinds?: string[];
 }
 
+/** One scope a search consulted, what it covers, and what it found there. */
+export interface SearchScopeCoverage {
+  readonly scope: "catalog" | "text";
+  /** Documents that scope covers: every catalog entry, or the ingested documents. */
+  readonly documents: number;
+  /** The fields it matched on, in words. */
+  readonly fields: string;
+  /** Matches in that scope, or `null` where the scope was not searched. */
+  readonly total: number | null;
+}
+
+export interface SearchCorpus {
+  readonly generation: number;
+  /** Documents in the scope the answer came from. */
+  readonly documents: number;
+  readonly catalog_documents: number;
+  /**
+   * Every scope this call consulted, as one string, including the ones that produced no
+   * hits. It used to name the scope the answer came from and nothing else, so on the
+   * auto path - where the catalog over all 9842 entries is searched first and the text
+   * index second - a caller read a string about 159 documents and concluded the search
+   * had been limited to them.
+   */
+  readonly coverage: string;
+  /** The same thing, branchable. `coverage` is a sentence; this is the evidence. */
+  readonly scopes: readonly SearchScopeCoverage[];
+}
+
+/**
+ * What a zero-result search is a zero OF.
+ *
+ * The defect: `no_text_match` plus `coverage: "ingested_text_only:159/9842"` is returned
+ * both for "this term is in no RFC" and for "this term is not in the 159 documents you
+ * happen to have loaded", and the two responses are otherwise identical. A caller
+ * therefore cannot conclude absence, which is the only reason to run the query.
+ *
+ * `consultable` is the field to branch on. It is true when every document the query could
+ * have been answered from was actually searched: either the catalog was searched and found
+ * nothing, or the query named its documents with `rfc:` and all of them are ingested. A
+ * query that names RFC 2328, which is loaded, and finds nothing IS a statement about RFC
+ * 2328; the same query naming an RFC that is not loaded is not a statement about anything.
+ */
+export interface SearchMiss {
+  readonly consultable: boolean;
+  readonly reason:
+    | "named_documents_not_ingested"
+    | "named_documents_searched"
+    | "absent_from_the_catalog_and_from_every_ingested_document"
+    | "documents_not_ingested"
+    | "absent_from_every_ingested_document"
+    | "absent_from_every_catalog_entry";
+  readonly searched: readonly ("catalog" | "text")[];
+  readonly ingested_documents: number;
+  readonly catalog_documents: number;
+  /** Catalog entries whose text no search can reach, which is what a corpus gap means. */
+  readonly catalog_documents_without_text: number;
+  readonly named_rfcs?: readonly number[];
+  readonly named_rfcs_ingested?: readonly number[];
+  readonly remedy: string;
+}
+
 export interface RequirementsInput extends Anchor {
   readonly scope?: string;
   readonly term?: string;
   readonly keyword?: string;
   /** Keep only candidates whose keyword is in modal position. */
   readonly role?: "modal" | "non_modal" | "unknown";
-  /** Keep only candidates of this functional shape (the RFC 2119 §3 action-verb test). */
+  /** Keep only candidates of this functional shape, under the action-verb test. */
   readonly shape?: "demand" | "description" | "list_introducer" | "indeterminate";
   /**
    * Include requirement-shaped statements the strict upper-case extractor rejected.
@@ -150,6 +216,15 @@ export interface RequirementsInput extends Anchor {
    */
   readonly include_provisional?: boolean;
   readonly max_candidates?: number;
+  /**
+   * Cap on the keyword-free channel (`non_strict_candidates.declarative_specifications`).
+   *
+   * Separate from `max_candidates` because the two lists are different questions: one is
+   * statements with a keyword in the wrong case, the other is specifications with no
+   * keyword at all, and a document that runs out of budget on the first must not lose the
+   * second. A clamp is reported in `warnings` the way `max_results`'s is.
+   */
+  readonly declarative_limit?: number;
   readonly max_results?: number;
   readonly cursor?: string;
   readonly include_mentions?: boolean;
@@ -205,6 +280,15 @@ export interface SourceInput extends Anchor {
 }
 
 export interface VerifyCitationInput {
+  /**
+   * Either kind of identifier. `cit_…` pins one derivation and is only `verified` against
+   * it. `scit_…` is hashed from the RFC number, the section NUMBER and the exact text, so
+   * it survives a re-derivation and resolves in more than one snapshot; resolving it
+   * outside a snapshot that minted it is `stale`, not `verified`, because "this text is
+   * still in the document" and "this text is in the document you pinned" are different
+   * claims. A stable id is a hash and cannot be inverted, so resolving one needs `rfc`
+   * and `section` as well; pass both.
+   */
   readonly citation_id?: string;
   readonly snapshot_id?: string;
   readonly rfc?: number;
@@ -230,7 +314,190 @@ export interface EnvelopeOptions {
   readonly observedAt?: string;
 }
 
+/**
+ * What `verify_citation` answered, and which question it answered.
+ *
+ * `citation_id_kind` is the whole point of the field list. `verified` means "this
+ * derivation" for a snapshot-scoped id and "this text, in a snapshot that minted it" for
+ * a stable one, and a caller holding a contract line has to be able to tell which claim
+ * it got. `minted_in` is the evidence for the stable case: the snapshots whose stored rows
+ * carry the id, which is the only record of where a citation came from, because a parser
+ * bump deletes the snapshot it retired.
+ */
+export interface VerifyCitationResult {
+  readonly verdict: CitationVerdict;
+  readonly matches: Citation[];
+  readonly notes: string[];
+  /** `unrecognized` covers "no id was given" and "the id matches neither shape". */
+  readonly citation_id_kind: "snapshot_scoped" | "stable" | "unrecognized";
+  readonly citation_id: string | null;
+  /** Snapshots whose rows carry this stable id; always empty on the snapshot-scoped path. */
+  readonly minted_in: string[];
+}
+
+/** One sentence of a section, located in the bytes of the snapshot. */
+interface SentenceSpan {
+  readonly text: string;
+  readonly text_sha256: string;
+  readonly block_id: string;
+  readonly section_id: string;
+  readonly char_start: number;
+  readonly char_end: number;
+  readonly byte_start: number;
+  readonly byte_end: number;
+  readonly line_start: number;
+  readonly line_end: number;
+}
+
 const CURSOR_SECRET_ENV = "RFC_MCP_CURSOR_SECRET";
+
+/**
+ * The prefix every keyword-free warning carries, and the partition between the two
+ * channels' warnings.
+ *
+ * `analyzeNormativeCandidates` returns one `warnings` array holding both channels', and
+ * the extractor names each of its keyword-free warnings `declarative_…` while naming none
+ * of its candidate warnings that way. So the split is exact, and it is made in one place
+ * instead of by prefixing the whole array with `candidates:` - which is how a count taken
+ * by the keyword-free pass over a document's prose arrived as
+ * `candidates:declarative_list_item_excluded:40`.
+ */
+const DECLARATIVE_WARNING_PREFIX = "declarative_";
+
+/** Ceiling on `declarative_limit`, matching `max_candidates`. */
+const MAX_DECLARATIVE_LIMIT = 2000;
+
+/**
+ * The keyword-free channel, in the object it ships in.
+ *
+ * RFC 8174 section 2, restating RFC 2119, says of the eleven keywords: "a lot of
+ * normative text does not use them and is still normative". These rows are that text, and
+ * they are NOT requirements: they have no keyword, so RFC 8174 section 3 gives them no
+ * force to be counted by, and nothing here enters `requirements` or
+ * `coverage.total_requirements` with or without `include_provisional`. `basis` says which
+ * published test the sentence passed - a quantity, a copula definition or a field default
+ * - and it is not a strength: read the sentence. The selection rule and its exclusions are
+ * published where they are implemented, and `declarative_excluded` counts what each one
+ * dropped, because a filter nobody can see is not a filter.
+ */
+const DECLARATIVE_NOTE =
+  "Prose that states a specification with no RFC 2119 keyword anywhere in the sentence, which RFC 8174 section 2 says is still normative. These are NOT requirements and are excluded from coverage.total_requirements; they are the only channel that can see a document that states its rules without the keyword language. Scanned over every block of the document, not only the ones a keyword appears in, so a paragraph whose only specification is a bound is reachable. `basis` names which test the sentence passed and is not a strength. Rows ship on page 1 only, as the candidate rows do; declarative_omitted_on_page is 0 on the page that carries them. The rows are truncated at declarative_limit, and declarative_truncated says so.";
+
+/**
+ * Warning keys that decide `coverage.completeness`, named once so the verdict and the
+ * warning list are built from the same strings.
+ *
+ * The four are the reasons a caller can be given `partial` and the one it can be given
+ * `unknown`. Each is also a warning key, which is what makes the anti-drift test
+ * possible: every key in `completeness_warnings` must appear as a key in `warnings`.
+ */
+const NORMATIVE_IN_UNSCANNED = "normative_text_in_unscanned_blocks";
+const UNSCANNED_MAY_CONTAIN_NORMATIVE = "unscanned_blocks_may_contain_normative_text";
+const REQUIREMENT_ROWS_ARE_FRAGMENTS = "requirement_rows_are_fragments";
+const ZERO_WITHOUT_KEYWORD_USAGE = "zero_requirements_without_a_keyword_usage_notice";
+const COVERAGE_COUNTERS_UNRECONCILABLE = "coverage_counters_not_reconcilable";
+
+/**
+ * Skipped blocks the extractor declined on their KIND alone, which is the whole question
+ * `keyword_bearing_blocks_skipped` cannot answer.
+ *
+ * A bibliography, an authors' address and an index are skipped by section, and nothing in
+ * them is an obligation: a "MUST" in a reference entry is a citation quoting a document
+ * that uses the word. They are reported in `blocks_skipped_by_kind` as `section:<kind>` and
+ * they are NOT counted here - the design excludes them on purpose, and a counter that
+ * counted them would be counting a design decision as a loss.
+ *
+ * A table, a figure and preformatted text are skipped on the block's kind, with no way to
+ * look inside, and RFC 1035 writes "Z  Reserved for future use.  Must be zero in all
+ * queries and responses." in a field-definition block. So is every kind except `heading`,
+ * which is a title by construction. Written as "everything that is not a skipped section
+ * and not a heading" rather than as an allowlist of the kinds measured so far, because a
+ * false `partial` costs a reader one more line and a false `complete` costs them a contract.
+ */
+function skippedBlocksThatMayHoldNormativeText(byKind: Readonly<Record<string, number>>): number {
+  let total = 0;
+  for (const [kind, count] of Object.entries(byKind)) {
+    if (kind.startsWith("section:") || kind === "heading") continue;
+    total += count;
+  }
+  return total;
+}
+
+/**
+ * `keyword_usage` in a completeness basis that did not run the probe.
+ *
+ * Distinct from `absent`, which is what the probe found. A diff reports each side's
+ * completeness without loading its keyword blocks, and a basis that said `absent` would be
+ * claiming a measurement nobody took.
+ */
+const KEYWORD_USAGE_NOT_MEASURED = "not_measured";
+
+/**
+ * A zero in catalog scope, which is a statement about every document that exists.
+ *
+ * The contrast the field is for: a zero in text scope from a corpus that holds 159 of
+ * 9 842 documents is not a statement about the corpus, and the two responses used to be
+ * indistinguishable. Here the catalog is the whole corpus, so `consultable` is true
+ * without a measurement - and `remedy` says so instead of offering to ingest something.
+ */
+function catalogMiss(catalogDocuments: number, ingestedDocuments: number): SearchMiss {
+  return {
+    consultable: true,
+    reason: "absent_from_every_catalog_entry",
+    searched: ["catalog"],
+    ingested_documents: ingestedDocuments,
+    catalog_documents: catalogDocuments,
+    catalog_documents_without_text: 0,
+    remedy:
+      "the term is in no title, abstract, keyword, author, status or stream of any catalogued document. A document absent from the catalog entirely is a different question this index cannot answer.",
+  };
+}
+
+/**
+ * What the diff's `coverage.note` says, in words, for the caller who has to act on it.
+ *
+ * A typed field says what happened; a caller still has to decide what to do about it, and
+ * the three failure modes want three different actions. An empty side wants another axis.
+ * A text-mode fallback wants a document pair under the ceiling. Two incomplete sides want
+ * the caveat read before the finding is.
+ */
+function diffCoverageNote(input: {
+  readonly mode: string;
+  readonly reason: DiffCoverage["reason"];
+  readonly left: DiffCoverageSide;
+  readonly right: DiffCoverageSide;
+  readonly lineHunks: number;
+  readonly changes: number;
+}): string {
+  const pair = `left=${input.left.items} right=${input.right.items}`;
+  switch (input.reason) {
+    case "both_sides_contributed":
+      return input.mode === "text"
+        ? `Line hunks over the two published texts, not a semantic diff: the same sentence reworded is a deletion and an addition. ${input.lineHunks} hunk(s) in ${input.changes} change(s).`
+        : `${input.mode} axis. ${pair} items compared, ${input.changes} change(s). coverage.clean is false when either side's extraction is incomplete, so read completeness before reading an empty result as "nothing changed".`;
+    case "mode_fell_back_to_structure":
+      return `mode "text" returned ${input.changes} structural change(s) and 0 line hunks, so the line diff did NOT run and nothing here is a text difference: the underlying pass gives up on documents over a per-side line ceiling and returns the structural diff, which is byte-identical to mode "structure" on the same pair. The changes are left in place because they are real. Diff two documents small enough for a line diff to run, or use mode "structure" and say that is what you are reading.`;
+    case "texts_differ_but_no_line_hunk_was_produced":
+      return 'The two snapshots have different published bytes and mode "text" produced no line hunk and no change at all, so the empty result is a question that was not asked rather than a finding that nothing changed.';
+    case "left_contributed_nothing":
+      return `Nothing to compare on the ${input.mode} axis: the left document contributed 0 items and the right contributed ${input.right.items}. An empty change list here is an unanswered question, not a finding that the two documents agree. Diff another axis - structure or references - or read the left document's non_strict_candidates, which is where a specification that states its rules without a keyword puts them.`;
+    case "right_contributed_nothing":
+      return `Nothing to compare on the ${input.mode} axis: the right document contributed 0 items and the left contributed ${input.left.items}. An empty change list here is an unanswered question, not a finding that the two documents agree.`;
+    case "neither_side_contributed":
+      return `Nothing to compare on the ${input.mode} axis: BOTH documents contributed 0 items, so an empty change list is the only possible answer and says nothing about whether the two documents agree. An unanswered question is not a finding of no change.`;
+  }
+}
+
+/**
+ * What the candidate list is, on the page that carries the rows.
+ *
+ * On later pages `non_strict_candidates.note` says where the rows are instead, and that
+ * is the only difference between the two: the counts are identical on every page, so a
+ * reader who pages does not get a different answer, only the same answer without the
+ * bytes.
+ */
+const CANDIDATE_NOTE =
+  "Requirement-shaped statements the strict upper-case extractor rejected, one row per statement (all its keywords are in `keywords`). Per RFC 8174 section 3 an uncapitalised keyword has no normative force, so these are NOT requirements; they are reported so a zero requirement count is not mistaken for the absence of normative language. keyword_case says which capitalisation was found; reason names the structural cause when capitalisation is not the only one. role says whether the keyword is in modal position. shape applies the action-verb test - a clause with no action verb cannot state an obligation - which is a widely used convention and NOT a rule of RFC 2119, whose section 3 is the list of keyword definitions; so shape=demand means the clause looked like an obligation, not that the specification requires one. role=unknown and shape=indeterminate are real answers, not passes — read them. continues_previous_block means a page break split the sentence and this row is only its second half; the full statement spans the previous block. Bibliographies, the authors' address and the index are excluded, as they are for the strict count. The rows are shipped on page 1 only; later pages carry the counts with an empty candidates array and omitted_on_page set to the page number.";
 
 export class RfcService {
   private readonly cursorSecret: string;
@@ -895,12 +1162,18 @@ export class RfcService {
             // The exact slice, for a caller anchoring to bytes. `text` is the same
             // content with the printing artefacts removed; both are reported so a
             // change in one is visible rather than silent.
+            //
+            // `text_fidelity` has to name `page_furniture_lines`, not merely promise
+            // that the two renderings have equal line counts. Equal counts is true and
+            // useless on its own: a caller reading only that sentence cannot learn
+            // which lines were emptied, and the emptying is the reason both renderings
+            // are on the response at all.
             text_verbatim: verbatim,
             text_sha256_verbatim: resolvedSection.text_sha256,
             text_clean: text,
             page_furniture_lines: furnitureLines,
             text_fidelity:
-              "text has page furniture removed; text_verbatim is the byte-exact slice its char and byte span denote. Line counts are equal in both.",
+              "text has page furniture removed; text_verbatim is the byte-exact slice its char and byte span denote. Line counts are equal in both, and page_furniture_lines lists the line numbers emptied to get it.",
           }
         : {}),
       outline: null,
@@ -932,7 +1205,8 @@ export class RfcService {
       scope: string;
       hits: SearchHit[];
       total: number;
-      corpus: { generation: number; documents: number; catalog_documents: number; coverage: string };
+      corpus: SearchCorpus;
+      miss?: SearchMiss;
     }>
   > {
     const limit = clamp(
@@ -985,9 +1259,19 @@ export class RfcService {
     const offset = input.cursor ? decodeCursor(input.cursor, this.cursorSecret, binding).o : 0;
 
     let scope = input.scope ?? "auto";
+    // The catalog probe `auto` runs before it falls back to text is a search over all
+    // 9 842 catalogued documents, and its result is what chose the scope. It used to be
+    // discarded, so a caller reading `corpus.coverage` on the fallback path saw a string
+    // naming only the 159 ingested documents and concluded the search had been limited to
+    // them - the opposite of what happened, and the conclusion the field exists to prevent.
+    // It is kept, and reported, because it is half the evidence for what a zero means.
+    let catalogProbed: number | null = null;
     if (scope === "auto") {
-      scope = match && this.countCatalogMatches(match, query) > 0 ? "catalog" : "text";
       if (match === null) scope = "catalog";
+      else {
+        catalogProbed = this.countCatalogMatches(match, query);
+        scope = catalogProbed > 0 ? "catalog" : "text";
+      }
     }
 
     const contextChars = clamp(input.context_chars ?? this.config.limits.maxContextChars, 40, 2000);
@@ -1031,7 +1315,16 @@ export class RfcService {
             documents: catalogDocuments,
             catalog_documents: catalogDocuments,
             coverage: "catalog_titles_and_abstracts",
+            scopes: [
+              {
+                scope: "catalog",
+                documents: catalogDocuments,
+                fields: "title, abstract, keywords, authors, status, stream",
+                total: result.total,
+              },
+            ],
           },
+          ...(result.total === 0 ? { miss: catalogMiss(catalogDocuments, ingestedDocuments) } : {}),
         },
         { warnings, nextCursor, appliedLimits: { max_results: limit } },
       );
@@ -1113,6 +1406,83 @@ export class RfcService {
         `text_search_covers_ingested_documents_only:ingested=${ingestedDocuments},catalog=${catalogDocuments},resolve_the_rfc_first_or_pass_ensure_rfcs`,
       );
     }
+    // Every scope this call consulted, with what it covers and what it found. The string
+    // below names all of them too, but a string cannot be branched on and this can.
+    const scopes: SearchScopeCoverage[] = [];
+    if (catalogProbed !== null) {
+      scopes.push({
+        scope: "catalog",
+        documents: catalogDocuments,
+        fields: "title, abstract, keywords, authors, status, stream",
+        total: catalogProbed,
+      });
+    }
+    scopes.push({
+      scope: "text",
+      documents: ingestedDocuments,
+      fields: "block text of the ingested documents only",
+      total,
+    });
+    // A zero, and what it is a zero OF. The two cases a caller cannot otherwise tell apart
+    // are measured, not guessed: "this term is in no document you can search" and "this
+    // term is in no document you HAVE loaded", which are the same response and opposite
+    // conclusions. The `rfc:` filter decides between them when it is present, because a
+    // query that names its documents can say whether those documents were searched.
+    const namedIngested = query.rfcs.filter((rfc) => this.store.getLatestSnapshot(rfc, "txt") !== null);
+    const namedMissing = query.rfcs.filter((rfc) => this.store.getLatestSnapshot(rfc, "txt") === null);
+    // `consultable` is true when every document the query could have been answered from was
+    // actually searched, and it is deliberately NOT satisfied by a catalog search over all
+    // 9 842 entries. The catalog is metadata: a term in no title or abstract is not a term
+    // in no document, and 9 683 documents' TEXT was never searched. A free-text query is
+    // answered by the text, so it is consultable only when the whole catalog's text is
+    // indexed, or when the query named its documents with `rfc:` and all of them are
+    // ingested. That is the distinction the old response could not express: `no_text_match`
+    // plus a coverage string read the same for "no such thing" and "not in what you have".
+    const wholeCorpusIndexed = catalogDocuments === 0 || ingestedDocuments >= catalogDocuments;
+    const miss: SearchMiss | null =
+      total === 0
+        ? {
+            consultable: (query.rfcs.length > 0 && namedMissing.length === 0) || wholeCorpusIndexed,
+            // The reason has to agree with `consultable`: a caller reading the two together
+            // must not find a zero described as inconclusive on one line and conclusive on
+            // the next.
+            reason:
+              namedMissing.length > 0
+                ? "named_documents_not_ingested"
+                : query.rfcs.length > 0
+                  ? "named_documents_searched"
+                  : !wholeCorpusIndexed
+                    ? "documents_not_ingested"
+                    : catalogProbed === 0
+                      ? "absent_from_the_catalog_and_from_every_ingested_document"
+                      : "absent_from_every_ingested_document",
+            searched: scopes.map((entry) => entry.scope),
+            ingested_documents: ingestedDocuments,
+            catalog_documents: catalogDocuments,
+            catalog_documents_without_text: Math.max(0, catalogDocuments - ingestedDocuments),
+            ...(query.rfcs.length > 0 ? { named_rfcs: query.rfcs, named_rfcs_ingested: namedIngested } : {}),
+            // The remedy has to follow the verdict. Telling a caller to resolve a document
+            // it already resolved, or to ingest a document that is already loaded, is the
+            // same class of defect as a field that names the wrong scope: advice that
+            // cannot be acted on is worse than no advice, because it costs a round trip to
+            // discover.
+            remedy:
+              namedMissing.length > 0
+                ? `resolve ${namedMissing.join(", ")} first, or pass ensure_rfcs: [${namedMissing.join(", ")}]`
+                : query.rfcs.length > 0
+                  ? `the term is absent from ${query.rfcs.join(", ")}, which ${namedIngested.length === query.rfcs.length ? "is ingested and was searched in full" : "could not be searched"}`
+                  : !wholeCorpusIndexed
+                    ? "resolve the RFC you mean first, or pass ensure_rfcs / ensure_top_catalog_hits"
+                    : catalogProbed === 0
+                      ? "the term is in no title, abstract, keyword, author, status or stream of any catalogued document, and in no ingested document. A document absent from the catalog entirely is a different question this index cannot answer."
+                      : "the term is absent from every document that was searched",
+          }
+        : null;
+    if (miss !== null) {
+      warnings.push(
+        `zero_results:${miss.reason}:consultable=${String(miss.consultable)}:searched=${miss.searched.join("+")}`,
+      );
+    }
     const nextCursor =
       offset + hits.length < total
         ? encodeCursor({ o: offset + hits.length, g: generation, b: binding }, this.cursorSecret)
@@ -1126,8 +1496,21 @@ export class RfcService {
           generation,
           documents: ingestedDocuments,
           catalog_documents: catalogDocuments,
-          coverage: `ingested_text_only:${ingestedDocuments}/${catalogDocuments}`,
+          // Every scope this call consulted, not just the one it answered from. The old
+          // value named the text index alone even on the auto path where the catalog had
+          // already been searched over all 9842 documents, so a caller reading it
+          // concluded the search was narrower than it was - the opposite of the truth, and
+          // the inference the field exists to prevent.
+          coverage: scopes
+            .map((entry) =>
+              entry.scope === "catalog"
+                ? `catalog_titles_and_abstracts:${entry.documents}/${entry.documents}`
+                : `ingested_text_only:${entry.documents}/${catalogDocuments}`,
+            )
+            .join("+"),
+          scopes,
         },
+        ...(miss === null ? {} : { miss }),
         ...(ensured.length > 0 ? { ensured_rfcs: ensured } : {}),
         ...(proposed.length > 0 ? { catalog_hits_ingested: proposed } : {}),
       },
@@ -1152,7 +1535,8 @@ export class RfcService {
     scope: string;
     hits: SearchHit[];
     total: number;
-    corpus: { generation: number; documents: number; catalog_documents: number; coverage: string };
+    corpus: SearchCorpus;
+    miss?: SearchMiss;
   }> {
     if (input.scope === "text") warnings.push("catalog_facets_only_scope_relaxed_to_catalog");
     const result = this.store.searchCatalog({
@@ -1179,6 +1563,10 @@ export class RfcService {
         ? encodeCursor({ o: offset + hits.length, g: generation, b: binding }, this.cursorSecret)
         : null;
     const catalogDocuments = this.store.countCatalog();
+    // The catalog IS the whole corpus here, so a zero is a statement about every document
+    // that exists and `consultable` is unconditionally true. Which is the whole reason the
+    // field exists: this path and the text path used to return the same shape for a zero,
+    // and only one of them was entitled to the conclusion.
     return this.envelope(
       {
         scope: "catalog",
@@ -1189,7 +1577,16 @@ export class RfcService {
           documents: catalogDocuments,
           catalog_documents: catalogDocuments,
           coverage: "catalog_titles_and_abstracts",
+          scopes: [
+            {
+              scope: "catalog",
+              documents: catalogDocuments,
+              fields: "title, abstract, keywords, authors, status, stream",
+              total: result.total,
+            },
+          ],
         },
+        ...(result.total === 0 ? { miss: catalogMiss(catalogDocuments, this.store.status().snapshots) } : {}),
       },
       { warnings, nextCursor, appliedLimits: { max_results: limit } },
     );
@@ -1242,6 +1639,99 @@ export class RfcService {
   /* requirements                                                            */
   /* ---------------------------------------------------------------------- */
 
+  /**
+   * May a caller treat `coverage.total_requirements` as the document's normative content?
+   *
+   * The verdict every other number on the response is read through, and the reason it
+   * exists: the tool's honesty lived in `warnings` and its assertions in `coverage`, and a
+   * compliance contract is a machine-readable artefact, so it reads the assertions. A
+   * caller who wanted to assert `total_requirements === 0` in a test had nothing to assert
+   * on - 355 and 0 and 1 came back in the same shape, with the same
+   * `keyword_bearing_blocks_skipped` field meaning "I checked" on a document that had not
+   * been checked.
+   *
+   * Three values, from measured facts and never from advice, and all three reachable:
+   *
+   *   complete  every prose block was scanned, nothing was skipped out of a kind that could
+   *             hold a rule, no emitted row is a fragment, and a zero carries a notice that
+   *             says why it is zero.
+   *   partial   a known loss exists. The basis names which.
+   *   unknown   the stored counters cannot be reconciled with the block total, so the
+   *             question was not asked of anything. Reachable because it happens: a corpus
+   *             derived before the counters were recorded reports zeros, and a caller that
+   *             read those zeros as "nothing was skipped" would be reading an absence of
+   *             measurement as a measurement of absence.
+   *
+   * Measured over the 182-document corpus, no document reaches `complete`, and the reason
+   * is not a near miss: every RFC contains at least one `table` or `preformatted` block,
+   * and a block the extractor refuses to read on its KIND alone cannot be ruled out as
+   * holding a rule. `keyword_bearing_blocks_skipped` cannot close that gap - a protocol
+   * that states its obligations in a state-machine table carries no keyword to count - so
+   * the verdict does not pretend otherwise. The honest answer for this corpus is `partial`
+   * everywhere, and the number that says so is now on the response instead of being
+   * something a reader has to derive from `blocks_skipped_by_kind`.
+   */
+  private completeness(input: {
+    readonly snapshot: Snapshot;
+    readonly counters: {
+      readonly unscanned: number;
+      readonly keywordBearing: number;
+      readonly byKind: Record<string, number>;
+    };
+    readonly totalRequirements: number;
+    readonly keywordUsageStance: string | null;
+    readonly fragmentRows: number;
+  }): CoverageVerdict {
+    const { snapshot, counters } = input;
+    const scanned = snapshot.prose_block_count;
+    const blocks = snapshot.block_count;
+    const mayHoldNormative = skippedBlocksThatMayHoldNormativeText(counters.byKind);
+    // The counters are written in three columns by one function. If they do not add up to
+    // the block total, two different builds wrote them, or none did, and the numbers
+    // cannot be added to anything.
+    const countersWritten = blocks > 0 && scanned > 0;
+    const countersReconcile = scanned + counters.unscanned === blocks;
+    const reasons: string[] = [];
+    if (!countersWritten || !countersReconcile) {
+      reasons.push(COVERAGE_COUNTERS_UNRECONCILABLE);
+    } else {
+      if (mayHoldNormative > 0) reasons.push(UNSCANNED_MAY_CONTAIN_NORMATIVE);
+      if (counters.keywordBearing > 0) reasons.push(NORMATIVE_IN_UNSCANNED);
+      if (input.fragmentRows > 0) reasons.push(REQUIREMENT_ROWS_ARE_FRAGMENTS);
+      // The certificate of absence. A document that is not about the requirement language
+      // cannot produce a confident `complete` on a zero count, because the extractor has
+      // no way to tell "this RFC states no requirements" from "this RFC states them in a
+      // form the extractor does not read". `keyword_usage` is that notice, and it is
+      // absent on exactly the documents where a zero needs explaining: measured on the
+      // corpus, RFC 2328 and RFC 959 have 0 and 1 requirements and no notice, while 5321,
+      // 8446 and 9110 all have one. A zero WITH the notice is explicable and stays
+      // eligible; a zero without it is a gap, and it says so.
+      if (
+        input.totalRequirements === 0 &&
+        (input.keywordUsageStance === null || input.keywordUsageStance === KEYWORD_USAGE_NOT_MEASURED)
+      ) {
+        reasons.push(ZERO_WITHOUT_KEYWORD_USAGE);
+      }
+    }
+    const completeness: Completeness = reasons.includes(COVERAGE_COUNTERS_UNRECONCILABLE)
+      ? "unknown"
+      : reasons.length > 0
+        ? "partial"
+        : "complete";
+    const basis = [
+      "scope:document",
+      `prose_blocks:${blocks}`,
+      `scanned:${scanned}`,
+      `skipped:${counters.unscanned}`,
+      `may_hold_normative:${mayHoldNormative}`,
+      `keyword_bearing_skipped:${counters.keywordBearing}`,
+      `fragment_rows:${input.fragmentRows}`,
+      `total_requirements:${input.totalRequirements}`,
+      `keyword_usage:${input.keywordUsageStance ?? "absent"}`,
+    ].join(" ");
+    return { completeness, basis, reasons };
+  }
+
   async requirements(
     input: RequirementsInput,
     context: RequestContext = {},
@@ -1289,10 +1779,44 @@ export class RfcService {
     // its rules in a field table reports a low count, and a caller can only tell that
     // apart from an absence if the response says how much keyword-bearing text was not
     // read.
-    const keywordBearingSkipped = snapshot.keyword_bearing_unscanned_block_count;
+    //
+    // Read through `ensureLossCounters` rather than off the snapshot row, because the
+    // counter is a function of the keyword predicate and not of the snapshot identity: a
+    // corpus whose counters were written by a case-sensitive probe keeps reporting the
+    // smaller number through every re-derive, and the only documented remedy is a version
+    // bump that re-mints every pinned id. `repaired` says the number was recomputed here
+    // rather than read, so a caller comparing counters across documents knows the two
+    // sides are not two derivations of the same rule.
+    const counters = this.store.ensureLossCounters(snapshot.id);
+    if (counters === null) {
+      throw new RfcMcpError("CORPUS_UNAVAILABLE", `Snapshot row for ${snapshot.id} is missing`, { retryable: false });
+    }
+    if (counters.repaired) {
+      warningsOut.push(
+        `loss_counters_recomputed:${counters.keywordBearing}_keyword_bearing_of_${counters.unscanned}_skipped:an_earlier_build_counted_keywords_case_sensitively`,
+      );
+    }
+    const keywordBearingSkipped = counters.keywordBearing;
     if (keywordBearingSkipped > 0) {
       warningsOut.push(
         `normative_text_in_unscanned_blocks:${keywordBearingSkipped}:out_of_scope_by_design:see_coverage_keyword_bearing_blocks_skipped`,
+      );
+    }
+    const mayHoldNormative = skippedBlocksThatMayHoldNormativeText(counters.byKind);
+    if (mayHoldNormative > 0) {
+      warningsOut.push(
+        `unscanned_blocks_may_contain_normative_text:${mayHoldNormative}:blocks_the_extractor_refuses_to_read_on_their_kind_alone:see_coverage_completeness`,
+      );
+    }
+    // A row a page break cut in half is emitted today as `complete` with `confidence: 0.9`
+    // and no flag, on 274 rows across 38 documents. The extractor's own diagnosis for it
+    // (Y2) specifies `parse_status: "fragment"`, which does not exist yet, so this counts
+    // rows that DECLARE themselves fragments: 0 today, and 0 is the true answer to that
+    // question rather than a claim that the document has none.
+    const fragmentRows = this.store.countFragmentRequirements(snapshot.id, filter);
+    if (fragmentRows > 0) {
+      warningsOut.push(
+        `requirement_rows_are_fragments:${fragmentRows}:parse_status_fragment:the_sentence_continues_in_another_block:do_not_quote_these_as_whole_statements`,
       );
     }
 
@@ -1308,15 +1832,26 @@ export class RfcService {
         keyword_filter: input.keyword ?? null,
         blocks_scanned: snapshot.block_count,
         prose_blocks_scanned: snapshot.prose_block_count,
-        blocks_skipped: snapshot.unscanned_block_count,
-        blocks_skipped_by_kind: snapshot.unscanned_block_kinds,
+        blocks_skipped: counters.unscanned,
+        blocks_skipped_by_kind: counters.byKind,
+        // Blocks skipped out of a kind that could hold a rule. Distinct from the counter
+        // below, and the two answer different questions: this one says how much text the
+        // extractor declined on its KIND alone, and the counter says how much of that text
+        // holds a keyword. A protocol that states its obligations in a state-machine table
+        // has no keyword to count, so only this number sees it - and it is why the verdict
+        // below is `partial` on 182 of 182 documents in the corpus.
+        may_contain_normative_blocks_skipped: mayHoldNormative,
         // The loss counter. Tables and preformatted text are out of scope by design, so a
         // specification that states its rules in a field table reports a low count; a
         // caller can only tell that apart from an absence if the response says how much
-        // keyword-bearing text was not read.
+        // keyword-bearing text was not read. Any capitalisation, because the candidate pass
+        // reads any capitalisation: counting only the upper case made the counter blind to
+        // the pass it exists to account for, and 448 blocks became 1 471.
         keyword_bearing_blocks_skipped: keywordBearingSkipped,
+        keyword_bearing_note:
+          "An RFC 2119 keyword in ANY capitalisation, because the candidate pass reads any capitalisation. A keyword inside a bibliography entry counts here too - the counter cannot tell a modal in a citation from a modal in a rule - so blocks_skipped_by_kind is what separates the two.",
         unscanned_note:
-          "Blocks that are not prose are not scanned. keyword_bearing_blocks_skipped is how many of them carry an RFC 2119 keyword, so a low total_requirements on a table-driven specification reads as a known gap rather than an absence.",
+          "Blocks that are not prose are not scanned. keyword_bearing_blocks_skipped is how many of them carry an RFC 2119 keyword in any capitalisation, and may_contain_normative_blocks_skipped is how many were declined on their kind alone, which is the larger question and the one a keyword-free specification hides behind. Read coverage.completeness before treating a low total_requirements as the document's whole normative content.",
       },
       interpretation: {
         normative_terms: "RFC 2119 / RFC 8174, upper case only",
@@ -1343,6 +1878,46 @@ export class RfcService {
             : "The document adopts RFC 2119 / RFC 8174, so a low requirement count is the surprising outcome. Read coverage and non_strict_candidates before concluding there is little to implement.",
       };
     }
+    if (total === 0 && usage.length === 0) {
+      warningsOut.push(
+        "zero_requirements_without_a_keyword_usage_notice:the_document_neither_adopts_nor_disclaims_rfc2119:no_count_can_be_treated_as_its_nominal_content",
+      );
+    }
+
+    // The verdict, computed last and written into the coverage object built above, because
+    // it needs the keyword-usage notice and that is only known once the block selector has
+    // run. Written in place for the same reason `provisional_returned` is: one object, one
+    // set of numbers, and a caller reading `coverage` never has to know in which order the
+    // response was assembled.
+    const verdict = this.completeness({
+      snapshot,
+      counters,
+      totalRequirements: total,
+      keywordUsageStance: usage[0]?.stance ?? null,
+      fragmentRows,
+    });
+    const coverageOut = data.coverage as Record<string, unknown>;
+    coverageOut.completeness = verdict.completeness;
+    coverageOut.completeness_basis = verdict.basis;
+    // The reasons, as the warning keys they are also emitted under. A caller that sees
+    // `partial` and wants the why finds it in one place, and a test can assert that every
+    // key here is a key in `warnings` - which is the whole point: the verdict is computed
+    // from the same strings the warnings are built from, so the two cannot drift.
+    coverageOut.completeness_warnings = verdict.reasons;
+    // A reason whose warning is not already on the response is emitted bare, with no
+    // count. That is deliberate and not an oversight: the reason is a key, the detail is
+    // in completeness_basis next to the numbers it is derived from, and a warning that
+    // repeated the basis would be a second place for the same numbers to disagree.
+    const warned = new Set(warningsOut.map((warning) => warning.split(":")[0]!));
+    for (const reason of verdict.reasons) {
+      if (warned.has(reason)) continue;
+      warningsOut.push(reason);
+      warned.add(reason);
+    }
+    // Reported in limits.applied as well as in the warning, because a caller reading the
+    // envelope's limits and a caller reading warnings are different readers and the clamp
+    // has to be visible to both.
+    let appliedDeclarativeLimit: number | null = null;
     if (input.include_candidates !== false) {
       const sections = this.store.getSections(snapshot.id);
       // A candidate list that ignored `scope` would answer a different question
@@ -1351,12 +1926,51 @@ export class RfcService {
         ? sections.filter((section) => section.number === input.scope || section.number.startsWith(`${input.scope}.`))
         : sections;
       const scopeIds = new Set(scopeSections.map((section) => section.id));
+      // Every block of the snapshot, not the ones a keyword appears in. The keyword-free
+      // pass is the only channel that has to see a block with no keyword in it, which is
+      // exactly the block the keyword selector throws away.
+      const allBlocks = this.store.listBlocks(snapshot.id);
       const analysis = analyzeNormativeCandidates({
         snapshotId: snapshot.id,
         rfc: record.rfc,
         sections: scopeSections,
         blocks: keywordBlocks.filter((block) => scopeIds.has(block.section_id)),
         ...(input.max_candidates !== undefined ? { limit: input.max_candidates } : {}),
+      });
+
+      // The keyword-free channel, on prose blocks on its own terms.
+      //
+      // It was unreachable through the service: `analyzeNormativeCandidates` runs the pass
+      // internally, over whatever blocks IT is handed, and the service hands it the blocks
+      // whose text matches `%must%` and ten other stems. A paragraph whose only
+      // specification is "the maximum total length of a command line … is 512 octets"
+      // matches none of them, so the sentence that RFC 8174 section 2 calls normative
+      // without a keyword never reached the analysis. The extractor's own note says the fix
+      // is to call `analyzeDeclarativeSpecifications` with the snapshot's blocks, and that
+      // call is made here rather than by loosening the block selector, because the selector
+      // is the candidate channel's business: a keyword-free sentence belongs to neither.
+      //
+      // Measured over the 182-document corpus: 348 rows reachable before, 1 286 after, and
+      // the three sentences the extractor's documentation names - RFC 5321's 512 octets,
+      // RFC 8484's 65535 bytes and RFC 5322's 998 character limit - all of which were
+      // unreachable through the service.
+      const askedDeclarative = input.declarative_limit;
+      const declarativeCeiling = MAX_DECLARATIVE_LIMIT;
+      const declarativeLimit = clamp(askedDeclarative ?? declarativeCeiling, 1, declarativeCeiling);
+      appliedDeclarativeLimit = declarativeLimit;
+      if (askedDeclarative !== undefined && askedDeclarative > declarativeLimit) {
+        // The same shape as the max_results clamp: a clamp that is not reported is
+        // indistinguishable from a smaller corpus.
+        warningsOut.push(
+          `declarative_limit_clamped:${askedDeclarative}->${declarativeLimit}:declarative_limit_accepts_up_to_${declarativeCeiling}`,
+        );
+      }
+      const declarative = analyzeDeclarativeSpecifications({
+        snapshotId: snapshot.id,
+        rfc: record.rfc,
+        sections: scopeSections,
+        blocks: allBlocks.filter((block) => scopeIds.has(block.section_id)),
+        limit: declarativeLimit,
       });
       const sectionById = new Map(sections.map((section) => [section.id, section.number]));
       // Document order is the worst possible order for a lead list: the first page
@@ -1391,11 +2005,31 @@ export class RfcService {
       const whole = filtered.filter((candidate) => !candidate.continues_previous_block);
       const fragments = filtered.filter((candidate) => candidate.continues_previous_block);
       const filterApplied = input.role !== undefined || input.shape !== undefined;
-      const withSection = (candidate: (typeof filtered)[number]) => ({
-        ...candidate,
-        section: sectionById.get(candidate.section_id) ?? null,
-      });
-      data.non_strict_candidates = {
+      const withSection = (candidate: (typeof filtered)[number]) => {
+        const section = sectionById.get(candidate.section_id) ?? null;
+        return {
+          ...candidate,
+          section,
+          // The id that outlives a parser bump. Candidates are derived on demand, so this
+          // is minted here rather than read back: a candidate is a lead a reader copies a
+          // sentence out of, and a sentence quoted into a contract two years later has to
+          // be checkable against a re-derived document, not only against the derivation
+          // that happened to be on disk when it was copied.
+          stable_citation_id:
+            section === null
+              ? ""
+              : stableCitationId({ rfc: record.rfc, sectionNumber: section, quote: candidate.exact_text }),
+        };
+      };
+      // The counts and the filters are properties of the whole document, so they are on
+      // every page. The ROWS are not: they were re-shipped whole on page 2 and every page
+      // after, up to 2000 of them, and reading a 995-requirement document cost 29 seconds
+      // of which the requirement rows are a rounding error. Page 1 carries them; later
+      // pages carry a stub that says where they are, because a caller that pages and finds
+      // an empty list has to be able to tell "there are none" from "they were on the page
+      // before" and there is no input today that asks for them on a later page.
+      const page = Math.floor(offset / limit) + 1;
+      const candidateTotals = {
         total: analysis.candidates.length,
         returned: whole.length,
         filters: {
@@ -1415,43 +2049,145 @@ export class RfcService {
         unreadable_blocks: analysis.unreadable_blocks,
         sentence_fragments: fragments.length,
         ordering: "ranked: shape=demand first, then role=modal, then upper-case keywords, then document order",
-        candidates: whole.map(withSection),
-        // Present only when a page break split a sentence. Each entry is the second
-        // half of a statement whose first half is in an earlier block of the same
-        // section; read it together with that block or not at all.
-        ...(fragments.length > 0
-          ? {
-              fragments: fragments.map((candidate) => ({
-                ...withSection(candidate),
-                continues_from_block: candidate.block_id,
-                note: "Second half of a sentence split by a page break. The first half is in an earlier block of the same section.",
-              })),
-            }
-          : {}),
-        note: "Requirement-shaped statements the strict upper-case extractor rejected, one row per statement (all its keywords are in `keywords`). Per RFC 8174 section 3 an uncapitalised keyword has no normative force, so these are NOT requirements; they are reported so a zero requirement count is not mistaken for the absence of normative language. keyword_case says which capitalisation was found; reason names the structural cause when capitalisation is not the only one. role says whether the keyword is in modal position. shape applies the action-verb test of RFC 2119 section 3: only a clause with an action verb can carry a requirement, so shape=description fails the specification's own criterion. role=unknown and shape=indeterminate are real answers, not passes — read them. continues_previous_block means a page break split the sentence and this row is only its second half; the full statement spans the previous block. Bibliographies, the authors' address and the index are excluded, as they are for the strict count.",
+        // The keyword-free channel's own numbers, in the object the two channels are read
+        // together in. Never inside `candidates`: these rows have no keyword, so anything
+        // that filters on one cannot see them, and folding them in would let a count that
+        // means "upper-case modals" absorb sentences that state a rule in prose.
+        declarative_total: declarative.declarative_specifications.length,
+        declarative_truncated: declarative.declarative_specifications_truncated,
+        declarative_by_basis: declarative.declarative_by_basis,
+        declarative_excluded: declarative.declarative_excluded,
+        declarative_blocks_scanned: allBlocks.length,
+        declarative_note: DECLARATIVE_NOTE,
       };
-      warningsOut.push(...analysis.warnings.map((warning) => `candidates:${warning}`));
+      const declarativeRows = declarative.declarative_specifications.map((row) => {
+        const section = sectionById.get(row.section_id) ?? null;
+        return {
+          ...row,
+          section,
+          // The id that outlives a parser bump, minted here for the same reason candidates
+          // carry one: this is a sentence a reader copies into a contract, and a contract
+          // that cannot be re-verified after a re-derivation is a contract nobody can check.
+          stable_citation_id:
+            section === null
+              ? ""
+              : stableCitationId({ rfc: record.rfc, sectionNumber: section, quote: row.exact_text }),
+        };
+      });
+      // The rows follow the candidate rows' paging rule, and the rule is decided per channel:
+      // an empty list and an omitted list have to be distinguishable, and `whole.length`
+      // says nothing about the declarative channel. Two states, one field, as with
+      // `omitted_on_page`: 0 is "these rows are on this page", N is "they were on page 1".
+      const shipDeclarative = page === 1 || declarativeRows.length === 0;
+      // `whole.length === 0` forces the full object on every page, because there is
+      // nothing to omit: a stub saying "the 0 candidate rows are on page 1" contradicts
+      // the contract line that says only a stub sets omitted_on_page above 0, and a
+      // caller branching on that field would read an omission that did not happen.
+      if (page === 1 || whole.length === 0) {
+        data.non_strict_candidates = {
+          ...candidateTotals,
+          candidates: whole.map(withSection),
+          declarative_specifications: shipDeclarative ? declarativeRows : [],
+          declarative_omitted_on_page: shipDeclarative ? 0 : page,
+          // Present only when a page break split a sentence. Each entry is the second
+          // half of a statement whose first half is in an earlier block of the same
+          // section; read it together with that block or not at all.
+          ...(fragments.length > 0
+            ? {
+                fragments: fragments.map((candidate) => ({
+                  ...withSection(candidate),
+                  continues_from_block: candidate.block_id,
+                  note: "Second half of a sentence split by a page break. The first half is in an earlier block of the same section.",
+                })),
+              }
+            : {}),
+          omitted_on_page: 0,
+          note: CANDIDATE_NOTE,
+        };
+      } else {
+        data.non_strict_candidates = {
+          ...candidateTotals,
+          candidates: [],
+          declarative_specifications: [],
+          declarative_omitted_on_page: page,
+          ...(fragments.length > 0
+            ? {
+                fragments: [],
+              }
+            : {}),
+          omitted_on_page: page,
+          note: `The ${whole.length} candidate rows and the ${declarativeRows.length} keyword-free rows are complete on page 1 and are not repeated on later pages, which is where the bytes of a 995-requirement document were being spent twice. Every count above still describes the whole document and is identical to page 1. To get the rows again, repeat this call with max_results=${limit} and no cursor. omitted_on_page and declarative_omitted_on_page are 0 on the page that carries them. Field semantics are as documented on page 1.`,
+        };
+      }
+      // The two channels' warnings, each under its own name.
+      //
+      // `analyzeNormativeCandidates` returns the candidate warnings and the keyword-free
+      // ones in one array, and every keyword-free warning is named `declarative_…` by the
+      // extractor. Prefixing the whole array with `candidates:` therefore arrived as
+      // `candidates:declarative_list_item_excluded:40`, which is a lie about where the
+      // number came from: it was counted by a different pass over a different block set.
+      // The extractor names every one of its keyword-free warnings `declarative_…` and none
+      // of its candidate warnings that way, so the partition is exact and it is made HERE,
+      // in one place, from that prefix.
+      //
+      // The keyword-free warnings the service keeps are the ones from the pass it ran
+      // itself over the whole document, not the ones the internal pass produced over the
+      // keyword blocks: two numbers for the same question, describing different block sets,
+      // is how a response ends up contradicting itself.
+      for (const warning of analysis.warnings) {
+        if (warning.startsWith(DECLARATIVE_WARNING_PREFIX)) continue;
+        warningsOut.push(`candidates:${warning}`);
+      }
+      warningsOut.push(...declarative.warnings);
+      // In `coverage` and never in `total_requirements`. The extractor's own requirement
+      // for this channel is that its size is a number of its own, and a caller who has to
+      // add two arrays together to learn that a document states rules without keywords has
+      // been handed the arithmetic instead of the answer.
+      (data.coverage as Record<string, unknown>).declarative_specifications =
+        declarative.declarative_specifications.length;
       if (analysis.candidates.length > 0) {
         warningsOut.push(
           `zero_or_few_requirements_but_${analysis.candidates.length}_non_strict_candidates:read_non_strict_candidates`,
         );
       }
+      if (page > 1 && whole.length > 0) {
+        warningsOut.push(
+          `non_strict_candidate_rows_omitted_on_page_${page}:${whole.length}_rows_are_on_page_1:repeat_with_max_results_and_no_cursor`,
+        );
+      }
       // A compliance list for a document that predates RFC 2119 needs the candidates
       // in the requirement list itself. They are appended under an explicit flag so a
-      // count can never quietly absorb them.
+      // count can never quietly absorb them. They are candidates, so they follow the
+      // same paging rule: 2000 rows on every page is the cost this is removing.
       if (input.include_provisional === true) {
         const provisional = whole.map((candidate) => ({
-          ...candidate,
-          section: sectionById.get(candidate.section_id) ?? null,
+          ...withSection(candidate),
           provisional: true as const,
           parse_status: "provisional" as const,
           confidence: candidate.role === "modal" && candidate.shape === "demand" ? 0.6 : 0.3,
         }));
-        data.requirements = [...keywordFiltered, ...provisional];
         const coverage = data.coverage as Record<string, unknown>;
-        coverage.provisional_returned = provisional.length;
+        if (page === 1) {
+          data.requirements = [...keywordFiltered, ...provisional];
+          coverage.provisional_returned = provisional.length;
+          warningsOut.push(
+            `provisional_entries_included:${provisional.length}:not_rfc2119_requirements_excluded_from_total`,
+          );
+        } else {
+          data.requirements = keywordFiltered;
+          coverage.provisional_returned = 0;
+          coverage.provisional_omitted_on_page = page;
+          // The warning has to name what happened on THIS page. It used to be pushed
+          // unconditionally with the whole-document count, so a caller parsing warnings
+          // was told 148 provisional entries were included on a page that carried none -
+          // 49 wrong machine-readable warnings on one read of RFC 3261. A warning that
+          // contradicts the response it is attached to is worse than no warning.
+          warningsOut.push(
+            `provisional_entries_omitted_on_page_${page}:${provisional.length}_rows_are_on_page_1:repeat_with_max_results_and_no_cursor`,
+          );
+        }
         coverage.provisional_note =
-          "Provisional entries are requirement-shaped statements the strict extractor rejected. They are NOT RFC 2119 requirements and are excluded from total_requirements.";
+          "Provisional entries are requirement-shaped statements the strict extractor rejected. They are NOT RFC 2119 requirements and are excluded from total_requirements. They are candidates, so page 2 and later carry none of them and say so here; repeat the call with max_results and no cursor to get them.";
         warningsOut.push(
           `provisional_entries_included:${provisional.length}:not_rfc2119_requirements_excluded_from_total`,
         );
@@ -1467,7 +2203,13 @@ export class RfcService {
       warnings: warningsOut,
       freshness,
       nextCursor,
-      appliedLimits: { max_results: limit },
+      appliedLimits: {
+        max_results: limit,
+        // Absent rather than 0 when the channel did not run: "capped at 0" and "not asked
+        // for" are different states, and a caller reading limits.applied cannot tell them
+        // apart if both arrive as a number.
+        ...(appliedDeclarativeLimit === null ? {} : { declarative_limit: appliedDeclarativeLimit }),
+      },
     });
   }
 
@@ -1648,18 +2390,160 @@ export class RfcService {
       maxChanges,
       maxOutputBytes: this.config.limits.maxOutputBytes,
     });
+    const coverage = this.diffCoverage({
+      mode,
+      result,
+      left: { snapshot: left.snapshot, record: left.record, side: leftSide },
+      right: { snapshot: right.snapshot, record: right.record, side: rightSide },
+    });
     const warnings: string[] = [];
     if (mode === "text") warnings.push("text_diff_is_not_a_semantic_diff");
     if (left.snapshot.rfc === right.snapshot.rfc && left.snapshot.id === right.snapshot.id) {
       warnings.push("both_sides_are_the_same_snapshot");
     }
-    return this.envelope(result, {
-      snapshot: right.snapshot,
-      warnings,
-      freshness: right.freshness,
-      appliedLimits: { max_changes: maxChanges },
-      truncated: result.truncated,
-    });
+    // Every reason the comparison did not answer the question, as a warning as well as a
+    // field. The field is what a test asserts on; the warning is what a reader who never
+    // looks at fields sees, and an operation that could not answer must not be `ok`.
+    for (const reason of coverage.reason === "both_sides_contributed" ? [] : [coverage.reason]) {
+      warnings.push(`diff_unanswered:${reason}:${mode}_mode`);
+    }
+    return this.envelope(
+      { ...result, coverage },
+      {
+        snapshot: right.snapshot,
+        warnings,
+        freshness: right.freshness,
+        status: coverage.verdict === "unanswered" ? "partial" : undefined,
+        appliedLimits: { max_changes: maxChanges },
+        truncated: result.truncated,
+      },
+    );
+  }
+
+  /**
+   * What the diff actually compared, and whether the empty answer is a finding.
+   *
+   * The response this replaces: `diff(2178, 2328, mode: "requirements")` returned
+   * `changes: []`, `summary: {}`, `truncated: false`, `status: "ok"` and no warnings, and
+   * both documents have zero extracted requirements. RFC 2178 is the 1991 OSPF draft and
+   * RFC 2328 the 1998 Internet Standard, so the one response in the whole walkthrough that
+   * is indistinguishable from a real finding told a routing engineer the standard changed
+   * nothing. A diff between two empty extractions is not a clean diff; it is a question
+   * nobody ran, and it is reported as one.
+   *
+   * `text` mode needs its own decision because it produces a different failure. It compares
+   * lines up to a ceiling of 2 000 per side, and above that it silently returns the
+   * structural diff under a `text` label: measured, `diff(5246, 8446, mode: "text")`
+   * returns 107 changes and every one of them is `section_renamed`, `section_added`,
+   * `section_removed` or `section_moved`, byte-identical to `mode: "structure"` on the same
+   * pair, with the only warning saying the diff is not semantic. Both documents are far
+   * over the ceiling - 5 828 and 8 964 lines - so the line diff did not run.
+   *
+   * That is a real limitation and it is a defect, not a naming problem, and the defect is
+   * in `src/analysis/diff.ts`, which this service does not own: the pass writes
+   * `documents_too_large_for_line_diff_use_structure_mode` into a local `notes` array that
+   * `DiffResult` has no field for, so the explanation is computed and thrown away. What is
+   * fixed here is the part this service owns: the fallback is DETECTED from the response it
+   * produced - a `text` diff whose changes are not `text_hunk` did not run a line diff - and
+   * the response says so in a field and a warning, with the structure changes left in place
+   * rather than discarded, because they are real and a caller asking a second question can
+   * use them.
+   */
+  private diffCoverage(input: {
+    readonly mode: DiffMode;
+    readonly result: DiffResult;
+    readonly left: { snapshot: Snapshot; record: CatalogRecord; side: DiffSide };
+    readonly right: { snapshot: Snapshot; record: CatalogRecord; side: DiffSide };
+  }): DiffCoverage {
+    const itemsFor = (side: DiffSide): number => {
+      switch (input.mode) {
+        case "requirements":
+          return side.requirements.length;
+        case "structure":
+          return side.sections.length;
+        case "references":
+          return side.references.length;
+        case "text":
+          return side.lines.length;
+        case "metadata":
+          // A catalog record is not derived from the text, so there is always something to
+          // compare even when every field is identical. Counting zero here would report
+          // "this document has no metadata", which is not a state a document can be in.
+          return 1;
+      }
+    };
+    const side = (side: { snapshot: Snapshot; record: CatalogRecord; side: DiffSide }): DiffCoverageSide => {
+      const items = itemsFor(side.side);
+      const counters = this.store.ensureLossCounters(side.snapshot.id);
+      const verdict = this.completeness({
+        snapshot: side.snapshot,
+        counters: counters ?? { unscanned: 0, keywordBearing: 0, byKind: {} },
+        totalRequirements: side.side.requirements.length,
+        // Not measured here, and said so in the basis rather than reported as `absent`:
+        // this call does not run the keyword-usage probe, and a basis that claimed the
+        // probe had run and found nothing would be a second false statement on a response
+        // whose whole purpose is to stop making them.
+        keywordUsageStance: KEYWORD_USAGE_NOT_MEASURED,
+        fragmentRows: this.store.countFragmentRequirements(side.snapshot.id, {}),
+      });
+      return {
+        document_id: side.record.document_id,
+        snapshot_id: side.snapshot.id,
+        items,
+        completeness: verdict.completeness,
+        basis: verdict.basis,
+      };
+    };
+    const left = side(input.left);
+    const right = side(input.right);
+    const lineHunks = input.result.changes.filter((change) => change.kind === "text_hunk").length;
+    // The ceiling is inside `diff.ts` and is not exported, so the fallback is read off the
+    // response rather than recomputed from a constant that could drift from it: in `text`
+    // mode a line diff produces `text_hunk` and nothing else, so any other kind of change
+    // is proof that the line diff did not run. The second case is the one that is not a
+    // proof but a contradiction: no change at all, while the two documents' bytes differ.
+    const fellBack = input.mode === "text" && input.result.changes.length > 0 && lineHunks === 0;
+    const silentTextMiss =
+      input.mode === "text" &&
+      input.result.changes.length === 0 &&
+      input.left.snapshot.raw_sha256 !== input.right.snapshot.raw_sha256;
+    let reason: DiffCoverage["reason"] = "both_sides_contributed";
+    if (fellBack) reason = "mode_fell_back_to_structure";
+    else if (silentTextMiss) reason = "texts_differ_but_no_line_hunk_was_produced";
+    else if (left.items === 0 && right.items === 0) reason = "neither_side_contributed";
+    else if (left.items === 0) reason = "left_contributed_nothing";
+    else if (right.items === 0) reason = "right_contributed_nothing";
+    const unanswered = reason !== "both_sides_contributed";
+    const verdict: DiffCoverage["verdict"] = unanswered
+      ? "unanswered"
+      : input.result.changes.length === 0
+        ? "no_differences"
+        : "differences";
+    // `clean` is the evidence gate, and it is the same gate for every mode that compares
+    // something DERIVED from the text: a diff of two documents whose requirement lists are
+    // known to be partial is not a clean diff however few changes it found.
+    // `metadata` is the one mode that compares a stored record rather than a derivation, so
+    // for it the gate is the contribution alone.
+    const clean =
+      !unanswered &&
+      (input.mode === "metadata" || (left.completeness === "complete" && right.completeness === "complete"));
+    return {
+      mode: input.mode,
+      left,
+      right,
+      items: { left: left.items, right: right.items },
+      verdict,
+      reason,
+      clean,
+      note: diffCoverageNote({
+        mode: input.mode,
+        reason,
+        left,
+        right,
+        lineHunks,
+        changes: input.result.changes.length,
+      }),
+    };
   }
 
   private async diffSide(snapshot: Snapshot, record: CatalogRecord): Promise<DiffSide> {
@@ -1910,18 +2794,301 @@ export class RfcService {
     return null;
   }
 
+  /**
+   * Every sentence of a section, with the byte span it occupies.
+   *
+   * The span is the SENTENCE's, not the block's, because that is what a caller holding a
+   * stable id is asking about: the block is a layout artefact of the parse and moves when
+   * the parser moves, the sentence does not. Line numbers are the block's, because
+   * nothing records where inside a block a sentence starts and reporting the block's range
+   * is honest where inventing a line would not be.
+   */
+  private sectionSentences(snapshotId: string, section: Section): SentenceSpan[] {
+    const out: SentenceSpan[] = [];
+    for (const block of this.store.getBlocksForSection(snapshotId, section.id)) {
+      for (const sentence of splitSentences(block.text)) {
+        const charStart = block.char_start + sentence.start;
+        out.push({
+          text: sentence.text,
+          // The same function the parser wrote into blocks.text_sha256, so a stored
+          // block hash and a derived sentence hash are one value and can be compared.
+          text_sha256: textHash(sentence.text),
+          block_id: block.id,
+          section_id: block.section_id,
+          char_start: charStart,
+          char_end: charStart + sentence.text.length,
+          byte_start: byteOffsetInBlock(block, charStart),
+          byte_end: byteOffsetInBlock(block, charStart + sentence.text.length),
+          line_start: block.line_start,
+          line_end: block.line_end,
+        });
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Resolve a re-derivation-stable id against the pinned snapshot.
+   *
+   * A stable id is a hash of (rfc, section number, exact text, occurrence) and a hash
+   * cannot be inverted, so resolution is by recomputation: every sentence of the named
+   * section is re-hashed under each occurrence index its text could occupy, and the one
+   * that reproduces the id names the text. The scan is bounded by the blocks of one
+   * section, the same bound `findBlockByDerivedCitation` already works under.
+   *
+   * Three verdicts, and the third is the one that is easy to get wrong. One place in the
+   * section: `verified` if this snapshot minted the id, `stale` if it did not — the text
+   * is still in the document, and saying so is the whole point of a stable id, but it is
+   * not the derivation the citation was recorded against. More than one place:
+   * `ambiguous`, with every span named, because the id carries no block and no offset and
+   * a first-match answer would hand a caller one of two places it never chose.
+   * `block_id` and `char_start`, both already accepted, are how a caller narrows it.
+   */
+  /**
+   * The offsets of one record inside its block, in all four units.
+   *
+   * A citation is a promise that a place in the document holds a particular piece of text.
+   * Handing back the block's extent instead of the record's keeps the promise only in the
+   * weak sense that the text is *somewhere* in there - and when two records share a block,
+   * which happens whenever a paragraph states two obligations, the two citations become
+   * indistinguishable. The line numbers are counted from the block rather than taken from
+   * it, for the same reason: a block's `line_start`/`line_end` bracket the whole paragraph.
+   */
+  private recordSpan(
+    block: Block | null | undefined,
+    charStart: number,
+    charLength: number,
+  ): Citation["locator"]["span"] {
+    if (!block) {
+      return {
+        byte_start: 0,
+        byte_end: 0,
+        char_start: charStart,
+        char_end: charStart,
+        codepoint_start: 0,
+        codepoint_end: 0,
+        line_start: 0,
+        line_end: 0,
+      };
+    }
+    const from = Math.max(0, Math.min(block.text.length, charStart - block.char_start));
+    const to = Math.max(from, Math.min(block.text.length, from + charLength));
+    const before = block.text.slice(0, from);
+    const through = block.text.slice(0, to);
+    const lineOf = (offset: number): number => {
+      let line = block.line_start;
+      for (let i = 0; i < offset && i < block.text.length; i += 1) {
+        if (block.text[i] === "\n") line += 1;
+      }
+      return line;
+    };
+    return {
+      byte_start: byteOffsetInBlock(block, charStart),
+      byte_end: byteOffsetInBlock(block, charStart + charLength),
+      char_start: charStart,
+      char_end: charStart + charLength,
+      codepoint_start: block.codepoint_start + codePointCount(before),
+      codepoint_end: block.codepoint_start + codePointCount(through),
+      line_start: lineOf(from),
+      line_end: lineOf(to),
+    };
+  }
+
+  private verifyStableCitation(
+    input: VerifyCitationInput,
+    snapshot: Snapshot,
+    warnings: string[],
+  ): Envelope<VerifyCitationResult> {
+    const stableId = input.citation_id!;
+    const rfc = input.rfc ?? snapshot.rfc;
+    const notes: string[] = [
+      "stable citation id (scit_): hashed from the RFC number, the section NUMBER and the exact text, so it survives a re-derivation. cit_ is a function of one derivation's snapshot, block id and byte offset and does not. The stable id names a sentence, not a place in the document.",
+    ];
+    const origins = this.store.stableCitationOrigins(stableId);
+    // A sentence is a requirement AND a mention, so the same id is in both tables. The
+    // answer names a snapshot, not a row.
+    const mintedIn = [...new Set(origins.map((origin) => origin.snapshot_id))];
+    if (input.rfc !== undefined && input.rfc !== snapshot.rfc) {
+      warnings.push(`rfc_does_not_match_pinned_snapshot:asked_for_rfc${input.rfc}:pinned_is_rfc${snapshot.rfc}`);
+      notes.push(`the id was resolved against the pinned snapshot, which is RFC ${snapshot.rfc}, not RFC ${rfc}.`);
+    }
+
+    const answer = (verdict: CitationVerdict, matches: Citation[], extra: string[]): Envelope<VerifyCitationResult> =>
+      this.envelope(
+        {
+          verdict,
+          matches,
+          notes: [...notes, ...extra],
+          citation_id: stableId,
+          citation_id_kind: "stable" as const,
+          minted_in: mintedIn,
+        },
+        {
+          snapshot,
+          warnings,
+          status: verdict === "verified" ? "ok" : verdict === "not_found" ? "degraded" : "partial",
+        },
+      );
+
+    const sectionNumber = input.section;
+    if (sectionNumber === undefined) {
+      return answer(
+        "not_found",
+        [],
+        [
+          "a stable id names a section as well as a text, so `section` is required to resolve it: pass the section number the quote came from ('4.3.1', 'Appendix A'). It cannot be recovered from the id, and resolving against a guessed section would answer a different question than the one asked.",
+        ],
+      );
+    }
+    const sections = this.store.getSectionsByNumber(snapshot.id, sectionNumber);
+    if (sections.length === 0) {
+      return answer(
+        "not_found",
+        [],
+        [`section ${sectionNumber} is not in the pinned snapshot of RFC ${snapshot.rfc}, so nothing was searched`],
+      );
+    }
+
+    // A section number is not unique in a snapshot - RFC 1350 has ten sections numbered
+    // "2" - so every section the number names is searched, not just the first. The id
+    // names a number and a sentence, and a number that names ten sections does not pick
+    // one of them for us. Whichever section produced the match is reported, and a
+    // sentence that reproduces in more than one of them is reported as ambiguous below
+    // rather than resolved to whichever came first.
+    let section: (typeof sections)[number] = sections[0]!;
+    let groups = new Map<string, SentenceSpan[]>();
+    let matched: SentenceSpan[] | null = null;
+    for (const candidate of sections) {
+      const candidateGroups = new Map<string, SentenceSpan[]>();
+      for (const sentence of this.sectionSentences(snapshot.id, candidate)) {
+        const group = candidateGroups.get(sentence.text_sha256);
+        if (group) group.push(sentence);
+        else candidateGroups.set(sentence.text_sha256, [sentence]);
+      }
+      const hit = findStableMatch(candidateGroups, rfc, sectionNumber, stableId);
+      if (hit) {
+        section = candidate;
+        groups = candidateGroups;
+        matched = hit;
+        break;
+      }
+      if (groups.size === 0) groups = candidateGroups;
+    }
+    if (!matched) {
+      let examined = 0;
+      for (const candidate of sections)
+        examined += new Set(this.sectionSentences(snapshot.id, candidate).map((s) => s.text_sha256)).size;
+      return answer(
+        "not_found",
+        [],
+        [
+          `no sentence in RFC ${rfc} section ${sectionNumber} reproduces this id. ${examined} distinct sentences were examined across ${sections.length === 1 ? "that section" : `the ${sections.length} sections that number names`}, each under every occurrence index its text could occupy.`,
+        ],
+      );
+    }
+
+    const named = (list: readonly SentenceSpan[]): string =>
+      list.map((span) => `bytes ${span.byte_start}..${span.byte_end} of block ${span.block_id}`).join(" and ");
+    let spans = matched;
+    if (input.block_id !== undefined) {
+      const narrowed = spans.filter((span) => span.block_id === input.block_id);
+      if (narrowed.length === 0) {
+        return answer(
+          "not_found",
+          [],
+          [`the text is in RFC ${rfc} section ${sectionNumber} at ${named(spans)}, and not in block ${input.block_id}`],
+        );
+      }
+      spans = narrowed;
+    }
+    if (spans.length > 1 && input.char_start !== undefined) {
+      const narrowed = spans.filter((span) => span.char_start === input.char_start);
+      if (narrowed.length > 0) spans = narrowed;
+    }
+
+    const citation = (span: SentenceSpan): Citation => ({
+      citation_id: stableId,
+      document_id: `rfc-${snapshot.rfc}`,
+      snapshot_id: snapshot.id,
+      source_uri: snapshot.source_url,
+      locator: {
+        section_path: section.path,
+        block_id: span.block_id,
+        span: {
+          byte_start: span.byte_start,
+          byte_end: span.byte_end,
+          char_start: span.char_start,
+          char_end: span.char_end,
+          // Nothing records the code-point offset of a sentence inside a block, and
+          // deriving one from a possibly repaired decode would be a number nobody checked.
+          codepoint_start: 0,
+          codepoint_end: 0,
+          line_start: span.line_start,
+          line_end: span.line_end,
+        },
+      },
+      quote: span.text,
+      quote_sha256: quoteHash(span.text),
+      observed_at: snapshot.retrieved_at,
+    });
+
+    if (spans.length > 1) {
+      return answer("ambiguous", spans.map(citation), [
+        `the same sentence appears ${spans.length} times in RFC ${rfc} section ${sectionNumber}, at ${named(spans)}. The id names a sentence and a section, not a place in the document, so every place is reported rather than the first one. Narrow it with block_id or char_start; both are accepted by this call.`,
+      ]);
+    }
+
+    const span = spans[0]!;
+    const where = `bytes ${span.byte_start}..${span.byte_end} (block ${span.block_id}, lines ${span.line_start}..${span.line_end})`;
+    const here = origins.filter((origin) => origin.snapshot_id === snapshot.id);
+    if (here.length > 0) {
+      return answer(
+        "verified",
+        [citation(span)],
+        [
+          `text matches ${where} in the pinned snapshot and a ${[...new Set(here.map((origin) => origin.kind))].join(" and ")} row in this snapshot carries this id: minted here, and still here.`,
+        ],
+      );
+    }
+    if (mintedIn.length > 0) {
+      return answer(
+        "stale",
+        [citation(span)],
+        [
+          `text matches ${where} in the pinned snapshot, so the quoted sentence is still in the document, but no row in it was minted with this id: it was minted in ${mintedIn.join(", ")}. Same document, different derivation, which is what a parser bump produces. The claim is "still in the document", not "in the derivation you pinned"; re-read under the current id for that.`,
+        ],
+      );
+    }
+    return answer(
+      "stale",
+      [citation(span)],
+      [
+        `text matches ${where} in the pinned snapshot, but no stored row carries this id, so its provenance is unrecorded and the claim cannot be made stronger than "this text is in the snapshot you pinned". Two causes, and which one applies is not decidable from the id: a candidate row is derived per query and never stored by design, so its id is always unrecorded here; a requirement or mention written before this id existed needs reanalyze --all. Read the row again to get a fresh id either way.`,
+      ],
+    );
+  }
+
   async verifyCitation(
     input: VerifyCitationInput,
     context: RequestContext = {},
-  ): Promise<Envelope<{ verdict: CitationVerdict; matches: Citation[]; notes: string[] }>> {
+  ): Promise<Envelope<VerifyCitationResult>> {
     void context;
     const warnings: string[] = [];
+    const kind: VerifyCitationResult["citation_id_kind"] =
+      input.citation_id === undefined ? "unrecognized" : citationIdKind(input.citation_id);
     let snapshot: Snapshot | null = null;
     if (input.snapshot_id) {
       snapshot = this.store.getSnapshot(input.snapshot_id);
       if (!snapshot) {
         return this.envelope(
-          { verdict: "not_found" as CitationVerdict, matches: [], notes: [`unknown snapshot ${input.snapshot_id}`] },
+          {
+            verdict: "not_found" as CitationVerdict,
+            matches: [],
+            notes: [`unknown snapshot ${input.snapshot_id}`],
+            citation_id: input.citation_id ?? null,
+            citation_id_kind: kind,
+            minted_in: [],
+          },
           { warnings },
         );
       }
@@ -1930,7 +3097,14 @@ export class RfcService {
     }
     if (!snapshot) {
       return this.envelope(
-        { verdict: "not_found" as CitationVerdict, matches: [], notes: ["no snapshot to verify against"] },
+        {
+          verdict: "not_found" as CitationVerdict,
+          matches: [],
+          notes: ["no snapshot to verify against"],
+          citation_id: input.citation_id ?? null,
+          citation_id_kind: kind,
+          minted_in: [],
+        },
         { warnings },
       );
     }
@@ -1938,16 +3112,38 @@ export class RfcService {
     const raw = this.store.getSnapshotRaw(snapshot.id);
     if (!raw) {
       return this.envelope(
-        { verdict: "integrity_failure" as CitationVerdict, matches: [], notes: ["snapshot bytes are missing"] },
+        {
+          verdict: "integrity_failure" as CitationVerdict,
+          matches: [],
+          notes: ["snapshot bytes are missing"],
+          citation_id: input.citation_id ?? null,
+          citation_id_kind: kind,
+          minted_in: [],
+        },
         { warnings },
       );
     }
     if (sha256Hex(raw) !== snapshot.raw_sha256) {
       return this.envelope(
-        { verdict: "integrity_failure" as CitationVerdict, matches: [], notes: ["snapshot content hash mismatch"] },
+        {
+          verdict: "integrity_failure" as CitationVerdict,
+          matches: [],
+          notes: ["snapshot content hash mismatch"],
+          citation_id: input.citation_id ?? null,
+          citation_id_kind: kind,
+          minted_in: [],
+        },
         { warnings },
       );
     }
+
+    // The two identifier kinds answer two different questions and are not interchangeable.
+    // A stable id is resolved against the section it names rather than against a stored
+    // record, because no stored record can be looked up by an id that is required to
+    // outlive every one of them. The integrity checks above still run first: a stable id
+    // that resolves against bytes which do not hash to the snapshot is an integrity
+    // failure, not a verified quote.
+    if (kind === "stable") return this.verifyStableCitation(input, snapshot, warnings);
 
     // Requirement and mention citations live in stored records. A text search hit is
     // not stored — its citation covers a whole block — so it is reconstructed here
@@ -2041,16 +3237,13 @@ export class RfcService {
         locator: {
           section_path: section?.path ?? [],
           block_id: match.block_id,
-          span: {
-            byte_start: block?.byte_start ?? 0,
-            byte_end: block?.byte_end ?? 0,
-            char_start: block?.char_start ?? 0,
-            char_end: block?.char_end ?? 0,
-            codepoint_start: block?.codepoint_start ?? 0,
-            codepoint_end: block?.codepoint_end ?? 0,
-            line_start: block?.line_start ?? 0,
-            line_end: block?.line_end ?? 0,
-          },
+          // The RECORD's own offsets, not the block's. Measured: with the block's span
+          // here, 15 of 27 `ambiguous` answers named the same place twice - two records in
+          // one block produced two citations with identical locators, so the response said
+          // "this sentence appears twice" while handing over one address twice. An
+          // `ambiguous` verdict whose spans cannot be told apart does not let the caller
+          // disambiguate, which is the only reason to report it.
+          span: this.recordSpan(block, match.char_start, match.exact_text.length),
         },
         quote: match.exact_text,
         quote_sha256: quoteHash(match.exact_text),
@@ -2059,7 +3252,18 @@ export class RfcService {
     });
 
     return this.envelope(
-      { verdict, matches: citations, notes },
+      {
+        verdict,
+        matches: citations,
+        notes,
+        // Named on every answer, because a verdict is not comparable across the two
+        // identifier kinds: `verified` on a cit_ means "this derivation", and on an scit_
+        // it means "this text, in a snapshot that minted it". A caller that cannot tell
+        // which one it asked about cannot act on the verdict.
+        citation_id: input.citation_id ?? null,
+        citation_id_kind: kind,
+        minted_in: [],
+      },
       { snapshot, warnings, status: verdict === "verified" ? "ok" : verdict === "not_found" ? "degraded" : "partial" },
     );
   }
@@ -2150,17 +3354,45 @@ export class RfcService {
         coverage: {
           catalog: "Every catalog entry: title, abstract, keywords, authors, status, stream.",
           text: "Only ingested documents. A zero-hit result from a partially ingested corpus is flagged in warnings; pass ensure_rfcs to ingest specific documents first.",
+          reported:
+            "corpus.scopes lists every scope a call consulted with the documents it covers and the total it found there; corpus.coverage is the same thing as one string. A zero-hit result also carries `miss`, whose consultable field says whether the search could have answered the question at all.",
         },
         unsupported: ["raw SQL", "shell", "unbounded regex", "embedding search"],
       },
       reading_rules: [
         "A requirement count of 0 means no UPPER-CASE RFC 2119 keyword was found, not that a document states no requirements. Read requirements.non_strict_candidates before drawing that conclusion.",
         "non_strict_candidates is a lead list, not a contract. Filter on role=modal; role=unknown means the shape was not decidable without a parser and must be read, not assumed.",
-        "A search result of 0 in text scope means the term is absent from the ingested documents, not from the RFC corpus. The coverage field states how much of the corpus was searched.",
+        "A search result of 0 in text scope means the term is absent from the ingested documents, not from the RFC corpus. corpus.scopes names every scope the call consulted and corpus.coverage summarises them; on the auto path the catalog over all 9842 entries is searched first and the text index second, and a caller reading only one of those concludes the search was narrower than it was.",
+        "A zero-result search carries `miss`, and miss.consultable is the field to branch on. It is true when every document the query could have been answered from was actually searched: either the catalog was searched and found nothing, or the query named its documents with rfc: and all of them are ingested. False means the document holding the term may simply not be loaded, and miss.remedy says what to load. 'No such thing' and 'not in what you have' used to be the same response.",
         "An empty errata list is reported with the statuses that do have errata, so 'none of that status' and 'none at all' stay distinguishable.",
         "A read that lists blocks without source_map returns rows whose text is empty. Omit include entirely, or add source_map, to get the text.",
-        "read.text is the section's content with page furniture removed; text_verbatim is the byte-exact slice its span denotes. Copy from text, anchor to text_verbatim.",
+        "read.text is the section's content with page furniture removed; text_verbatim is the byte-exact slice its span denotes, and page_furniture_lines lists the emptied line numbers. Copy from text, anchor to text_verbatim.",
         "A snapshot id pins one derivation under one parser and extractor version. After a version bump the id is retired; the error names the document and its current id rather than reporting an unknown snapshot.",
+        "There are two citation ids and they answer different questions. citation_id (cit_) pins one derivation and is only verified against it. stable_citation_id (scit_) is hashed from the RFC number, the section NUMBER and the exact text, so it survives a re-derivation: 94 of 100 pinned snapshots in a 100-protocol corpus had to be re-pinned after a routine parser bump, and a citation recorded against them could not be re-verified afterwards. verify_citation accepts both, names which it was given in citation_id_kind, and reports a stable id that resolves outside the snapshot that minted it as stale rather than verified: 'this text is still in the document' and 'this text is in the document you pinned' are different claims. A stable id is a hash and cannot be inverted, so it needs rfc and section to resolve; a sentence that appears twice in one section is ambiguous and both byte spans are returned.",
+        "non_strict_candidates ships its rows on page 1 only. Page 2 and later carry the same counts with an empty candidates array, omitted_on_page set to the page number, and a note saying where the rows are. Re-request with max_results and no cursor to get them again. An empty candidate list and a stub are distinguishable: only a stub sets omitted_on_page above 0. The keyword-free rows follow the same rule under declarative_omitted_on_page.",
+        "A low total_requirements has a knowable cause and the response says which. coverage.keyword_bearing_blocks_skipped counts blocks that were not read and carry an RFC 2119 keyword in ANY capitalisation, and a requirements response for such a document raises the warning normative_text_in_unscanned_blocks:N. Tables, figures and preformatted text are out of scope by design, so a table-driven specification reports a low count as a known gap rather than as an absence.",
+        "requirements.coverage.completeness is the verdict a caller branches on, and it is the answer to 'may I treat total_requirements as this document's normative content?'. complete: every prose block was scanned, nothing was skipped out of a kind that could hold a rule, no emitted row is a fragment, and a zero carries a keyword-usage notice saying why. partial: a known loss exists. unknown: the counters that would answer it were never recorded, or were recorded by two different rules and do not reconcile - so the question was not asked of anything. completeness_basis is a space-separated list of key:value pairs, every value a number or a name, in a fixed order, and completeness_warnings holds the warning keys that produced the verdict; each of them also appears in warnings, so the verdict and the warnings cannot disagree. Measured over a 182-document corpus, NO document reaches complete, and that is the finding rather than a near miss: every RFC contains at least one table or preformatted block, and a block refused on its kind alone cannot be ruled out as holding a rule.",
+        "non_strict_candidates.declarative_specifications is the keyword-free channel: prose that states a specification with no RFC 2119 keyword anywhere in the sentence, which RFC 8174 section 2 says is still normative. It is scanned over every block of the document, not only the blocks a keyword appears in, which is what makes a paragraph whose only specification is a bound reachable. These are NOT requirements and never enter total_requirements; coverage.declarative_specifications is their count as a number of its own. basis names which test the sentence passed and is not a strength. declarative_excluded counts what each published exclusion dropped, because a filter nobody can see is not a filter. Cap them with declarative_limit; a clamp is reported the way max_results' is.",
+        'A diff reports what it compared in diff.coverage, and an empty change list is not a finding until you read it. coverage.verdict is `unanswered` when a side contributed nothing to compare on that mode or when the mode did not run the comparison it names - diff(2178, 2328, mode:"requirements") is the case that motivated it, and both OSPF documents have zero extracted requirements, so an empty successful response there told a routing engineer the 1998 standard changed nothing against the 1991 draft. An `unanswered` diff is never status ok. coverage.clean is true only when both sides are complete and both contributed, so an empty result from two lossy sides is marked as not clean rather than as agreement. mode:"text" compares LINES and not semantics, and above a per-side line ceiling the underlying pass returns the structural diff instead: the response then says so in coverage.reason = mode_fell_back_to_structure, leaves the structure changes in place, and changes of kind section_* under a text mode are never text differences.',
+      ],
+      parse_notes: [
+        // The single most surprising property of this parser, and the reason a reach
+        // reported for one RFC means nothing until you know the decade it was typeset
+        // in. Per-snapshot counts are in the snapshot's warnings; the contract has to
+        // say what the counts mean before the caller has one in hand.
+        "Section discovery recognises numbered subsection titles that are set by indentation and titles set with an underline, because RFCs published before about 2010 were typeset rather than generated. How many titles each rule recovered is reported per snapshot in warnings as indented_subsection_headings_recognised:N and underlined_headings_recognised:N, and a document whose warnings carry neither is expected to be in the modern generated format.",
+        "A block of a document's masthead is read as prose and its centred title as a heading, because both used to be read as notation: a masthead's two columns are three spaces apart, and looksLikeNotation reads a run of spaces at any indent as a table. The discriminator is that a masthead's second column is right-aligned on a repeated edge while a data table's is ragged. This matters beyond tidiness - while every RFC had at least one skipped block of a kind that could hold a rule, coverage.completeness could never be `complete` for any document, so the verdict was vacuous.",
+        "An indented subsection title is not counted as unread text, and a table of contents entry is not a section: a heading line is excluded from the blocks that may contain normative text, and a number lifted from the middle of a sentence does not open a section. RFC 876 filed 93% of itself under such numbers before this, and a document whose text shows a heading its outline omits is reported by the bench as a dangling heading rather than silently unreachable.",
+      ],
+      ingest_notes: [
+        // A 200 carrying the wrong body is the one upstream failure that used to become a
+        // document. It needs no adversary: a 503 error page was stored as an RFC, analysed
+        // as one, and its requirements verified, quoting `<p>The server MUST be restarted.`
+        // Every other guarantee here is downstream of a citation resolving to the right
+        // bytes, so the check is at the boundary where the bytes enter rather than in the
+        // parser, and it is documented here because a caller deciding whether to retry
+        // needs to know the failure is a contract violation and not a network hiccup.
+        "A body that is not the rendition that was requested is refused and nothing is stored, with the retryable error code UPSTREAM_CONTRACT. The bytes are the gate and the content-type is corroboration: a missing content-type is tolerated, because a proxy may strip one, but a body that sniffs as markup or as binary is refused. Measured before this check: an HTML 503 page became a document with status ok, two requirements at parse_status complete, and verify_citation returning verified.",
       ],
       limits: this.config.limits,
       limits_notes: {
@@ -2169,6 +3401,18 @@ export class RfcService {
         maxContextChars: "Enforced on search snippets, and overridable per call with context_chars (40..2000).",
         maxOutputBytes:
           "Enforced on read. A small budget narrows the answer and reports truncated; it never fails the call.",
+        // The loss counters, in the same block as the limits, because they are what a
+        // caller reads to decide whether a limit was hit or a document said nothing. A
+        // low total_requirements is uninterpretable without them: tables, figures and
+        // preformatted text are out of scope by design, so a specification that states
+        // its rules in a field table reports a low count, and until the response said how
+        // much keyword-bearing text went unread nothing distinguished that from an
+        // absence. Corpus-wide, 278 non-prose blocks carry an RFC 2119 keyword and none
+        // of them is scanned; RFC 1122: 312 blocks skipped, 19 of them keyword-bearing.
+        keywordBearingBlocksSkipped:
+          "Not a limit: a reported number. Every requirements response carries coverage.keyword_bearing_blocks_skipped, which is how many blocks the normative extractor did not read carry an RFC 2119 keyword in ANY capitalisation - the same predicate the candidate pass selects its blocks with, because the two used to disagree on case and the counter was blind to everything the candidate pass drops. It is written to the snapshot row at derivation time and never counted per query, because counting it cost 29 500 ms on RFC 3261; a corpus whose counters were written by the older case-sensitive predicate has them recomputed once, on read, and says so in the warning loss_counters_recomputed. Read it before concluding that a low coverage.total_requirements means the document states little, and read coverage.completeness for the verdict rather than deriving one from this number: a specification that states its rules in a state-machine table carries no keyword for this counter to find.",
+        normativeTextInUnscannedBlocks:
+          "Not a limit: a warning template. A requirements response for a document with keyword_bearing_blocks_skipped > 0 carries the warning normative_text_in_unscanned_blocks:N, where N is that count, meaning N blocks hold an RFC 2119 keyword and were not read. out_of_scope_by_design is part of the warning text: tables, figures, preformatted text and the references section are excluded by design, not by a parser failure. Read those blocks with read(section=…, include=[blocks, source_map]) or a text search over the section before concluding a document states no requirement.",
       },
       sources: [
         { name: "RFC Editor", hosts: ["www.rfc-editor.org"], role: "canonical metadata and publication files" },
@@ -2495,12 +3739,57 @@ function unsupportedCatalogFilters(query: ParsedQuery): string[] {
 
 const DECODER = new TextDecoder("utf-8", { ignoreBOM: true });
 
+/**
+ * Find the sentence group a stable citation id names, by recomputation.
+ *
+ * A hash cannot be inverted, so the id's inputs are re-derived from the section's own
+ * sentences: every distinct text is hashed under every occurrence index it could occupy
+ * in that section. The occurrence index is carried in the id, and every row in the corpus
+ * mints with index 0, so a sentence that stands twice in one section has ONE id with two
+ * referents - the whole group is returned and the caller is told it is ambiguous, rather
+ * than this function choosing the first.
+ */
+function findStableMatch(
+  groups: Map<string, SentenceSpan[]>,
+  rfc: number,
+  sectionNumber: string,
+  stableId: string,
+): SentenceSpan[] | null {
+  for (const group of groups.values()) {
+    const quote = group[0]!.text;
+    for (let occurrence = 0; occurrence < group.length; occurrence += 1) {
+      if (stableCitationId({ rfc, sectionNumber, quote, occurrence }) === stableId) return group;
+    }
+  }
+  return null;
+}
+
 function decodedText(raw: Buffer, charStart: number, charEnd: number): string {
   return DECODER.decode(raw).slice(charStart, charEnd);
 }
 
 function collapseWhitespace(text: string): string {
   return text.replace(/\s+/gu, " ").trim();
+}
+
+/**
+ * Byte offset of an absolute character offset inside a block.
+ *
+ * Block text is a verbatim slice of the publication bytes, so the offset of anything in
+ * it is the block's byte start plus the byte length of the text before it. The extractor
+ * computes the same thing for its own spans; this is the reader's half of it, and it has
+ * to agree with `blocks.byte_start` or a stable id would resolve to a span that is off by
+ * however many multi-byte characters precede it.
+ */
+function codePointCount(text: string): number {
+  let count = 0;
+  for (const _ of text) count += 1;
+  return count;
+}
+
+function byteOffsetInBlock(block: Block, absoluteChar: number): number {
+  const relative = Math.max(0, Math.min(block.text.length, absoluteChar - block.char_start));
+  return block.byte_start + Buffer.byteLength(block.text.slice(0, relative), "utf8");
 }
 
 function codeOf(error: unknown): string {

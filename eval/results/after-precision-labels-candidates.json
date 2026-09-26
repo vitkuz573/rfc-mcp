@@ -1,4 +1,10 @@
 {
+ "$comparability": {
+  "what": "hand labels, kind: non_strict_candidate",
+  "labels_remain_valid": true,
+  "why": "A label is a judgement about a sentence, not about a build. These verdicts are still judgements about these sentences and node eval/apply-labels.mjs carries them forward, so the labels survive the golden set being rebuilt.",
+  "carry_key_changed": "The carry key is now (rfc, kind, text) rather than (rfc, text). One key in this set of files already carried both verdicts - rfc 7872, TRUE as a requirement and FALSE as a candidate - and the old key stored the contradiction silently. apply-labels.mjs now reports it instead of overwriting it."
+ },
  "$comment": [
   "Hand labels for the 132 items of eval/results/after-precision-non_strict_candidate.json",
   "that had no counterpart in the BEFORE sample, plus the 53 items carried over from",

@@ -154,6 +154,54 @@ describe("stdio protocol (legacy 2025 era)", () => {
     expect(parsed.data.tools).toContain("verify_citation");
   });
 
+  it("names the field that says which lines were emptied", async () => {
+    // `text_fidelity` promised that the cleaned and verbatim renderings have equal
+    // line counts and never said which lines were blanked, and the read description
+    // spoke of "the line numbers that were emptied" without naming the field. A
+    // caller who cannot find the field cannot learn that a line is missing from the
+    // text it is about to copy. Both surfaces have to name it, and they have to name
+    // the same one, so a rename cannot leave one of them promising a field that is no
+    // longer on the response.
+    const list = await client.request("tools/list", {});
+    const read = (list.tools as { name: string; description?: string }[]).find((tool) => tool.name === "read");
+    expect(read?.description).toContain("page_furniture_lines");
+    expect(read?.description).toContain("text_verbatim");
+
+    const result = await client.request("tools/call", { name: "capabilities", arguments: {} });
+    const rules = JSON.parse(result.content[0].text).data.reading_rules as string[];
+    expect(rules.some((rule) => rule.includes("page_furniture_lines"))).toBe(true);
+  });
+
+  it("says that a document's reach can depend on how it was typeset", async () => {
+    // 4 838 indented subsection titles and 75 underlined ones were found by shape,
+    // because a document that was typeset sets its titles by indenting or underlining
+    // them. A contract that does not say so makes an outline that reaches less than
+    // the text look complete; the counts are already per-snapshot warnings, but a
+    // caller has to be told what the absence of those warnings means.
+    const result = await client.request("tools/call", { name: "capabilities", arguments: {} });
+    const note = ((JSON.parse(result.content[0].text).data.parse_notes as string[] | undefined) ?? []).join(" ");
+    expect(note).toContain("indented_subsection_headings_recognised");
+    expect(note).toContain("underlined_headings_recognised");
+    expect(note).toContain("warnings");
+    expect(note).toContain("typeset");
+  });
+
+  it("says that a body which is not the document is refused, and with which error", async () => {
+    // A 200 carrying the wrong body is the one upstream failure that used to become a
+    // document. An HTML 503 error page was stored as an RFC, analysed as one, and its
+    // requirements VERIFIED - quoting `<p>The server MUST be restarted.` Every other
+    // guarantee in this tool is downstream of a citation resolving to the right bytes, so
+    // a caller deciding whether to retry needs the error code to be in the contract
+    // rather than discovered from a message.
+    const result = await client.request("tools/call", { name: "capabilities", arguments: {} });
+    const notes = JSON.parse(result.content[0].text).data.ingest_notes as string[];
+    expect(Array.isArray(notes)).toBe(true);
+    expect(notes.join(" ")).toContain("UPSTREAM_CONTRACT");
+    // And the gate is named, so the tolerance is documented as well as the refusal: a
+    // missing content-type passes, a body that sniffs as markup does not.
+    expect(notes.join(" ")).toMatch(/bytes are the gate/iu);
+  });
+
   it("reports offline misses as a tool error, not a protocol error", async () => {
     const result = await client.request("tools/call", { name: "resolve", arguments: { rfc: 2119 } });
     expect(result.isError).toBe(true);

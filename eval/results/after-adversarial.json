@@ -1,0 +1,6867 @@
+{
+ "tag": "after-adversarial",
+ "run_at": "2026-09-26T11:34:41.175Z",
+ "corpus": {
+  "documents": 159,
+  "catalog": 9842
+ },
+ "golden": {
+  "file": "eval/golden.json",
+  "build_fingerprint": "4ac58e81846cde7cc124320a81257ddf23f6077093bbdab56caf7999041265f3",
+  "comparable_with": "eval/results/*.json up to and including redteam.json: NO. Those were measured against eval/golden-baseline-2026-09-26.json, whose selection is not what the published rule produces from this corpus and whose rules carry no snapshot and no offset.",
+  "protocols": 100,
+  "protocols_measured": 96,
+  "protocols_excluded": 4,
+  "rules": 272,
+  "strict": 122,
+  "weak": 150,
+  "rules_carrying_a_snapshot_id": 272,
+  "rules_carrying_a_char_offset": 272
+ },
+ "EXCLUSIONS": {
+  "why": "run-bench.mjs used to drop every protocol whose golden rule list was empty, and the filter was on the LABELLER's output rather than the tool's, so the documents the tool cannot reach were the documents excluded from the measurement. Two of the five were the only two documents in the corpus where the tool returns nothing at all. A filter is allowed to exclude; it is not allowed to exclude quietly.",
+  "count": 4,
+  "protocols": [
+   768,
+   792,
+   2052,
+   9650
+  ],
+  "scored": false,
+  "replay": [
+   {
+    "rfc": 768,
+    "recorded_rules": 0,
+    "would_yield": 2,
+    "would_yield_exact": 2,
+    "eligible_sections": 8,
+    "tool_total_requirements": 0,
+    "tool_candidate_total": 1,
+    "tried": [
+     [
+      "User Interface",
+      0
+     ],
+     [
+      "Format",
+      0
+     ],
+     [
+      "Protocol Application",
+      0
+     ],
+     [
+      "Introduction",
+      0
+     ],
+     [
+      "Protocol Number",
+      0
+     ],
+     [
+      "Fields",
+      1
+     ],
+     [
+      "IP Interface",
+      1
+     ]
+    ]
+   },
+   {
+    "rfc": 792,
+    "recorded_rules": 0,
+    "would_yield": 0,
+    "would_yield_exact": 0,
+    "eligible_sections": 0,
+    "tool_total_requirements": 0,
+    "tool_candidate_total": 1,
+    "tried": []
+   },
+   {
+    "rfc": 2052,
+    "recorded_rules": 0,
+    "would_yield": 0,
+    "would_yield_exact": 0,
+    "eligible_sections": 0,
+    "tool_total_requirements": 9,
+    "tool_candidate_total": 1,
+    "tried": []
+   },
+   {
+    "rfc": 9650,
+    "recorded_rules": 0,
+    "would_yield": 0,
+    "would_yield_exact": 0,
+    "eligible_sections": 5,
+    "tool_total_requirements": 0,
+    "tool_candidate_total": 0,
+    "tried": [
+     [
+      "2",
+      0
+     ],
+     [
+      "1",
+      0
+     ],
+     [
+      "3",
+      0
+     ],
+     [
+      "Acknowledgements",
+      0
+     ],
+     [
+      "Acknowledgements",
+      0
+     ]
+    ]
+   }
+  ],
+  "rules_they_would_contribute": 2,
+  "note": "A protocol that yields no probe cannot yield a recall hit or a recall miss, so it is not scored. It is named here, and `replay` reports what the same published labelling rule finds in it on the CURRENT outline, in rules, so the size of the hole is a number rather than an argument."
+ },
+ "FLOOR": {
+  "why": "Computed on every run, over the same golden set, by the same matcher, from the same section text the probes were cut from. A recall figure at or below its own floor is VOID: a number a grep beats is not a measurement, and the only way a reader finds out is if the instrument says so itself.",
+  "status": "computed",
+  "computable": true,
+  "rows_emitted_total": 1682,
+  "protocols_with_no_floor_rows": [],
+  "why_it_matters": "The floor is not a sanity check a healthy build passes. It is the value below which a reported percentage carries no information, and a reader who knows it is 100% learns that 91.5% is a failure. A run that cannot compute it says so here rather than printing a bare percentage, and every tier below reads floor_unavailable.",
+  "extractors": [
+   {
+    "key": "F1_modal_sentence",
+    "what": "every sentence containing a modal token, any case, split on the labeller's own boundary rule",
+    "lines": 3,
+    "rows_emitted": 865
+   },
+   {
+    "key": "F3_modal_block",
+    "what": "every block containing a modal token, unsplit - no idea where a sentence ends",
+    "lines": 3,
+    "rows_emitted": 605
+   },
+   {
+    "key": "F2_whole_section",
+    "what": "one row per section, carrying the whole section; no split, no keyword test at all",
+    "lines": 2,
+    "rows_emitted": 212
+   }
+  ],
+  "per_tier": [
+   {
+    "tier": "strict",
+    "label": "strict",
+    "rules": 122,
+    "tool_found": 110,
+    "tool_pct": 90.2,
+    "tool_pct_unbounded_matcher": 90.2,
+    "floor": [
+     {
+      "key": "F1_modal_sentence",
+      "what": "every sentence containing a modal token, any case, split on the labeller's own boundary rule",
+      "rows_emitted": 865,
+      "found": 122,
+      "found_pct": 100,
+      "found_pct_containment_matcher": 100
+     },
+     {
+      "key": "F3_modal_block",
+      "what": "every block containing a modal token, unsplit - no idea where a sentence ends",
+      "rows_emitted": 605,
+      "found": 20,
+      "found_pct": 16.4,
+      "found_pct_containment_matcher": 93.4
+     },
+     {
+      "key": "F2_whole_section",
+      "what": "one row per section, carrying the whole section; no split, no keyword test at all",
+      "rows_emitted": 212,
+      "found": 1,
+      "found_pct": 0.8,
+      "found_pct_containment_matcher": 100
+     }
+    ],
+    "floor_pct": 100,
+    "floor_set_by": "F1_modal_sentence",
+    "floor_pct_containment_matcher": 100,
+    "floor_containment_set_by": "F1_modal_sentence",
+    "verdict": "VOID",
+    "floor_computable": true,
+    "discriminates": false,
+    "void_because": "the tool scores 90.2% and F1_modal_sentence scores 100% on the same 122 probes with the same matcher: at or below the floor, so the gap is not evidence of extraction."
+   },
+   {
+    "tier": "weak_lower",
+    "label": "weak/lower",
+    "rules": 134,
+    "tool_found": 121,
+    "tool_pct": 90.3,
+    "tool_pct_unbounded_matcher": 91,
+    "floor": [
+     {
+      "key": "F1_modal_sentence",
+      "what": "every sentence containing a modal token, any case, split on the labeller's own boundary rule",
+      "rows_emitted": 865,
+      "found": 134,
+      "found_pct": 100,
+      "found_pct_containment_matcher": 100
+     },
+     {
+      "key": "F3_modal_block",
+      "what": "every block containing a modal token, unsplit - no idea where a sentence ends",
+      "rows_emitted": 605,
+      "found": 17,
+      "found_pct": 12.7,
+      "found_pct_containment_matcher": 91
+     },
+     {
+      "key": "F2_whole_section",
+      "what": "one row per section, carrying the whole section; no split, no keyword test at all",
+      "rows_emitted": 212,
+      "found": 1,
+      "found_pct": 0.7,
+      "found_pct_containment_matcher": 100
+     }
+    ],
+    "floor_pct": 100,
+    "floor_set_by": "F1_modal_sentence",
+    "floor_pct_containment_matcher": 100,
+    "floor_containment_set_by": "F1_modal_sentence",
+    "verdict": "VOID",
+    "floor_computable": true,
+    "discriminates": false,
+    "void_because": "the tool scores 90.3% and F1_modal_sentence scores 100% on the same 134 probes with the same matcher: at or below the floor, so the gap is not evidence of extraction."
+   },
+   {
+    "tier": "weak_keyword_free",
+    "label": "weak/keyword-free",
+    "rules": 16,
+    "tool_found": 0,
+    "tool_pct": 0,
+    "tool_pct_unbounded_matcher": 0,
+    "floor": [
+     {
+      "key": "F1_modal_sentence",
+      "what": "every sentence containing a modal token, any case, split on the labeller's own boundary rule",
+      "rows_emitted": 865,
+      "found": 0,
+      "found_pct": 0,
+      "found_pct_containment_matcher": 0
+     },
+     {
+      "key": "F3_modal_block",
+      "what": "every block containing a modal token, unsplit - no idea where a sentence ends",
+      "rows_emitted": 605,
+      "found": 0,
+      "found_pct": 0,
+      "found_pct_containment_matcher": 18.8
+     },
+     {
+      "key": "F2_whole_section",
+      "what": "one row per section, carrying the whole section; no split, no keyword test at all",
+      "rows_emitted": 212,
+      "found": 0,
+      "found_pct": 0,
+      "found_pct_containment_matcher": 100
+     }
+    ],
+    "floor_pct": 0,
+    "floor_set_by": "F1_modal_sentence",
+    "floor_pct_containment_matcher": 100,
+    "floor_containment_set_by": "F2_whole_section",
+    "verdict": "VOID",
+    "floor_computable": true,
+    "discriminates": false,
+    "void_because": "the tool scores 0% and the best trivial extractor scores 0% on these 16 probes: the class does not discriminate, because nothing reaches it - not a grep, not a sentence splitter, and not this build either. Its 0% is a statement about the tier, not about the extractor."
+   },
+   {
+    "tier": "weak_all",
+    "label": "weak/all",
+    "rules": 150,
+    "tool_found": 121,
+    "tool_pct": 80.7,
+    "tool_pct_unbounded_matcher": 81.3,
+    "floor": [
+     {
+      "key": "F1_modal_sentence",
+      "what": "every sentence containing a modal token, any case, split on the labeller's own boundary rule",
+      "rows_emitted": 865,
+      "found": 134,
+      "found_pct": 89.3,
+      "found_pct_containment_matcher": 89.3
+     },
+     {
+      "key": "F3_modal_block",
+      "what": "every block containing a modal token, unsplit - no idea where a sentence ends",
+      "rows_emitted": 605,
+      "found": 17,
+      "found_pct": 11.3,
+      "found_pct_containment_matcher": 83.3
+     },
+     {
+      "key": "F2_whole_section",
+      "what": "one row per section, carrying the whole section; no split, no keyword test at all",
+      "rows_emitted": 212,
+      "found": 1,
+      "found_pct": 0.7,
+      "found_pct_containment_matcher": 100
+     }
+    ],
+    "floor_pct": 89.3,
+    "floor_set_by": "F1_modal_sentence",
+    "floor_pct_containment_matcher": 100,
+    "floor_containment_set_by": "F2_whole_section",
+    "verdict": "VOID",
+    "floor_computable": true,
+    "discriminates": false,
+    "void_because": "the tool scores 80.7% and F1_modal_sentence scores 89.3% on the same 150 probes with the same matcher: at or below the floor, so the gap is not evidence of extraction."
+   },
+   {
+    "tier": "negative_discriminating",
+    "label": "NEGATIVE (must-not)",
+    "rules": 218,
+    "tool_found": 166,
+    "tool_pct": 76.1,
+    "tool_pct_unbounded_matcher": 75.2,
+    "floor": [
+     {
+      "key": "F1_modal_sentence",
+      "what": "every sentence containing a modal token, any case, split on the labeller's own boundary rule",
+      "rows_emitted": 865,
+      "found": 151,
+      "found_pct": 69.3,
+      "found_pct_containment_matcher": 69.3
+     },
+     {
+      "key": "F3_modal_block",
+      "what": "every block containing a modal token, unsplit - no idea where a sentence ends",
+      "rows_emitted": 605,
+      "found": 207,
+      "found_pct": 95,
+      "found_pct_containment_matcher": 49.5
+     },
+     {
+      "key": "F2_whole_section",
+      "what": "one row per section, carrying the whole section; no split, no keyword test at all",
+      "rows_emitted": 212,
+      "found": 218,
+      "found_pct": 100,
+      "found_pct_containment_matcher": 0
+     }
+    ],
+    "floor_pct": 100,
+    "floor_set_by": "the trivial extractors score between 69% and 100% here; only the modal-sentence grep is bad at it, and it is bad by only 6 points",
+    "verdict": "measured",
+    "discriminates": true,
+    "void_because": null,
+    "note": "The only tier in this table where the tool is above the best trivial extractor, and by 6 points. Read it with the strict row: a grep trades 8 points of recall for 6 points of contamination, and the trade is the measurement. A high score here is not a high score in isolation - a whole-section emitter scores 100% by emitting nothing at all, which is why the two rows are one table."
+   }
+  ],
+  "discriminates": [
+   "negative_discriminating"
+  ],
+  "does_not_discriminate": [
+   "strict",
+   "weak_lower",
+   "weak_keyword_free",
+   "weak_all"
+  ],
+  "pairwise": [
+   {
+    "key": "F1_modal_sentence",
+    "what": "every sentence containing a modal token, any case, split on the labeller's own boundary rule",
+    "strict_recall_pct": 100,
+    "negative_score_pct": 69.3,
+    "vs_tool_recall_pp": 9.8,
+    "vs_tool_negative_pp": -6.8,
+    "dominates_tool": false,
+    "dominated_by_tool": false
+   },
+   {
+    "key": "F3_modal_block",
+    "what": "every block containing a modal token, unsplit - no idea where a sentence ends",
+    "strict_recall_pct": 16.4,
+    "negative_score_pct": 95,
+    "vs_tool_recall_pp": -73.8,
+    "vs_tool_negative_pp": 18.9,
+    "dominates_tool": false,
+    "dominated_by_tool": false
+   },
+   {
+    "key": "F2_whole_section",
+    "what": "one row per section, carrying the whole section; no split, no keyword test at all",
+    "strict_recall_pct": 0.8,
+    "negative_score_pct": 100,
+    "vs_tool_recall_pp": -89.4,
+    "vs_tool_negative_pp": 23.9,
+    "dominates_tool": false,
+    "dominated_by_tool": false
+   }
+  ],
+  "pairwise_note": "strict recall against negative score, both under the bounded matcher, both on the same 100-document corpus. `dominates_tool` means at least as good on both axes and better on one; no trivial extractor does, and F1 does not: it buys +8.2 points of strict recall for -6.4 points of negative score."
+ },
+ "SPLITTER_SENSITIVITY": {
+  "why": "The same floor extractor under four sentence-boundary rules. Recall is set by whether the candidate extractor's boundaries agree with labelling.mjs's, not by whether it found the statement: 100% with the labeller's own rule and 3.1% with one that also breaks at line ends, which is the right thing to do on hard-wrapped RFC text.",
+  "rows": [
+   {
+    "splitter": "punct",
+    "why": "the splitter labelling.mjs itself uses, so a probe and its floor-case extractor agree by construction",
+    "rows_emitted": 865,
+    "per_tier": [
+     {
+      "tier": "strict",
+      "label": "strict",
+      "found": 122,
+      "rules": 122,
+      "found_pct": 100
+     },
+     {
+      "tier": "weak_lower",
+      "label": "weak/lower",
+      "found": 134,
+      "rules": 134,
+      "found_pct": 100
+     },
+     {
+      "tier": "weak_keyword_free",
+      "label": "weak/keyword-free",
+      "found": 0,
+      "rules": 16,
+      "found_pct": 0
+     },
+     {
+      "tier": "weak_all",
+      "label": "weak/all",
+      "found": 134,
+      "rules": 150,
+      "found_pct": 89.3
+     }
+    ],
+    "spread_pp": 100
+   },
+   {
+    "splitter": "dot",
+    "why": "period followed by whitespace only: no boundary at a question mark, an exclamation, or a line end",
+    "rows_emitted": 865,
+    "per_tier": [
+     {
+      "tier": "strict",
+      "label": "strict",
+      "found": 9,
+      "rules": 122,
+      "found_pct": 7.4
+     },
+     {
+      "tier": "weak_lower",
+      "label": "weak/lower",
+      "found": 12,
+      "rules": 134,
+      "found_pct": 9
+     },
+     {
+      "tier": "weak_keyword_free",
+      "label": "weak/keyword-free",
+      "found": 0,
+      "rules": 16,
+      "found_pct": 0
+     },
+     {
+      "tier": "weak_all",
+      "label": "weak/all",
+      "found": 12,
+      "rules": 150,
+      "found_pct": 8
+     }
+    ],
+    "spread_pp": 9
+   },
+   {
+    "splitter": "punct_or_newline",
+    "why": "hard-wrapped RFC text also breaks at a line end, which is what a reader sees",
+    "rows_emitted": 1003,
+    "per_tier": [
+     {
+      "tier": "strict",
+      "label": "strict",
+      "found": 3,
+      "rules": 122,
+      "found_pct": 2.5
+     },
+     {
+      "tier": "weak_lower",
+      "label": "weak/lower",
+      "found": 6,
+      "rules": 134,
+      "found_pct": 4.5
+     },
+     {
+      "tier": "weak_keyword_free",
+      "label": "weak/keyword-free",
+      "found": 0,
+      "rules": 16,
+      "found_pct": 0
+     },
+     {
+      "tier": "weak_all",
+      "label": "weak/all",
+      "found": 6,
+      "rules": 150,
+      "found_pct": 4
+     }
+    ],
+    "spread_pp": 4.5
+   },
+   {
+    "splitter": "none",
+    "why": "no sentence split at all",
+    "rows_emitted": 212,
+    "per_tier": [
+     {
+      "tier": "strict",
+      "label": "strict",
+      "found": 1,
+      "rules": 122,
+      "found_pct": 0.8
+     },
+     {
+      "tier": "weak_lower",
+      "label": "weak/lower",
+      "found": 1,
+      "rules": 134,
+      "found_pct": 0.7
+     },
+     {
+      "tier": "weak_keyword_free",
+      "label": "weak/keyword-free",
+      "found": 0,
+      "rules": 16,
+      "found_pct": 0
+     },
+     {
+      "tier": "weak_all",
+      "label": "weak/all",
+      "found": 1,
+      "rules": 150,
+      "found_pct": 0.7
+     }
+    ],
+    "spread_pp": 0.8
+   }
+  ],
+  "max_spread_pp": 100,
+  "verdict": "UNSTABLE: matching by whitespace-normalised containment against probes defined by one regex measures SPLITTER AGREEMENT, not extraction. Every number above is quoted with this spread beside it for that reason."
+ },
+ "RECALL": {
+  "strict": {
+   "rules": 122,
+   "found": 110,
+   "found_pct": 90.2,
+   "exact_pct": 2.5,
+   "missed": [
+    "G0011",
+    "G0012",
+    "G0017",
+    "G0024",
+    "G0028",
+    "G0052",
+    "G0103",
+    "G0111",
+    "G0118",
+    "G0121",
+    "G0129",
+    "G0249"
+   ]
+  },
+  "weak_all": {
+   "rules": 150,
+   "found": 121,
+   "found_pct": 80.7,
+   "exact_pct": 4,
+   "missed": [
+    "G0008",
+    "G0009",
+    "G0027",
+    "G0032",
+    "G0036",
+    "G0041",
+    "G0042",
+    "G0045",
+    "G0046",
+    "G0053",
+    "G0078",
+    "G0080",
+    "G0081",
+    "G0086",
+    "G0090",
+    "G0095",
+    "G0096",
+    "G0104",
+    "G0113",
+    "G0116",
+    "G0148",
+    "G0156",
+    "G0185",
+    "G0189",
+    "G0198",
+    "G0199",
+    "G0248",
+    "G0264",
+    "G0272"
+   ]
+  },
+  "weak_lowercase_modal": {
+   "rules": 134,
+   "found": 121,
+   "found_pct": 90.3,
+   "exact_pct": 4.5,
+   "missed": [
+    "G0008",
+    "G0027",
+    "G0032",
+    "G0036",
+    "G0053",
+    "G0080",
+    "G0081",
+    "G0096",
+    "G0113",
+    "G0148",
+    "G0185",
+    "G0198",
+    "G0272"
+   ]
+  },
+  "weak_keyword_free": {
+   "rules": 16,
+   "found": 0,
+   "found_pct": 0,
+   "exact_pct": 0,
+   "missed": [
+    "G0009",
+    "G0041",
+    "G0042",
+    "G0045",
+    "G0046",
+    "G0078",
+    "G0086",
+    "G0090",
+    "G0095",
+    "G0104",
+    "G0116",
+    "G0156",
+    "G0189",
+    "G0199",
+    "G0248",
+    "G0264"
+   ]
+  },
+  "by_tier_table": [
+   {
+    "tier": "strict",
+    "label": "strict",
+    "rules": 122,
+    "bounded_matcher": {
+     "rules": 122,
+     "found": 110,
+     "found_pct": 90.2,
+     "exact_pct": 2.5,
+     "missed": [
+      "G0011",
+      "G0012",
+      "G0017",
+      "G0024",
+      "G0028",
+      "G0052",
+      "G0103",
+      "G0111",
+      "G0118",
+      "G0121",
+      "G0129",
+      "G0249"
+     ]
+    },
+    "containment_matcher": {
+     "rules": 122,
+     "found": 110,
+     "found_pct": 90.2,
+     "exact_pct": 2.5,
+     "missed": [
+      "G0011",
+      "G0012",
+      "G0017",
+      "G0024",
+      "G0028",
+      "G0052",
+      "G0103",
+      "G0111",
+      "G0118",
+      "G0121",
+      "G0129",
+      "G0249"
+     ]
+    },
+    "delta_pp": 0
+   },
+   {
+    "tier": "weak_lower",
+    "label": "weak/lower",
+    "rules": 134,
+    "bounded_matcher": {
+     "rules": 134,
+     "found": 121,
+     "found_pct": 90.3,
+     "exact_pct": 4.5,
+     "missed": [
+      "G0008",
+      "G0027",
+      "G0032",
+      "G0036",
+      "G0053",
+      "G0080",
+      "G0081",
+      "G0096",
+      "G0113",
+      "G0148",
+      "G0185",
+      "G0198",
+      "G0272"
+     ]
+    },
+    "containment_matcher": {
+     "rules": 134,
+     "found": 122,
+     "found_pct": 91,
+     "exact_pct": 4.5,
+     "missed": [
+      "G0008",
+      "G0027",
+      "G0032",
+      "G0036",
+      "G0053",
+      "G0080",
+      "G0081",
+      "G0096",
+      "G0113",
+      "G0148",
+      "G0198",
+      "G0272"
+     ]
+    },
+    "delta_pp": -0.7
+   },
+   {
+    "tier": "weak_keyword_free",
+    "label": "weak/keyword-free",
+    "rules": 16,
+    "bounded_matcher": {
+     "rules": 16,
+     "found": 0,
+     "found_pct": 0,
+     "exact_pct": 0,
+     "missed": [
+      "G0009",
+      "G0041",
+      "G0042",
+      "G0045",
+      "G0046",
+      "G0078",
+      "G0086",
+      "G0090",
+      "G0095",
+      "G0104",
+      "G0116",
+      "G0156",
+      "G0189",
+      "G0199",
+      "G0248",
+      "G0264"
+     ]
+    },
+    "containment_matcher": {
+     "rules": 16,
+     "found": 0,
+     "found_pct": 0,
+     "exact_pct": 0,
+     "missed": [
+      "G0009",
+      "G0041",
+      "G0042",
+      "G0045",
+      "G0046",
+      "G0078",
+      "G0086",
+      "G0090",
+      "G0095",
+      "G0104",
+      "G0116",
+      "G0156",
+      "G0189",
+      "G0199",
+      "G0248",
+      "G0264"
+     ]
+    },
+    "delta_pp": 0
+   },
+   {
+    "tier": "weak_all",
+    "label": "weak/all",
+    "rules": 150,
+    "bounded_matcher": {
+     "rules": 150,
+     "found": 121,
+     "found_pct": 80.7,
+     "exact_pct": 4,
+     "missed": [
+      "G0008",
+      "G0009",
+      "G0027",
+      "G0032",
+      "G0036",
+      "G0041",
+      "G0042",
+      "G0045",
+      "G0046",
+      "G0053",
+      "G0078",
+      "G0080",
+      "G0081",
+      "G0086",
+      "G0090",
+      "G0095",
+      "G0096",
+      "G0104",
+      "G0113",
+      "G0116",
+      "G0148",
+      "G0156",
+      "G0185",
+      "G0189",
+      "G0198",
+      "G0199",
+      "G0248",
+      "G0264",
+      "G0272"
+     ]
+    },
+    "containment_matcher": {
+     "rules": 150,
+     "found": 122,
+     "found_pct": 81.3,
+     "exact_pct": 4,
+     "missed": [
+      "G0008",
+      "G0009",
+      "G0027",
+      "G0032",
+      "G0036",
+      "G0041",
+      "G0042",
+      "G0045",
+      "G0046",
+      "G0053",
+      "G0078",
+      "G0080",
+      "G0081",
+      "G0086",
+      "G0090",
+      "G0095",
+      "G0096",
+      "G0104",
+      "G0113",
+      "G0116",
+      "G0148",
+      "G0156",
+      "G0189",
+      "G0198",
+      "G0199",
+      "G0248",
+      "G0264",
+      "G0272"
+     ]
+    },
+    "delta_pp": -0.6
+   }
+  ],
+  "matcher": {
+   "control": "containment: norm(row.exact_text) includes norm(probe), no bound on the row",
+   "reported": "bounded statement containment: the probe must be a substring of the row AND the normalised row may not exceed 1.5x the normalised probe",
+   "why": "Containment alone lets one row per section score 260/260 = 100% on every tier, for an extractor that reads nothing, so a percentage under it describes the matcher rather than the extractor.",
+   "margin": 1.5,
+   "margin_is_a_judgement": true,
+   "margin_sweep": [
+    {
+     "margin": 1,
+     "per_tier": [
+      {
+       "tier": "strict",
+       "label": "strict",
+       "found": 110,
+       "rules": 122,
+       "found_pct": 90.2,
+       "excluded_vs_unbounded": 0
+      },
+      {
+       "tier": "weak_lower",
+       "label": "weak/lower",
+       "found": 121,
+       "rules": 134,
+       "found_pct": 90.3,
+       "excluded_vs_unbounded": 1
+      },
+      {
+       "tier": "weak_keyword_free",
+       "label": "weak/keyword-free",
+       "found": 0,
+       "rules": 16,
+       "found_pct": 0,
+       "excluded_vs_unbounded": 0
+      },
+      {
+       "tier": "weak_all",
+       "label": "weak/all",
+       "found": 121,
+       "rules": 150,
+       "found_pct": 80.7,
+       "excluded_vs_unbounded": 1
+      }
+     ]
+    },
+    {
+     "margin": 1.25,
+     "per_tier": [
+      {
+       "tier": "strict",
+       "label": "strict",
+       "found": 110,
+       "rules": 122,
+       "found_pct": 90.2,
+       "excluded_vs_unbounded": 0
+      },
+      {
+       "tier": "weak_lower",
+       "label": "weak/lower",
+       "found": 121,
+       "rules": 134,
+       "found_pct": 90.3,
+       "excluded_vs_unbounded": 1
+      },
+      {
+       "tier": "weak_keyword_free",
+       "label": "weak/keyword-free",
+       "found": 0,
+       "rules": 16,
+       "found_pct": 0,
+       "excluded_vs_unbounded": 0
+      },
+      {
+       "tier": "weak_all",
+       "label": "weak/all",
+       "found": 121,
+       "rules": 150,
+       "found_pct": 80.7,
+       "excluded_vs_unbounded": 1
+      }
+     ]
+    },
+    {
+     "margin": 1.5,
+     "per_tier": [
+      {
+       "tier": "strict",
+       "label": "strict",
+       "found": 110,
+       "rules": 122,
+       "found_pct": 90.2,
+       "excluded_vs_unbounded": 0
+      },
+      {
+       "tier": "weak_lower",
+       "label": "weak/lower",
+       "found": 121,
+       "rules": 134,
+       "found_pct": 90.3,
+       "excluded_vs_unbounded": 1
+      },
+      {
+       "tier": "weak_keyword_free",
+       "label": "weak/keyword-free",
+       "found": 0,
+       "rules": 16,
+       "found_pct": 0,
+       "excluded_vs_unbounded": 0
+      },
+      {
+       "tier": "weak_all",
+       "label": "weak/all",
+       "found": 121,
+       "rules": 150,
+       "found_pct": 80.7,
+       "excluded_vs_unbounded": 1
+      }
+     ]
+    },
+    {
+     "margin": 2,
+     "per_tier": [
+      {
+       "tier": "strict",
+       "label": "strict",
+       "found": 110,
+       "rules": 122,
+       "found_pct": 90.2,
+       "excluded_vs_unbounded": 0
+      },
+      {
+       "tier": "weak_lower",
+       "label": "weak/lower",
+       "found": 121,
+       "rules": 134,
+       "found_pct": 90.3,
+       "excluded_vs_unbounded": 1
+      },
+      {
+       "tier": "weak_keyword_free",
+       "label": "weak/keyword-free",
+       "found": 0,
+       "rules": 16,
+       "found_pct": 0,
+       "excluded_vs_unbounded": 0
+      },
+      {
+       "tier": "weak_all",
+       "label": "weak/all",
+       "found": 121,
+       "rules": 150,
+       "found_pct": 80.7,
+       "excluded_vs_unbounded": 1
+      }
+     ]
+    },
+    {
+     "margin": "unbounded",
+     "per_tier": [
+      {
+       "tier": "strict",
+       "label": "strict",
+       "found": 110,
+       "rules": 122,
+       "found_pct": 90.2,
+       "excluded_vs_unbounded": 0
+      },
+      {
+       "tier": "weak_lower",
+       "label": "weak/lower",
+       "found": 122,
+       "rules": 134,
+       "found_pct": 91,
+       "excluded_vs_unbounded": 0
+      },
+      {
+       "tier": "weak_keyword_free",
+       "label": "weak/keyword-free",
+       "found": 0,
+       "rules": 16,
+       "found_pct": 0,
+       "excluded_vs_unbounded": 0
+      },
+      {
+       "tier": "weak_all",
+       "label": "weak/all",
+       "found": 122,
+       "rules": 150,
+       "found_pct": 81.3,
+       "excluded_vs_unbounded": 0
+      }
+     ]
+    }
+   ],
+   "matches_excluded_by_margin": 1,
+   "matches_excluded_detail": [
+    {
+     "id": "G0185",
+     "rfc": 8447,
+     "ratio": 2.455,
+     "chars": 297,
+     "text": "It is sufficient to have an Internet-Draft\n      (that is posted and never published as an RFC) or a document from\n      another standards body, industry consor"
+    }
+   ],
+   "hit_ratio_distribution": {
+    "min": 1,
+    "q25": 1,
+    "median": 1,
+    "q75": 1,
+    "max": 1
+   }
+  },
+  "headline_rule": "strict and weak are never added together; keyword-free is reported apart because no keyword-driven extractor can reach it; every tier is reported beside its own floor and marked VOID when the floor beats it."
+ },
+ "NEGATIVES": {
+  "why": "A benchmark where a 3-line grep scores 100% has no floor to measure against, and the positive set cannot supply one: it asks only whether a statement was found, and a grep finds every statement. These probes are the statements that must NOT be in a compliance list. Every one is produced by a named, published mechanism test over text the extractor never sees (eval/lib/negative.mjs) - never hand-picked, and the label IS the mechanism.",
+  "unlabelled_positive_guard": "A negative whose normalised text is also a golden probe is dropped and counted: it would be scored in both directions at once. Collisions dropped: 47 ([[959,\"descriptive_modal\"],[1034,\"descriptive_modal\"],[1034,\"no_modal\"],[1812,\"descriptive_modal\"]])",
+  "total": 1538,
+  "leaked": 62,
+  "score_pct": 96,
+  "score_pct_note": "Pooled over every class. It is the LEAST useful number here, because `no_modal` is the largest class and almost every extractor passes it, so the pool is dominated by the one check that does not discriminate. The discriminating figure is `discriminating` below.",
+  "per_class": [
+   {
+    "class": "meta_language",
+    "probes": 14,
+    "leaked": 3,
+    "score_pct": 78.6,
+    "leaked_unbounded_matcher": 3,
+    "by_generator": {
+     "meta_language/quoted_keyword": 5,
+     "meta_language/about_the_language": 9
+    },
+    "by_block_kind": {
+     "paragraph": 14
+    },
+    "leaked_by_pool": {
+     "strict": 0,
+     "candidates": 3
+    },
+    "examples": [
+     [
+      4764,
+      "1.3",
+      "meta_language",
+      "quoted_keyword",
+      "The key words \"MUST\", \"MUST NOT\", \"REQUIRED\", \"SHALL\", \"SHALL NOT\", \"SHOULD\", \"SHOULD NOT\", \"RECOMMENDED\", \"MA"
+     ],
+     [
+      6302,
+      "2",
+      "meta_language",
+      "quoted_keyword",
+      "The key words \"MUST\", \"MUST NOT\", \"REQUIRED\", \"SHALL\", \"SHALL NOT\", \"SHOULD\", \"SHOULD NOT\", \"RECOMMENDED\", \"MA"
+     ],
+     [
+      8499,
+      "9",
+      "meta_language",
+      "about_the_language",
+      "The term \"WHOIS data\" is often used as a synonym for the registry database, even though that database may be s"
+     ]
+    ]
+   },
+   {
+    "class": "descriptive_modal",
+    "probes": 204,
+    "leaked": 49,
+    "score_pct": 76,
+    "leaked_unbounded_matcher": 51,
+    "by_generator": {
+     "descriptive_modal/relative_clause_modal": 180,
+     "descriptive_modal/possibility_or_courtesy": 13,
+     "descriptive_modal/consequence_reporting": 11
+    },
+    "by_block_kind": {
+     "paragraph": 204
+    },
+    "leaked_by_pool": {
+     "strict": 0,
+     "candidates": 49
+    },
+    "examples": [
+     [
+      793,
+      "3.3",
+      "descriptive_modal",
+      "possibility_or_courtesy",
+      "This is an engineering choice, and may be changed if experience indicates it is desirable to do so."
+     ],
+     [
+      793,
+      "3.3",
+      "descriptive_modal",
+      "relative_clause_modal",
+      "The problem is that the recovering host may not know for how long it crashed nor does it know whether there ar"
+     ],
+     [
+      1034,
+      "3.6",
+      "descriptive_modal",
+      "relative_clause_modal",
+      "While short TTLs can be used to minimize caching, and a zero TTL prohibits caching, the realities of Internet "
+     ],
+     [
+      1122,
+      "3.3.3",
+      "descriptive_modal",
+      "relative_clause_modal",
+      "We designate by EMTU_S (\"Effective MTU for sending\") the maximum IP datagram size that may be sent, for a part"
+     ],
+     [
+      1122,
+      "3.3.3",
+      "descriptive_modal",
+      "relative_clause_modal",
+      "Thus, MMS_S is only an upper bound on the datagram size that a transport protocol may send; even when MMS_S ex"
+     ],
+     [
+      1812,
+      "4.2.2.2",
+      "descriptive_modal",
+      "consequence_reporting",
+      "The Router ID may be specified on a system basis or on a per-link basis."
+     ]
+    ]
+   },
+   {
+    "class": "nonprose_block",
+    "probes": 5,
+    "leaked": 5,
+    "score_pct": 0,
+    "leaked_unbounded_matcher": 5,
+    "by_generator": {
+     "nonprose_block/keyword_in_non_prose_block": 5
+    },
+    "by_block_kind": {
+     "table": 5
+    },
+    "leaked_by_pool": {
+     "strict": 0,
+     "candidates": 5
+    },
+    "examples": [
+     [
+      9117,
+      "4.1",
+      "nonprose_block",
+      "keyword_in_non_prose_block",
+      "| b) One of the following conditions MUST hold true: | | 1."
+     ],
+     [
+      9117,
+      "4.1",
+      "nonprose_block",
+      "keyword_in_non_prose_block",
+      "This condition MAY be disabled by explicit | configuration on a BGP speaker."
+     ],
+     [
+      9117,
+      "4.1",
+      "nonprose_block",
+      "keyword_in_non_prose_block",
+      "As an extension to this rule, a given non-empty AS_PATH | (besides AS_CONFED_SEQUENCE segments) MAY be permitt"
+     ],
+     [
+      9117,
+      "4.2",
+      "nonprose_block",
+      "keyword_in_non_prose_block",
+      "| BGP implementations MUST also enforce that the AS_PATH | attribute of a route received via the External Bord"
+     ],
+     [
+      9117,
+      "4.2",
+      "nonprose_block",
+      "keyword_in_non_prose_block",
+      "| BGP Flow Specification implementations MUST enforce that the AS | in the left-most position of the AS_PATH a"
+     ]
+    ]
+   },
+   {
+    "class": "no_modal",
+    "probes": 1310,
+    "leaked": 0,
+    "score_pct": 100,
+    "leaked_unbounded_matcher": 2,
+    "by_generator": {
+     "no_modal/no_modal_token": 1310
+    },
+    "by_block_kind": {
+     "paragraph": 1214,
+     "list_item": 96
+    },
+    "leaked_by_pool": {
+     "strict": 0,
+     "candidates": 0
+    },
+    "examples": []
+   }
+  ],
+  "contested": [
+   {
+    "class": "preformatted_block",
+    "probes": 5,
+    "leaked": 5,
+    "score_pct": 0,
+    "leaked_unbounded_matcher": 5,
+    "by_generator": {
+     "preformatted_block/keyword_in_preformatted_block": 5
+    },
+    "by_block_kind": {
+     "preformatted": 5
+    },
+    "leaked_by_pool": {
+     "strict": 0,
+     "candidates": 5
+    },
+    "examples": [
+     [
+      1122,
+      "4.2.2.3",
+      "preformatted_block",
+      "keyword_in_preformatted_block",
+      "The window size MUST be treated as an unsigned number, or else large window sizes will appear like negative wi"
+     ],
+     [
+      4764,
+      "1.3",
+      "preformatted_block",
+      "keyword_in_preformatted_block",
+      "The key words \"MUST\", \"MUST NOT\", \"REQUIRED\", \"SHALL\", \"SHALL NOT\", \"SHOULD\", \"SHOULD NOT\", \"RECOMMENDED\", \"MA"
+     ],
+     [
+      6302,
+      "2",
+      "preformatted_block",
+      "keyword_in_preformatted_block",
+      "The key words \"MUST\", \"MUST NOT\", \"REQUIRED\", \"SHALL\", \"SHALL NOT\", \"SHOULD\", \"SHOULD NOT\", \"RECOMMENDED\", \"MA"
+     ],
+     [
+      8174,
+      "2",
+      "preformatted_block",
+      "keyword_in_preformatted_block",
+      "The key words \"MUST\", \"MUST NOT\", \"REQUIRED\", \"SHALL\", \"SHALL NOT\", \"SHOULD\", \"SHOULD NOT\", \"RECOMMENDED\", \"MA"
+     ],
+     [
+      8174,
+      "2",
+      "preformatted_block",
+      "keyword_in_preformatted_block",
+      "The key words \"MUST\", \"MUST NOT\", \"REQUIRED\", \"SHALL\", \"SHALL NOT\", \"SHOULD\", \"SHOULD NOT\", \"RECOMMENDED\", \"NO"
+     ]
+    ]
+   }
+  ],
+  "discriminating": {
+   "probes": 218,
+   "leaked": 52,
+   "score_pct": 76.1,
+   "leaked_unbounded_matcher": 54,
+   "by_generator": {
+    "descriptive_modal/relative_clause_modal": 180,
+    "descriptive_modal/possibility_or_courtesy": 13,
+    "descriptive_modal/consequence_reporting": 11,
+    "meta_language/quoted_keyword": 5,
+    "meta_language/about_the_language": 9
+   },
+   "by_block_kind": {
+    "paragraph": 218
+   },
+   "leaked_by_pool": {
+    "strict": 0,
+    "candidates": 52
+   },
+   "examples": [
+    [
+     793,
+     "3.3",
+     "descriptive_modal",
+     "possibility_or_courtesy",
+     "This is an engineering choice, and may be changed if experience indicates it is desirable to do so."
+    ],
+    [
+     793,
+     "3.3",
+     "descriptive_modal",
+     "relative_clause_modal",
+     "The problem is that the recovering host may not know for how long it crashed nor does it know whether there ar"
+    ],
+    [
+     1034,
+     "3.6",
+     "descriptive_modal",
+     "relative_clause_modal",
+     "While short TTLs can be used to minimize caching, and a zero TTL prohibits caching, the realities of Internet "
+    ],
+    [
+     1122,
+     "3.3.3",
+     "descriptive_modal",
+     "relative_clause_modal",
+     "We designate by EMTU_S (\"Effective MTU for sending\") the maximum IP datagram size that may be sent, for a part"
+    ],
+    [
+     1122,
+     "3.3.3",
+     "descriptive_modal",
+     "relative_clause_modal",
+     "Thus, MMS_S is only an upper bound on the datagram size that a transport protocol may send; even when MMS_S ex"
+    ],
+    [
+     1812,
+     "4.2.2.2",
+     "descriptive_modal",
+     "consequence_reporting",
+     "The Router ID may be specified on a system basis or on a per-link basis."
+    ]
+   ]
+  },
+  "discriminating_by_pool": {
+   "probes": 218,
+   "leaked_strict": 0,
+   "strict_score_pct": 100,
+   "leaked_candidates": 52,
+   "candidates_score_pct": 76.1,
+   "why": "A caller building a compliance contract reads requirements[]. The candidate list is a review list, so a lead that is not an obligation is that channel working rather than a defect - and saying so is not exculpation, it is naming which pool each number is about. A class that leaks into requirements[] is a defect; the same class in non_strict_candidates is a cost to whoever reads the review list."
+  },
+  "census": {
+   "descriptive_modal/relative_clause_modal": 180,
+   "no_modal/no_modal_token": 1310,
+   "descriptive_modal/possibility_or_courtesy": 13,
+   "descriptive_modal/consequence_reporting": 11,
+   "preformatted_block/keyword_in_preformatted_block": 5,
+   "meta_language/quoted_keyword": 5,
+   "meta_language/about_the_language": 9,
+   "nonprose_block/keyword_in_non_prose_block": 5
+  },
+  "not_measured": [
+   "An upper-case descriptive modal - the most common false positive in RFC 2119 and the most valuable negative. Telling a deontic modal from a descriptive one is a grammatical judgement, and the only mechanism available for it is the extractor's own `shape: demand`, which is the claim under test. Labelling with it would make the check circular, so the population is UNMEASURED rather than guessed.",
+   "Any class whose generators fire on nothing. The census above is the count per generator; a generator that produced zero is a class the mechanism does not reach in this corpus, and that is reported rather than quietly widened."
+  ],
+  "floor_extractors": {
+   "why": "The floor scored on the set it is supposed to fail. A trivial extractor that takes every positive probe and every negative one is proved to be doing nothing, and the two numbers together are the only way to say what a recall figure is worth.",
+   "discriminating": [
+    {
+     "key": "F1_modal_sentence",
+     "probes": 218,
+     "leaked_bounded": 67,
+     "score_bounded_pct": 69.3,
+     "leaked_containment": 67,
+     "score_containment_pct": 69.3
+    },
+    {
+     "key": "F3_modal_block",
+     "probes": 218,
+     "leaked_bounded": 11,
+     "score_bounded_pct": 95,
+     "leaked_containment": 110,
+     "score_containment_pct": 49.5
+    },
+    {
+     "key": "F2_whole_section",
+     "probes": 218,
+     "leaked_bounded": 0,
+     "score_bounded_pct": 100,
+     "leaked_containment": 218,
+     "score_containment_pct": 0
+    }
+   ],
+   "per_class": [
+    {
+     "class": "meta_language",
+     "probes": 14,
+     "floor": [
+      {
+       "key": "F1_modal_sentence",
+       "probes": 14,
+       "leaked_bounded": 6,
+       "score_bounded_pct": 57.1,
+       "leaked_containment": 6,
+       "score_containment_pct": 57.1
+      },
+      {
+       "key": "F3_modal_block",
+       "probes": 14,
+       "leaked_bounded": 2,
+       "score_bounded_pct": 85.7,
+       "leaked_containment": 6,
+       "score_containment_pct": 57.1
+      },
+      {
+       "key": "F2_whole_section",
+       "probes": 14,
+       "leaked_bounded": 0,
+       "score_bounded_pct": 100,
+       "leaked_containment": 14,
+       "score_containment_pct": 0
+      }
+     ]
+    },
+    {
+     "class": "descriptive_modal",
+     "probes": 204,
+     "floor": [
+      {
+       "key": "F1_modal_sentence",
+       "probes": 204,
+       "leaked_bounded": 61,
+       "score_bounded_pct": 70.1,
+       "leaked_containment": 61,
+       "score_containment_pct": 70.1
+      },
+      {
+       "key": "F3_modal_block",
+       "probes": 204,
+       "leaked_bounded": 9,
+       "score_bounded_pct": 95.6,
+       "leaked_containment": 104,
+       "score_containment_pct": 49
+      },
+      {
+       "key": "F2_whole_section",
+       "probes": 204,
+       "leaked_bounded": 0,
+       "score_bounded_pct": 100,
+       "leaked_containment": 204,
+       "score_containment_pct": 0
+      }
+     ]
+    }
+   ],
+   "all_classes": [
+    {
+     "key": "F1_modal_sentence",
+     "probes": 1538,
+     "leaked_bounded": 76,
+     "score_bounded_pct": 95.1,
+     "leaked_containment": 121,
+     "score_containment_pct": 92.1
+    },
+    {
+     "key": "F3_modal_block",
+     "probes": 1538,
+     "leaked_bounded": 23,
+     "score_bounded_pct": 98.5,
+     "leaked_containment": 580,
+     "score_containment_pct": 62.3
+    },
+    {
+     "key": "F2_whole_section",
+     "probes": 1538,
+     "leaked_bounded": 0,
+     "score_bounded_pct": 100,
+     "leaked_containment": 1538,
+     "score_containment_pct": 0
+    }
+   ]
+  }
+ },
+ "PRECISION": {
+  "status": "awaiting manual labels",
+  "sample": 287,
+  "distinct_sentences": 287,
+  "duplicate_rows_skipped": 1,
+  "dedupe_key": "rfc + whitespace-normalised exact_text",
+  "why_dedupe": "The same sentence is emitted up to 12 times in one document, so an undeduped sample labels one sentence repeatedly and the effective n is smaller than the printed n.",
+  "sample_file": "eval/results/after-adversarial-precision-sample.json",
+  "rubric": "eval/PRECISION-RUBRIC.md"
+ },
+ "CALLS": {
+  "golden_rules": 272,
+  "units_of_40_golden_rules": 6.8,
+  "calls_total": 714,
+  "by_purpose": {
+   "resolve": 96,
+   "requirements": 192,
+   "requirements_extra_page": 15,
+   "verify_citation": 411,
+   "read": 0
+  },
+  "per_40_golden_rules": 44.56,
+  "per_40_reported_requirements": 1.77,
+  "per_40_emitted_rows": 1,
+  "caller_calls": 303,
+  "caller_buckets": [
+   "resolve",
+   "requirements",
+   "requirements_extra_page"
+  ],
+  "audit_calls": 411,
+  "audit_note": "verify_citation, and nothing else: the harness auditing its own output. It was 52.9% of the old headline, and a caller building a compliance list never calls it. The section reads behind the label-free invariants are made outside the counting wrapper and are not in either figure: a guard that can move the number it guards is part of the instrument rather than a check on it, and their cost is reported in `instrument_reads`.",
+  "instrument_reads": {
+   "note": "Read calls made outside the counting wrapper: the section text+blocks reused by the floor, the negative probes, conservation and the dangling-heading guard, plus one outline read per protocol for the guard. The old CALLS figure counted none of them and said so only in prose.",
+   "section_reads": 212,
+   "outline_reads_for_dangling_guard": 96,
+   "calls_after_invariants": 1191
+  },
+  "reported_requirements": 6838,
+  "emitted_rows": 12089,
+  "distribution_by_golden_rules_per_protocol": [
+   {
+    "golden_rules": 1,
+    "protocols": 4,
+    "calls": 12,
+    "rules": 4,
+    "rows": 48,
+    "mean_calls": 3,
+    "mean_rows": 12,
+    "calls_per_golden_rule": 3
+   },
+   {
+    "golden_rules": 2,
+    "protocols": 8,
+    "calls": 24,
+    "rules": 16,
+    "rows": 316,
+    "mean_calls": 3,
+    "mean_rows": 40,
+    "calls_per_golden_rule": 1.5
+   },
+   {
+    "golden_rules": 3,
+    "protocols": 84,
+    "calls": 267,
+    "rules": 252,
+    "rows": 11725,
+    "mean_calls": 3.18,
+    "mean_rows": 140,
+    "calls_per_golden_rule": 1.06
+   }
+  ],
+  "worst_protocol": {
+   "rfc": 2606,
+   "title": "Reserved Top Level DNS Names",
+   "golden_rules": 1,
+   "calls": 3,
+   "pages": 1,
+   "emitted_rows": 4,
+   "total_requirements": 0,
+   "calls_per_golden_rule": 3,
+   "why": "WORST PER GOLDEN RULE. 3 calls for 1 golden rule and 4 emitted rows. The fixed cost is one resolve plus one unscoped requirements before a single rule is read, so it is amortised over 1 probe here and over 2.83 on average. A sparse document is the most expensive thing in the set per unit of measured work, and the cheapest per row - both numbers are reported because a mean of either one is a lie about the other."
+  },
+  "worst_protocol_per_row": {
+   "rfc": 4033,
+   "title": "DNS Security Introduction and Requirements",
+   "golden_rules": 3,
+   "calls": 3,
+   "pages": 1,
+   "emitted_rows": 51,
+   "total_requirements": 0,
+   "calls_per_emitted_row": 0.0588,
+   "restricted_to": "documents emitting at least 50 rows, so a document with nothing in it cannot win the ranking",
+   "why": "WORST PER EMITTED ROW, over documents with at least 50 rows. 3 calls (1 pages) for 51 emitted rows. The cost here is pagination, not the fixed cost: max_results caps a page at 200 rows, so a document with 0 requirements is read in 1 calls, and every one of those is a call a caller building a compliance list has to make."
+  },
+  "most_expensive_to_read_whole": {
+   "rfc": 1812,
+   "title": "Requirements for IP Version 4 Routers",
+   "pages": 3,
+   "calls": 5,
+   "total_requirements": 577,
+   "emitted_rows": 980,
+   "why": "Most pages of any measured document: 3 pages, 5 calls, 577 requirements and 980 emitted rows. This is the absolute worst case for a caller who wants the whole compliance list, and it is a property of the 200-row page ceiling rather than of the extractor."
+  }
+ },
+ "VERIFY": {
+  "why": "One number per verdict condition, because one pooled number is what hid the finding. The old figure - 234/235 = 99.6% of the citations hanging off a matched recall rule - is the store checked against itself: the quote and the block come from the same record, so they agree by construction. It is not recomputed here; S1 is the same check, named as a control, and the other four conditions are the ones that can fail.",
+  "replaces": {
+   "figure": "234/235 = 99.6% ({verified: 234, not_found: 1})",
+   "how_it_was_produced": "verify_citation on citation_ids.slice(0,2) of every rule counted found, pinned to that protocol's snapshot. eval/results/redteam.json VERIFY.",
+   "why_not_recomputed": "It is a tautology and it cost 235 calls; S1 measures the same property with 96 and is labelled as the control it is."
+  },
+  "calls": 411,
+  "scenarios": [
+   {
+    "key": "S1_same_derivation",
+    "contract": "verified",
+    "why": "CONTROL, and the only tautology here: the citation is read off a row of this derivation and verified against the snapshot this derivation was made from. A pass says the store is self-consistent, which is worth knowing and is not evidence about any other derivation.",
+    "control": true,
+    "checks": 96,
+    "conform": 96,
+    "conform_pct": 100,
+    "by_verdict": {
+     "verified": 96
+    },
+    "reachable": true,
+    "unreachable_reason": null,
+    "span_failures": [],
+    "span_caveat": null,
+    "nonconform": []
+   },
+   {
+    "key": "S2_other_derivation",
+    "contract": "stale or not_found, NEVER verified",
+    "why": "The same id against a DIFFERENT document's derivation. A derived id is a function of its snapshot, block and offset, so a record that resolves in a store it was not minted in is a provenance failure and answering `verified` would be the tool claiming a quote it never read.",
+    "control": false,
+    "checks": 96,
+    "conform": 96,
+    "conform_pct": 100,
+    "by_verdict": {
+     "not_found": 96
+    },
+    "reachable": true,
+    "unreachable_reason": null,
+    "span_failures": [],
+    "span_caveat": null,
+    "nonconform": []
+   },
+   {
+    "key": "S3_duplicate_quote",
+    "contract": "ambiguous, with every span named",
+    "why": "A sentence that occurs twice in one document. The id names a sentence, not a place, so the only correct answer reports both places. `not_found` is a failure of the search and `verified` is a guess; both are caught here.",
+    "control": false,
+    "checks": 27,
+    "conform": 12,
+    "conform_pct": 44.4,
+    "by_verdict": {
+     "ambiguous": 27
+    },
+    "reachable": true,
+    "unreachable_reason": null,
+    "span_failures": [
+     [
+      1812,
+      2,
+      1
+     ],
+     [
+      2045,
+      3,
+      1
+     ],
+     [
+      2845,
+      2,
+      1
+     ],
+     [
+      4035,
+      2,
+      1
+     ],
+     [
+      4120,
+      2,
+      1
+     ],
+     [
+      4253,
+      2,
+      1
+     ],
+     [
+      6066,
+      2,
+      1
+     ],
+     [
+      6762,
+      2,
+      1
+     ],
+     [
+      7230,
+      2,
+      1
+     ],
+     [
+      7231,
+      2,
+      1
+     ],
+     [
+      7540,
+      2,
+      1
+     ],
+     [
+      8446,
+      2,
+      1
+     ],
+     [
+      9000,
+      2,
+      1
+     ],
+     [
+      9112,
+      2,
+      1
+     ],
+     [
+      9114,
+      2,
+      1
+     ]
+    ],
+    "span_caveat": "`locator.span` on a verify response is the BLOCK's span, not the record's own offsets, so two stored records that live in one block come back with the same locator. `distinct_spans` counts locators that differ, which is the only distinction the response makes. A scenario that returns `ambiguous` twice with the same place has answered half the question, and `span_failures` says how often that happened rather than letting the verdict alone stand for it.",
+    "nonconform": []
+   },
+   {
+    "key": "S4_corrupted_id",
+    "contract": "not_found",
+    "why": "An id with one hex character changed. It is the shape of a citation mangled in transit or truncated in a document, and the contract says a mangled citation is refused rather than resolved.",
+    "control": false,
+    "checks": 96,
+    "conform": 96,
+    "conform_pct": 100,
+    "by_verdict": {
+     "not_found": 96
+    },
+    "reachable": true,
+    "unreachable_reason": null,
+    "span_failures": [],
+    "span_caveat": null,
+    "nonconform": []
+   },
+   {
+    "key": "S5_drifted_pin",
+    "contract": "not_found - a snapshot the store does not hold is refused",
+    "why": "The pin a caller carries across a re-sync. 95 of 95 protocols had drifted between the golden set and the store, so every citation, every read and every requirement list recorded before the last sync is in this shape. A server that answered from the LATEST snapshot instead would be reporting on bytes the caller did not pin, with no warning - which is the failure this check exists to catch.",
+    "control": false,
+    "checks": 96,
+    "conform": 96,
+    "conform_pct": 100,
+    "by_verdict": {
+     "not_found": 96
+    },
+    "reachable": true,
+    "unreachable_reason": null,
+    "span_failures": [],
+    "span_caveat": null,
+    "nonconform": []
+   }
+  ],
+  "pooled_conform_pct": 96,
+  "pooled_note": "Pooled for completeness only. The per-scenario numbers are the measurement: pooling is how a 96/96 control and a 0/96 broken condition average into something that looks like a rate."
+ },
+ "CONSERVATION": {
+  "what": "three label-free invariants, because eval/audit/conservation.md falsified the one that was proposed: Y5 as worded is false, and it is passed by rows that invert their own sentence",
+  "R1_reach": {
+   "claim": "for every sampled section, every keyword-bearing sentence in read(section).text lands in exactly one arm: reached as a requirement, reached as a candidate, reached as a fragment, reached as a classified mention, or NOT REACHED",
+   "why": "read and requirements are allowed to disagree, and a caller who reads a section, sees a MUST and gets nothing back cannot tell a miss from a sentence that was never scanned. Recall cannot see it either: its probes are cut from the same text view the caller read, so a dropped sentence is a miss with the same shape as an extraction failure. Stated as an acceptance test in eval/results/pending-fixes.md (Y5).",
+   "sections": 212,
+   "keyword_bearing_sentences": 865,
+   "arms": {
+    "requirement": 434,
+    "candidate": 347,
+    "fragment": 0,
+    "mention": 2,
+    "unreached": 82
+   },
+   "coverage_pct": 50.2,
+   "any_reach_pct": 90.5,
+   "unreached": 82,
+   "unreached_by_block_kind": {
+    "list_item": 7,
+    "paragraph": 41,
+    "text_view_only": 16,
+    "preformatted": 12,
+    "table": 6
+   },
+   "undeclared": {
+    "count": 48,
+    "share_of_unreached_pct": 58.5,
+    "under_45_chars": 0,
+    "why": "a sentence no row in any channel accounts for, whose block is prose. The tool's own counters do not report these, so a caller cannot see them. This is the part that means something is wrong rather than something was decided."
+   },
+   "text_view_only": {
+    "count": 16,
+    "share_of_unreached_pct": 19.5,
+    "why": "present in read(section).text and in NO block. The text view and the block view disagree, so a caller reading the text sees a sentence no query can return. 10.4% of the golden probes are in this state, which is the same bias measured from the other end: the recall denominator is padded with sentences no block-classifying extractor can reach at any quality."
+   },
+   "worst_sections": [
+    [
+     793,
+     "3.3",
+     5,
+     5
+    ],
+    [
+     2045,
+     "6.7",
+     4,
+     3
+    ],
+    [
+     4764,
+     "4",
+     3,
+     3
+    ],
+    [
+     4045,
+     "5.1",
+     2,
+     2
+    ],
+    [
+     4291,
+     "2.8",
+     2,
+     2
+    ],
+    [
+     5246,
+     "7.3",
+     2,
+     2
+    ],
+    [
+     7233,
+     "4.1",
+     2,
+     2
+    ],
+    [
+     9112,
+     "4",
+     2,
+     2
+    ],
+    [
+     4253,
+     "7.1",
+     2,
+     1
+    ],
+    [
+     4291,
+     "2.2",
+     2,
+     1
+    ],
+    [
+     5780,
+     "8.5",
+     2,
+     1
+    ],
+    [
+     7874,
+     "3",
+     2,
+     1
+    ]
+   ],
+   "undeclared_examples": [
+    [
+     793,
+     "3.3",
+     "list_item",
+     "The typical kinds of sequence number comparisons which the TCP must perform include: (a) Determining that an acknowledgment refers to some sequence number sent but not yet acknowle"
+    ],
+    [
+     793,
+     "3.3",
+     "paragraph",
+     "Due to zero windows and zero length segments, we have four cases for the acceptability of an incoming segment: Segment Receive Test Length Window ------- ------- ------------------"
+    ],
+    [
+     793,
+     "3.3",
+     "paragraph",
+     "Knowing When to Keep Quiet To be sure that a TCP does not create a segment that carries a sequence number which may be duplicated by an old segment remaining in the network, the TC"
+    ],
+    [
+     793,
+     "3.3",
+     "paragraph",
+     "The TCP Quiet Time Concept This specification provides that hosts which \"crash\" without retaining any knowledge of the last sequence numbers transmitted on each active (i.e., not c"
+    ],
+    [
+     793,
+     "3.3",
+     "paragraph",
+     "If the recovery occurs quickly enough, any old September 1981 Transmission Control Protocol Functional Specification duplicates in the net bearing sequence numbers in the neighborh"
+    ],
+    [
+     1034,
+     "3.6",
+     "text_view_only",
+     "Each node has a set of resource information, which may be empty."
+    ],
+    [
+     1122,
+     "3.3.3",
+     "preformatted",
+     "If no local fragmentation is performed, the value of MMS_S will be: MMS_S = EMTU_S - <IP header size> and EMTU_S must be less than or equal to the MTU of the network interface corr"
+    ],
+    [
+     1122,
+     "3.3.3",
+     "table",
+     "In the absence of actual knowledge of the minimum MTU along the path, the IP layer SHOULD use EMTU_S <= 576 whenever the destination address is not on a connected network, and othe"
+    ],
+    [
+     1122,
+     "4.2.2.3",
+     "preformatted",
+     "The window size MUST be treated as an unsigned number, or else large window sizes will appear like negative windows RFC1122 TRANSPORT LAYER -- TCP October 1989 and TCP will not wor"
+    ],
+    [
+     1812,
+     "4.2.2.2",
+     "text_view_only",
+     "When a router inserts its address into such an option, it MUST use the IP address of the logical interface on which the packet is being sent."
+    ],
+    [
+     1939,
+     "4",
+     "paragraph",
+     "(If a lock was acquired but the POP3 server intends to respond with a negative status indicator, the POP3 server must release the lock prior to rejecting the command.) After return"
+    ],
+    [
+     1939,
+     "8",
+     "paragraph",
+     "Consequently, it is recommended that operators of large-scale multi- user servers, especially ones in which the user's only access to the maildrop is via POP3, consider such option"
+    ],
+    [
+     2045,
+     "6.7",
+     "paragraph",
+     "In this encoding, octets are to be represented as determined by the following rules: (1) (General 8bit representation) Any octet, except a CR or LF that is part of a CRLF line brea"
+    ],
+    [
+     2045,
+     "6.7",
+     "list_item",
+     "(3) (White Space) Octets with values of 9 and 32 MAY be represented as US-ASCII TAB (HT) and SPACE characters, respectively, but MUST NOT be so represented at the end of an encoded"
+    ],
+    [
+     2045,
+     "6.7",
+     "text_view_only",
+     "If longer lines are to be encoded with the Quoted-Printable encoding, \"soft\" line breaks must be used."
+    ],
+    [
+     2045,
+     "6.7",
+     "paragraph",
+     "For formalists, the syntax of quoted-printable data is described by the following grammar: quoted-printable := qp-line *(CRLF qp-line) qp-line := *(qp-segment transport-padding CRL"
+    ]
+   ],
+   "weaker_than_the_report_in_three_ways": [
+    "arm (c) of R1 - a per-sentence not_classified list with a reason from a closed vocabulary - is not implemented, because it is a change to the response shape and this harness only reads. The unreached set is reported with a block-kind attribution instead, which is weaker evidence than a reason the tool gave.",
+    "rows are pooled over EVERY page. A caller holding page 1 has a strict subset, so this number is the tool's best case.",
+    "sections are the golden set's sampled sections, not all 9 955. The report's version is corpus-scale; this one is free."
+   ]
+  },
+  "R2_fidelity": {
+   "claim": "for every row in requirements, the polarity asserted for its primary keyword agrees with the keyword as written in exact_text",
+   "why": "a coverage law cannot see this. A row that states the opposite of the sentence it quotes satisfies Y5 perfectly and is the worst thing this tool can emit into a contract, so reach and fidelity have to be two numbers.",
+   "vocabulary": "MUST NOT / SHALL NOT / SHOULD NOT / NOT RECOMMENDED, and an upper-case keyword followed by a lower-case not. MAY NOT and NOT REQUIRED are deliberately NOT treated as keywords here: adding them is a change to the extractor, and a checker that borrows the tool's own vocabulary is not a checker.",
+   "rows_checked": 6838,
+   "rows_read_at_their_own_offset": 6838,
+   "rows_read_by_fallback_search": 0,
+   "disagreements": 0,
+   "agreement_pct": 100,
+   "vocabulary_out": {
+    "rows": 11,
+    "may_not": 11,
+    "not_required": 16,
+    "asserted_positive": 10,
+    "why": "MAY NOT and NOT REQUIRED are not in the extractor's NORMATIVE_TERMS. Rows whose polarity turns on them are counted here and judged by nothing: widening the vocabulary is a change to the tool, and a checker that borrows the tool's own decision is not a checker."
+   },
+   "detail": []
+  },
+  "R3_budget": {
+   "claim": "paging a document to exhaustion yields the same rows as one call with the ceilings raised, and every channel that truncates reports its own size",
+   "why": "a caller who concatenates pages must not receive a row twice, and a caller who sees 500 mentions must be able to tell 500 from all of them.",
+   "documents": 96,
+   "documents_re_shipping_a_channel": 11,
+   "re_ship_detail": [
+    [
+     1122,
+     2,
+     [
+      "mentions"
+     ]
+    ],
+    [
+     1123,
+     2,
+     [
+      "mentions"
+     ]
+    ],
+    [
+     1812,
+     3,
+     [
+      "mentions"
+     ]
+    ],
+    [
+     4120,
+     2,
+     [
+      "mentions"
+     ]
+    ],
+    [
+     5321,
+     2,
+     [
+      "mentions"
+     ]
+    ],
+    [
+     7230,
+     2,
+     [
+      "mentions"
+     ]
+    ],
+    [
+     7540,
+     2,
+     [
+      "mentions"
+     ]
+    ],
+    [
+     8446,
+     3,
+     [
+      "mentions"
+     ]
+    ],
+    [
+     9000,
+     3,
+     [
+      "mentions"
+     ]
+    ],
+    [
+     9110,
+     3,
+     [
+      "mentions"
+     ]
+    ],
+    [
+     9114,
+     2,
+     [
+      "mentions"
+     ]
+    ]
+   ],
+   "documents_with_a_channel_that_does_not_report_its_size": 81,
+   "silent_detail": [
+    [
+     959,
+     [
+      "mentions"
+     ]
+    ],
+    [
+     1122,
+     [
+      "mentions"
+     ]
+    ],
+    [
+     1123,
+     [
+      "mentions"
+     ]
+    ],
+    [
+     1812,
+     [
+      "mentions"
+     ]
+    ],
+    [
+     1939,
+     [
+      "mentions"
+     ]
+    ],
+    [
+     2045,
+     [
+      "mentions"
+     ]
+    ],
+    [
+     2119,
+     [
+      "mentions"
+     ]
+    ],
+    [
+     2181,
+     [
+      "mentions"
+     ]
+    ],
+    [
+     2308,
+     [
+      "mentions"
+     ]
+    ],
+    [
+     2845,
+     [
+      "mentions"
+     ]
+    ],
+    [
+     3110,
+     [
+      "mentions"
+     ]
+    ],
+    [
+     3226,
+     [
+      "mentions"
+     ]
+    ]
+   ],
+   "not_checked": "the equality arm - paged set == unpaged set with the ceiling raised - is not measurable from here, because max_results is capped at 200 by the schema and this harness only reads. Raising the ceiling is a src/ change. What is checked is the half that needs no change: whether paging alters the set a caller receives, and whether a channel that truncates says so."
+  },
+  "case_insensitive": true,
+  "case_note": "One predicate, one case semantics. The tool's own keyword_bearing_blocks_skipped tests an upper-case-only vocabulary case-sensitively while its candidate pass selects blocks with a case-folding LIKE, so a paragraph carrying only a lower-case permission is dropped by neither count. A check written on the strict pass's predicate would inherit that blindness, which is the defect it exists to find.",
+  "in_CALLS": false,
+  "why_not_in_CALLS": "It is a check on the corpus, not a step of the scenario a caller performs. The rows it reads are the ones phase 1 already fetched, so it adds no call at all; the section reads behind the sentences are the same `instrument_reads` the other label-free guards use."
+ },
+ "snapshot_drift": [
+  [
+   793,
+   "snp_bec04d7b0b2e18aaa628279a -> snp_03c6ab294bbaf1560769c11d"
+  ],
+  [
+   959,
+   "snp_9d255dcfa3b30a72116842fc -> snp_46d7ee3c013c8b9364ac5dcb"
+  ],
+  [
+   1034,
+   "snp_44d9a1199dd419318c77be63 -> snp_ccd639ab11a4c45dda670003"
+  ],
+  [
+   1122,
+   "snp_acfa68ff9133abbe9b9db989 -> snp_4f027a11ede302597e48417a"
+  ],
+  [
+   1123,
+   "snp_bdae8fa18a72543845743b7d -> snp_a5f6dee3d1ff43b544658aa7"
+  ],
+  [
+   1812,
+   "snp_ce356d0155e6ca9eda77e039 -> snp_4cd3e64e4c41b2d85aed1d70"
+  ],
+  [
+   1939,
+   "snp_5987bf7cff338a54235fb6d1 -> snp_68ed3374752cd81bd08fa050"
+  ],
+  [
+   2045,
+   "snp_b7b43b50bb1713af013f71d0 -> snp_a5bae0a22b4ce244173ef777"
+  ],
+  [
+   2054,
+   "snp_87d2f3ba8060c4eec41bf09c -> snp_5a9ee3dd6825bb708df7e26c"
+  ],
+  [
+   2119,
+   "snp_4c6f237f84ac4c4d9d516fbc -> snp_50cc18590dba5e49517cf47b"
+  ],
+  [
+   2181,
+   "snp_1617789572f89829d622c111 -> snp_4c63f7c33789b165bbbb951c"
+  ],
+  [
+   2308,
+   "snp_9ac4bb839cb8f1ce937d2bfe -> snp_50c66d70acbc52ac47122bd9"
+  ],
+  [
+   2606,
+   "snp_2fd4bf6a9d26f640c75e13f6 -> snp_f3f2ba05983b1df9d5148356"
+  ],
+  [
+   2845,
+   "snp_68cd0e088c610c3a9727c14a -> snp_a4a67a9b237daf3556945190"
+  ],
+  [
+   3110,
+   "snp_7b8712995602c089dfd1e011 -> snp_9e59ea32ce3b7add3cf25164"
+  ],
+  [
+   3129,
+   "snp_2fcb9693cc93ebd0d42a3d0e -> snp_1712d34e7e54a68531782e7e"
+  ],
+  [
+   3226,
+   "snp_39cfbd2cea6c0851a67ddb5a -> snp_95d2e33ec78176d21961841d"
+  ],
+  [
+   3229,
+   "snp_30307bb4a9b52cd7782b2b18 -> snp_87121d7a67d642485c9753f0"
+  ],
+  [
+   3335,
+   "snp_238522272cc2ee314ca86cf0 -> snp_d18aa8b7cabc65b6806ce9d7"
+  ],
+  [
+   3403,
+   "snp_97ac00ffdf962571b4b211ec -> snp_c2d0819c1a2f98cdce9f8caf"
+  ],
+  [
+   3597,
+   "snp_da41c7b2819e10c1244c9cbf -> snp_0b4c54560f4a8dfb395ae3ff"
+  ],
+  [
+   3987,
+   "snp_f966a164d4944e031b1b7363 -> snp_62cc2d52d8c323bbde935201"
+  ],
+  [
+   3988,
+   "snp_37bdbf552e5de8d7cad9ffb6 -> snp_484dcb09195ec0e2f58f4705"
+  ],
+  [
+   4033,
+   "snp_64727ed44dc34d9fad151c0a -> snp_6837e6a44fe87fefa44e8cd6"
+  ],
+  [
+   4035,
+   "snp_2590fa45ed4feb88b3f4f82a -> snp_15f59b3f5b071ea34f848823"
+  ],
+  [
+   4045,
+   "snp_f11b30b4b495edc5b1a8e933 -> snp_557b70ec4571f6ceebf3e4cf"
+  ],
+  [
+   4120,
+   "snp_a598ad9ef8e98ea3c378706a -> snp_0a431804a4cad96d23dd3e05"
+  ],
+  [
+   4253,
+   "snp_4718020ae9f68b662560e8b1 -> snp_23e3909d24505a9032b993d6"
+  ],
+  [
+   4291,
+   "snp_61c0b666ef39b99a6b62c277 -> snp_f0db53a9c469515b6ac47261"
+  ],
+  [
+   4330,
+   "snp_6114a2ead322cc3d15b4d1ae -> snp_d1285150f9f70216d9d2245e"
+  ],
+  [
+   4506,
+   "snp_c5e88d1706f50637f5ecda1d -> snp_3517a33560c52271a1df0a24"
+  ],
+  [
+   4635,
+   "snp_691aa7de55d01bbfa75a2331 -> snp_46b0346fb2d85edf23c66f23"
+  ],
+  [
+   4636,
+   "snp_150aa843eab0bb18215a091a -> snp_49d81035845c4d31c58f9b70"
+  ],
+  [
+   4764,
+   "snp_71c1be7a11e1a68f38bbf536 -> snp_0ec45e3213d64d3dc4b5c0a3"
+  ],
+  [
+   5234,
+   "snp_d31b16b1ad316af6544b58b9 -> snp_882f947d71a479e45aec9eb7"
+  ],
+  [
+   5246,
+   "snp_b0f75415a69f23f0382e07bf -> snp_672bb9530a658860aaba53a5"
+  ],
+  [
+   5282,
+   "snp_064eb017d8d719d5283f1b66 -> snp_7a210f52e59d9056bcf24a7e"
+  ],
+  [
+   5321,
+   "snp_1acf4f72085033dbce60bc1b -> snp_6c91b63491ecba424ede6ef1"
+  ],
+  [
+   5689,
+   "snp_e60de64cbe65c1050771916f -> snp_7839433f415ca748bcdf4c00"
+  ],
+  [
+   5780,
+   "snp_acb20d00d81925b3c6fa5ce9 -> snp_cc7ec865eee94d0769432b5a"
+  ],
+  [
+   6066,
+   "snp_b3d036089fc22095aaf76926 -> snp_442eac05aa0206858eda62a1"
+  ],
+  [
+   6302,
+   "snp_117096336be2a2d9bcba7be5 -> snp_85fc7f30e6c9f2953bb22931"
+  ],
+  [
+   6455,
+   "snp_537c6415f8114795013f6752 -> snp_fbfdf65c6c03199ccd87066f"
+  ],
+  [
+   6672,
+   "snp_b030aa3eb4b74507b12a84de -> snp_8a5ce024eb3c841e03888c57"
+  ],
+  [
+   6761,
+   "snp_75ad9632db77bd1688d2e789 -> snp_3ebc4e51264e1288cb3a1c3f"
+  ],
+  [
+   6762,
+   "snp_2bd63e5d403863f4ca5d86a6 -> snp_7ac0b2e0dbdc40a47e4a0492"
+  ],
+  [
+   7230,
+   "snp_978eeb0c6c20ebd2821ad967 -> snp_0f0ddfd10776dc3ccec37c02"
+  ],
+  [
+   7231,
+   "snp_ecf2013f736370c8ce3da61d -> snp_226199625c4a7f2b1f8a0560"
+  ],
+  [
+   7233,
+   "snp_778c98cf804841e14cab6dea -> snp_73d915d717340ac41109b44f"
+  ],
+  [
+   7234,
+   "snp_d692e50378ceda0b98040f57 -> snp_199fef3e1e33e6b615a4e965"
+  ],
+  [
+   7258,
+   "snp_dfab5dc40783eea132dcc912 -> snp_5ad835b9d4c528bbf7931d8f"
+  ],
+  [
+   7540,
+   "snp_dcf031e7090b24c57377b483 -> snp_a3ba272e27827b42b66dfbf9"
+  ],
+  [
+   7624,
+   "snp_f6270154bb20d86fd1975537 -> snp_9f8ccb98031da6534982055e"
+  ],
+  [
+   7671,
+   "snp_d27f711e2ff76db827955a82 -> snp_9d150b1e3ae2db8e548734d4"
+  ],
+  [
+   7719,
+   "snp_4ab936b3b5dac01a85aa97b9 -> snp_0ddbb1739d5f4aefd6421f9a"
+  ],
+  [
+   7830,
+   "snp_8e0a0617257dd085fb888af9 -> snp_70176e1e0e04302206ffd9cb"
+  ],
+  [
+   7858,
+   "snp_653bc2a120965b46858dc4a6 -> snp_52531a1d4bbc7ce1a060b58b"
+  ],
+  [
+   7871,
+   "snp_445229c4cc2ca1aca84095d5 -> snp_22f8886f50b65121d74ae25a"
+  ],
+  [
+   7873,
+   "snp_017ad0862e19b2807e977024 -> snp_8ee82d9e21977ea8bfddd852"
+  ],
+  [
+   7874,
+   "snp_d0d0c254f5f0266f5c28346a -> snp_f9a4425a271b2c6d92d18d9a"
+  ],
+  [
+   7929,
+   "snp_90c3fa652bd8369c9387e500 -> snp_b0d18caa5ad4c883dba9c05e"
+  ],
+  [
+   8078,
+   "snp_7a0ff99a304c2b3357fabce9 -> snp_afb4be1ca8067650f706e1c8"
+  ],
+  [
+   8174,
+   "snp_120180e6f1854c1de8608aac -> snp_5d7e321ce1c3263f7ddc8204"
+  ],
+  [
+   8252,
+   "snp_05cae304260a6d72b1ea325b -> snp_9134a1590cae1f532976363e"
+  ],
+  [
+   8446,
+   "snp_bafd768dd7810726d9947fe0 -> snp_b089901641a618eba7c13f91"
+  ],
+  [
+   8447,
+   "snp_9d96f00cb8570fe92eefb522 -> snp_420085a22a815e454ba65540"
+  ],
+  [
+   8449,
+   "snp_d57abcabf81df614164ac282 -> snp_de4dbe1e28ea08b74629374a"
+  ],
+  [
+   8470,
+   "snp_d4d9db5163b645849f386d70 -> snp_7d4dc18401f7efdf42df72b0"
+  ],
+  [
+   8490,
+   "snp_e4b64d28d670e2be38c31de2 -> snp_287fb0ea8b6a6e127025248a"
+  ],
+  [
+   8499,
+   "snp_cdd31f4a0395a4c574def3dd -> snp_36cb1bbe26ba187b1c1e5219"
+  ],
+  [
+   8659,
+   "snp_097a59c9a77377904d7b2e6e -> snp_31c528a1f8a989f8b190866a"
+  ],
+  [
+   8833,
+   "snp_394d0abc9ad408be1062eaa5 -> snp_9ef64d6fda632985f0273845"
+  ],
+  [
+   8834,
+   "snp_a89b98897920a6188b603956 -> snp_b9992dcb22db9387560fa5e3"
+  ],
+  [
+   8901,
+   "snp_46e656ba53c06e26df1b92a5 -> snp_74c66a882e40e0fd1b4fd0eb"
+  ],
+  [
+   8903,
+   "snp_e05bf8b4883ec72e159aa479 -> snp_ca37a3dc46808bca121b0c45"
+  ],
+  [
+   8914,
+   "snp_b54e79b678e5b42a3c337968 -> snp_563d27c1e89b584e1441a6ad"
+  ],
+  [
+   8959,
+   "snp_bb8e1f73df5fdbf02a94ab84 -> snp_0ad4673d194f783c284e975b"
+  ],
+  [
+   9000,
+   "snp_c7010bf3314696ec764ccbd4 -> snp_1d76d32d869f94c2c320784b"
+  ],
+  [
+   9002,
+   "snp_336d3587e9945031124f648e -> snp_a77f70dc55019fe78ac34078"
+  ],
+  [
+   9110,
+   "snp_03dd4d3ddb726ce5c970f0b6 -> snp_2f2fd0bb476488837cb0a660"
+  ],
+  [
+   9112,
+   "snp_92939acd944ad99694f05514 -> snp_43b54eeb3f020647c098c990"
+  ],
+  [
+   9114,
+   "snp_192b6339176efaf89e58c21f -> snp_ec5c7d2a7280c58412ebb761"
+  ],
+  [
+   9117,
+   "snp_1ce30df096d5c12502300933 -> snp_a92e12f8bf8b1adf68e3a9b3"
+  ],
+  [
+   9197,
+   "snp_401b9d0f11a309b90d7361d0 -> snp_586ec6e7bf761c310f0788bf"
+  ],
+  [
+   9217,
+   "snp_e9aaf3cc53ee98c3196cb565 -> snp_3c67e940f109a83e423676a1"
+  ],
+  [
+   9221,
+   "snp_e514c5f633fdc9b78813aed0 -> snp_73ef55fbba30d68a8a1ea833"
+  ],
+  [
+   9407,
+   "snp_960d97d59fe8ed37ea14b3bd -> snp_15254b316634e9b73ba6a7d6"
+  ],
+  [
+   9422,
+   "snp_bfd1793e99a3bff60b4c1464 -> snp_5a36bf85db332190dfc2f6fd"
+  ],
+  [
+   9458,
+   "snp_7c17ca83c917e6a6894cf76f -> snp_dd8cae13b0737966e1e377cf"
+  ],
+  [
+   9460,
+   "snp_fb43a72ce0a8e904103fd09d -> snp_5d164c81bda9e4f3e0e8103c"
+  ],
+  [
+   9462,
+   "snp_890b27666df97880e9458a39 -> snp_b283b7b5c8c201193e9df0a3"
+  ],
+  [
+   9472,
+   "snp_906e1bb396737e2150f43a73 -> snp_f0a45d2875fa895cd292013c"
+  ],
+  [
+   9499,
+   "snp_990bd375dbd8e159aa65bf75 -> snp_c8f92106b4248746c6c19cfb"
+  ],
+  [
+   9552,
+   "snp_dd31f79fe174b6cab49f4b6a -> snp_eb576fa67dfcb5aa946e84ba"
+  ],
+  [
+   9651,
+   "snp_8100a125100af286dcf2d1d9 -> snp_8906f8713b8beb1baab6d118"
+  ],
+  [
+   9999,
+   "snp_4568cc2800dc7f5a2d9ebc9f -> snp_3229626239fa2ba013ec94e2"
+  ]
+ ],
+ "snapshot_drift_note": "Reported, and now acted on: every golden rule names the snapshot and the offsets it was cut from, so `node eval/build-golden.mjs --verify` can name a rule that no longer matches its bytes instead of printing a drift list that changes no number.",
+ "fetch_failures": [],
+ "per_protocol": [
+  {
+   "rfc": 793,
+   "title": "Transmission Control Protocol",
+   "sections": [
+    "1.4",
+    "3.3"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 0,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 959,
+   "title": "File Transfer Protocol",
+   "sections": [
+    "3.4.1",
+    "3.1.1.4"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 1,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 1034,
+   "title": "Domain names - concepts and facilities",
+   "sections": [
+    "4.2.2",
+    "3.6"
+   ],
+   "rules": 3,
+   "found": 1,
+   "found_unbounded": 1,
+   "calls": 3,
+   "total_requirements": 0,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 1122,
+   "title": "Requirements for Internet Hosts - Communication Layers",
+   "sections": [
+    "3.3.3",
+    "4.2.2.3"
+   ],
+   "rules": 3,
+   "found": 1,
+   "found_unbounded": 1,
+   "calls": 4,
+   "total_requirements": 274,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 2,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 1123,
+   "title": "Requirements for Internet Hosts - Application and Support",
+   "sections": [
+    "3.4.4",
+    "5.3.8",
+    "2.4"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 4,
+   "total_requirements": 228,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 2,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 1812,
+   "title": "Requirements for IP Version 4 Routers",
+   "sections": [
+    "5.2.4.2",
+    "4.2.2.2"
+   ],
+   "rules": 3,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 5,
+   "total_requirements": 577,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 3,
+   "keyword_stance": "disclaims"
+  },
+  {
+   "rfc": 1939,
+   "title": "Post Office Protocol - Version 3",
+   "sections": [
+    "8",
+    "4"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 7,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 2045,
+   "title": "Multipurpose Internet Mail Extensions (MIME) Part One: Format of Internet Message Bodies",
+   "sections": [
+    "5.2",
+    "6.7"
+   ],
+   "rules": 3,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 7,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 2054,
+   "title": "WebNFS Client Specification",
+   "sections": [
+    "6.2",
+    "4.3"
+   ],
+   "rules": 3,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 0,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 2119,
+   "title": "Key words for use in RFCs to Indicate Requirement Levels",
+   "sections": [
+    "7",
+    "6"
+   ],
+   "rules": 2,
+   "found": 1,
+   "found_unbounded": 1,
+   "calls": 3,
+   "total_requirements": 3,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 2181,
+   "title": "Clarifications to the DNS Specification",
+   "sections": [
+    "6.1",
+    "5.2"
+   ],
+   "rules": 3,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 0,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "disclaims"
+  },
+  {
+   "rfc": 2308,
+   "title": "Negative Caching of DNS Queries (DNS NCACHE)",
+   "sections": [
+    "6",
+    "2.2"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 17,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 2606,
+   "title": "Reserved Top Level DNS Names",
+   "sections": [
+    "2"
+   ],
+   "rules": 1,
+   "found": 0,
+   "found_unbounded": 0,
+   "calls": 3,
+   "total_requirements": 0,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 2845,
+   "title": "Secret Key Transaction Authentication for DNS (TSIG)",
+   "sections": [
+    "6",
+    "2"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 48,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 3110,
+   "title": "RSA/SHA-1 SIGs and RSA KEYs in the Domain Name System (DNS)",
+   "sections": [
+    "4",
+    "2"
+   ],
+   "rules": 3,
+   "found": 1,
+   "found_unbounded": 1,
+   "calls": 3,
+   "total_requirements": 5,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 3129,
+   "title": "Requirements for Kerberized Internet Negotiation of Keys",
+   "sections": [
+    "Acknowledgments"
+   ],
+   "rules": 1,
+   "found": 1,
+   "found_unbounded": 1,
+   "calls": 3,
+   "total_requirements": 0,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 3226,
+   "title": "DNSSEC and IPv6 A6 aware server/resolver message size requirements",
+   "sections": [
+    "2.4",
+    "2.1"
+   ],
+   "rules": 3,
+   "found": 1,
+   "found_unbounded": 1,
+   "calls": 3,
+   "total_requirements": 4,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 3229,
+   "title": "Delta encoding in HTTP",
+   "sections": [
+    "10.2",
+    "5.5",
+    "4.1"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 38,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 3335,
+   "title": "MIME-based Secure Peer-to-Peer Business Data Interchange over the Internet",
+   "sections": [
+    "5.3.2.1",
+    "2.2.3"
+   ],
+   "rules": 3,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 37,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 3403,
+   "title": "Dynamic Delegation Discovery System (DDDS) Part Three: The Domain Name System (DNS) Database",
+   "sections": [
+    "5",
+    "4.1"
+   ],
+   "rules": 3,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 12,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 3597,
+   "title": "Handling of Unknown DNS Resource Record (RR) Types",
+   "sections": [
+    "4",
+    "13",
+    "5"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 10,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 3987,
+   "title": "Internationalized Resource Identifiers (IRIs)",
+   "sections": [
+    "5.3.2.3",
+    "3.2.1",
+    "7.3"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 38,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 3988,
+   "title": "Maximum Transmission Unit Signalling Extensions for the Label Distribution Protocol",
+   "sections": [
+    "4",
+    "2.1"
+   ],
+   "rules": 2,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 8,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 4033,
+   "title": "DNS Security Introduction and Requirements",
+   "sections": [
+    "8",
+    "10",
+    "12"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 0,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 4035,
+   "title": "Protocol Modifications for the DNS Security Extensions",
+   "sections": [
+    "4.1",
+    "2.4"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 144,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 4045,
+   "title": "Extensions to Support Efficient Carrying of Multicast Traffic in Layer-2 Tunneling Protocol (L2TP)",
+   "sections": [
+    "6.2",
+    "5.1"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 55,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 4120,
+   "title": "The Kerberos Network Authentication Service (V5)",
+   "sections": [
+    "5.2.2",
+    "3.2.2"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 4,
+   "total_requirements": 278,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 2,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 4253,
+   "title": "The Secure Shell (SSH) Transport Layer Protocol",
+   "sections": [
+    "7.1",
+    "5.3"
+   ],
+   "rules": 3,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 121,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 4291,
+   "title": "IP Version 6 Addressing Architecture",
+   "sections": [
+    "2.5",
+    "2.8",
+    "2.2"
+   ],
+   "rules": 3,
+   "found": 1,
+   "found_unbounded": 1,
+   "calls": 3,
+   "total_requirements": 0,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 4330,
+   "title": "Simple Network Time Protocol (SNTP) Version 4 for IPv4, IPv6 and OSI",
+   "sections": [
+    "Request     Reply",
+    "LI       Meaning"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 8,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 4506,
+   "title": "XDR: External Data Representation Standard",
+   "sections": [
+    "4.6",
+    "6.2"
+   ],
+   "rules": 3,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 0,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 4635,
+   "title": "HMAC SHA (Hashed Message Authentication Code, Secure Hash Algorithm) TSIG Algorithm Identifiers",
+   "sections": [
+    "4",
+    "3"
+   ],
+   "rules": 3,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 10,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 4636,
+   "title": "Foreign Agent Error Extension for Mobile IPv4",
+   "sections": [
+    "6",
+    "8",
+    "4"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 4,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 4764,
+   "title": "The EAP-PSK Protocol: A Pre-Shared Key Extensible Authentication Protocol (EAP) Method",
+   "sections": [
+    "8.7",
+    "1.3",
+    "4"
+   ],
+   "rules": 3,
+   "found": 1,
+   "found_unbounded": 1,
+   "calls": 3,
+   "total_requirements": 5,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 5234,
+   "title": "Augmented BNF for Syntax Specifications: ABNF",
+   "sections": [
+    "3.4",
+    "2.1",
+    "3.1"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 0,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 5246,
+   "title": "The Transport Layer Security (TLS) Protocol Version 1.2",
+   "sections": [
+    "7.3",
+    "5"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 172,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 5282,
+   "title": "Using Authenticated Encryption Algorithms with the Encrypted Payload of the Internet Key Exchange version 2 (IKEv2) Protocol",
+   "sections": [
+    "5.1",
+    "10.2.2",
+    "3.1"
+   ],
+   "rules": 3,
+   "found": 1,
+   "found_unbounded": 1,
+   "calls": 3,
+   "total_requirements": 23,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 5321,
+   "title": "Simple Mail Transfer Protocol",
+   "sections": [
+    "4.1.5",
+    "7.2"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 4,
+   "total_requirements": 358,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 2,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 5689,
+   "title": "Extended MKCOL for Web Distributed Authoring and Versioning (WebDAV)",
+   "sections": [
+    "3",
+    "3.3"
+   ],
+   "rules": 3,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 11,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 5780,
+   "title": "NAT Behavior Discovery Using Session Traversal Utilities for NAT (STUN)",
+   "sections": [
+    "2.3",
+    "8.5"
+   ],
+   "rules": 2,
+   "found": 1,
+   "found_unbounded": 1,
+   "calls": 3,
+   "total_requirements": 33,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 6066,
+   "title": "Transport Layer Security (TLS) Extensions: Extension Definitions",
+   "sections": [
+    "4"
+   ],
+   "rules": 3,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 77,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 6302,
+   "title": "Logging Recommendations for Internet-Facing Servers",
+   "sections": [
+    "3",
+    "2"
+   ],
+   "rules": 3,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 3,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 6455,
+   "title": "The WebSocket Protocol",
+   "sections": [
+    "7.1.6",
+    "5.1"
+   ],
+   "rules": 3,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 184,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 6672,
+   "title": "DNAME Redirection in the DNS",
+   "sections": [
+    "5.2",
+    "5.3.4.3",
+    "2.2"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 26,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 6761,
+   "title": "Special-Use Domain Names",
+   "sections": [
+    "6.1",
+    "4"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 48,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 6762,
+   "title": "Multicast DNS",
+   "sections": [
+    "13",
+    "7.1"
+   ],
+   "rules": 3,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 190,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 7230,
+   "title": "Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing",
+   "sections": [
+    "3.2.4",
+    "2.7.1"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 4,
+   "total_requirements": 208,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 2,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 7231,
+   "title": "Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content",
+   "sections": [
+    "6.4.1",
+    "3.1.3.2"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 152,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 7233,
+   "title": "Hypertext Transfer Protocol (HTTP/1.1): Range Requests",
+   "sections": [
+    "Appendix A",
+    "4.1"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 46,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 7234,
+   "title": "Hypertext Transfer Protocol (HTTP/1.1): Caching",
+   "sections": [
+    "5.2.2.1",
+    "5.5.5"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 102,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 7258,
+   "title": "Pervasive Monitoring Is an Attack",
+   "sections": [
+    "1"
+   ],
+   "rules": 1,
+   "found": 1,
+   "found_unbounded": 1,
+   "calls": 3,
+   "total_requirements": 0,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 7540,
+   "title": "Hypertext Transfer Protocol Version 2 (HTTP/2)",
+   "sections": [
+    "6.9.3",
+    "5.3.2",
+    "9.2.1"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 4,
+   "total_requirements": 261,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 2,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 7624,
+   "title": "Confidentiality in the Face of Pervasive Surveillance: A Threat Model and Problem Statement",
+   "sections": [
+    "3.2",
+    "5",
+    "5.2"
+   ],
+   "rules": 3,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 0,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 7671,
+   "title": "The DNS-Based Authentication of Named Entities (DANE) Protocol: Updates and Operational Guidance",
+   "sections": [
+    "7",
+    "10.1.1"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 73,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 7719,
+   "title": "DNS Terminology",
+   "sections": [
+    "6",
+    "3"
+   ],
+   "rules": 3,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 0,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 7830,
+   "title": "The EDNS(0) Padding Option",
+   "sections": [
+    "4",
+    "6",
+    "3"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 10,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 7858,
+   "title": "Specification for DNS over Transport Layer Security (TLS)",
+   "sections": [
+    "3.2",
+    "7",
+    "3.4"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 34,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 7871,
+   "title": "Client Subnet in DNS Queries",
+   "sections": [
+    "7.3.2",
+    "7.1",
+    "11.1"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 75,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 7873,
+   "title": "Domain Name System (DNS) Cookies",
+   "sections": [
+    "7.1",
+    "9.1"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 28,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 7874,
+   "title": "WebRTC Audio Codec and Processing Requirements",
+   "sections": [
+    "5",
+    "3"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 24,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 7929,
+   "title": "DNS-Based Authentication of Named Entities (DANE) Bindings for OpenPGP",
+   "sections": [
+    "5.3",
+    "7.5"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 29,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 8078,
+   "title": "Managing DS Records from the Parent via CDS/CDNSKEY",
+   "sections": [
+    "3.2",
+    "4"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 5,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 8174,
+   "title": "Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words",
+   "sections": [
+    "2"
+   ],
+   "rules": 1,
+   "found": 1,
+   "found_unbounded": 1,
+   "calls": 3,
+   "total_requirements": 0,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 8252,
+   "title": "OAuth 2.0 for Native Apps",
+   "sections": [
+    "8.3",
+    "7",
+    "4"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 34,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 8446,
+   "title": "The Transport Layer Security (TLS) Protocol Version 1.3",
+   "sections": [
+    "4.1.4",
+    "8.3"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 5,
+   "total_requirements": 428,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 3,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 8447,
+   "title": "IANA Registry Updates for TLS and DTLS",
+   "sections": [
+    "10",
+    "5",
+    "17"
+   ],
+   "rules": 3,
+   "found": 2,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 11,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 8449,
+   "title": "Record Size Limit Extension for TLS",
+   "sections": [
+    "4.1",
+    "3"
+   ],
+   "rules": 3,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 12,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 8470,
+   "title": "Using Early Data in HTTP",
+   "sections": [
+    "5.2",
+    "3"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 25,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 8490,
+   "title": "DNS Stateful Operations",
+   "sections": [
+    "5.4.2",
+    "7.2.2"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 144,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 8499,
+   "title": "DNS Terminology",
+   "sections": [
+    "9",
+    "5"
+   ],
+   "rules": 3,
+   "found": 1,
+   "found_unbounded": 1,
+   "calls": 3,
+   "total_requirements": 1,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 8659,
+   "title": "DNS Certification Authority Authorization (CAA) Resource Record",
+   "sections": [
+    "5.1",
+    "4.1"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 31,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 8833,
+   "title": "Application-Layer Protocol Negotiation (ALPN) for WebRTC",
+   "sections": [
+    "3",
+    "4",
+    "2"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 8,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 8834,
+   "title": "Media Transport and Use of RTP in WebRTC",
+   "sections": [
+    "5.2.2",
+    "4.8",
+    "11"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 102,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 8901,
+   "title": "Multi-Signer DNSSEC Models",
+   "sections": [
+    "5.2",
+    "2",
+    "6.2"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 0,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 8903,
+   "title": "Use Cases for DDoS Open Threat Signaling",
+   "sections": [
+    "3.2",
+    "2"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 0,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 8914,
+   "title": "Extended DNS Errors",
+   "sections": [
+    "3"
+   ],
+   "rules": 2,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 14,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 8959,
+   "title": "The \"secret-token\" URI Scheme",
+   "sections": [
+    "2",
+    "4"
+   ],
+   "rules": 2,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 2,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 9000,
+   "title": "QUIC: A UDP-Based Multiplexed and Secure Transport",
+   "sections": [
+    "8.2.2",
+    "19.16"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 5,
+   "total_requirements": 521,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 3,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 9002,
+   "title": "QUIC Loss Detection and Congestion Control",
+   "sections": [
+    "6.2.3",
+    "7.5",
+    "4.3"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 79,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 9110,
+   "title": "HTTP Semantics",
+   "sections": [
+    "12.1",
+    "15.5.14",
+    "5.1"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 5,
+   "total_requirements": 408,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 3,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 9112,
+   "title": "HTTP/1.1",
+   "sections": [
+    "7.4",
+    "4",
+    "10.2"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 131,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 9114,
+   "title": "HTTP/3",
+   "sections": [
+    "7.1",
+    "4.2.2"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 4,
+   "total_requirements": 239,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 2,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 9117,
+   "title": "Revised Validation Procedure for BGP Flow Specifications",
+   "sections": [
+    "4.1",
+    "7",
+    "4.2"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 3,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 9197,
+   "title": "Data Fields for In Situ Operations, Administration, and Maintenance (IOAM)",
+   "sections": [
+    "4.4.2.12",
+    "4.4.2.1",
+    "4.6"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 59,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 9217,
+   "title": "Current Open Questions in Path-Aware Networking",
+   "sections": [
+    "2.4",
+    "2.8",
+    "2.2"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 0,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 9221,
+   "title": "An Unreliable Datagram Extension to QUIC",
+   "sections": [
+    "5.2",
+    "3"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 20,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 9407,
+   "title": "Tetrys: An On-the-Fly Network Coding Protocol",
+   "sections": [
+    "5.3.1"
+   ],
+   "rules": 3,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 39,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 9422,
+   "title": "The LIMITS SMTP Service Extension",
+   "sections": [
+    "3.8",
+    "3.2"
+   ],
+   "rules": 2,
+   "found": 1,
+   "found_unbounded": 1,
+   "calls": 3,
+   "total_requirements": 13,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 9458,
+   "title": "Oblivious HTTP",
+   "sections": [
+    "6.2.3",
+    "5.3"
+   ],
+   "rules": 2,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 40,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 9460,
+   "title": "Service Binding and Parameter Specification via the DNS (SVCB and HTTPS Resource Records)",
+   "sections": [
+    "9",
+    "3.2"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 141,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 9462,
+   "title": "Discovery of Designated Resolvers",
+   "sections": [
+    "6.1",
+    "4.1"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 38,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 9472,
+   "title": "A YANG Data Model for Reporting Software Bills of Materials (SBOMs) and Vulnerability Information",
+   "sections": [
+    "1.3",
+    "5.3"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 10,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 9499,
+   "title": "DNS Terminology",
+   "sections": [
+    "4"
+   ],
+   "rules": 3,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 1,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": null
+  },
+  {
+   "rfc": 9552,
+   "title": "Distribution of Link-State and Traffic Engineering Information Using BGP",
+   "sections": [
+    "5.3.3.6",
+    "5.3"
+   ],
+   "rules": 3,
+   "found": 3,
+   "found_unbounded": 3,
+   "calls": 3,
+   "total_requirements": 124,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 9651,
+   "title": "Structured Field Values for HTTP",
+   "sections": [
+    "3.3.1",
+    "2.3"
+   ],
+   "rules": 2,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 26,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  },
+  {
+   "rfc": 9999,
+   "title": "Remote ATtestation procedureS (RATS) Conceptual Message Wrapper (CMW)",
+   "sections": [
+    "4.2",
+    "9.4",
+    "9.5.4"
+   ],
+   "rules": 3,
+   "found": 2,
+   "found_unbounded": 2,
+   "calls": 3,
+   "total_requirements": 23,
+   "candidate_total": 1,
+   "pages_to_read_whole_list": 1,
+   "keyword_stance": "adopts"
+  }
+ ],
+ "misses": [
+  {
+   "id": "G0008",
+   "rfc": 1034,
+   "section": "3.6",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "Each node has a set of resource information, which may be empty."
+  },
+  {
+   "id": "G0009",
+   "rfc": 1034,
+   "section": "3.6",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "This field is a 32 bit integer in units of seconds, an is primarily used by resolvers when they cache RRs."
+  },
+  {
+   "id": "G0011",
+   "rfc": 1122,
+   "section": "3.3.3",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "A host that does not implement local fragmentation MUST ensure that the transport layer (for TCP) or the application layer (for UDP) obtains MMS_S from the IP layer and does not send a datagram exceeding MMS_S in size."
+  },
+  {
+   "id": "G0012",
+   "rfc": 1122,
+   "section": "4.2.2.3",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "The window size MUST be treated as an unsigned number, or else large window sizes will appear like negative windows RFC1122 TRANSPORT LAYER -- TCP October 1989 and TCP will not work."
+  },
+  {
+   "id": "G0017",
+   "rfc": 1812,
+   "section": "4.2.2.2",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "When a router inserts its address into such an option, it MUST use the IP address of the logical interface on which the packet is being sent."
+  },
+  {
+   "id": "G0024",
+   "rfc": 2045,
+   "section": "6.7",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "(3) (White Space) Octets with values of 9 and 32 MAY be represented as US-ASCII TAB (HT) and SPACE characters, respectively, but MUST NOT be so represented at the end of an encoded line."
+  },
+  {
+   "id": "G0027",
+   "rfc": 2054,
+   "section": "4.3",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "WebNFS clients that require attribute information for directory entries should use READDIRPLUS in preference to READDIR."
+  },
+  {
+   "id": "G0028",
+   "rfc": 2119,
+   "section": "7",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "The effects on security of not implementing a MUST or SHOULD, or doing something the specification says MUST NOT or SHOULD NOT be done may be very subtle."
+  },
+  {
+   "id": "G0032",
+   "rfc": 2181,
+   "section": "5.2",
+   "tier": "weak",
+   "kw": "Should",
+   "class": "lowercase-modal",
+   "probe": "Should an authoritative source send such a malformed RRSet, the client should treat the RRs for all purposes as if all TTLs in the RRSet had been set to the value of the lowest TTL in the RRSet."
+  },
+  {
+   "id": "G0036",
+   "rfc": 2606,
+   "section": "2",
+   "tier": "weak",
+   "kw": "recommended",
+   "class": "lowercase-modal",
+   "probe": ".test .example .invalid .localhost \".test\" is recommended for use in testing of current or new DNS related code."
+  },
+  {
+   "id": "G0041",
+   "rfc": 3110,
+   "section": "4",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "Current DNS implementations are optimized for small transfers, typically less than 512 bytes including DNS overhead."
+  },
+  {
+   "id": "G0042",
+   "rfc": 3110,
+   "section": "2",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "Its length in octets is represented as one octet if it is in the range of 1 to 255 and by a zero octet followed by a two octet unsigned length if it is longer than 255 bytes."
+  },
+  {
+   "id": "G0045",
+   "rfc": 3226,
+   "section": "2.4",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "Given all these factors, it is essential that any implementation that supports DNSSEC and or A6 be able to use larger DNS messages than 512 octets."
+  },
+  {
+   "id": "G0046",
+   "rfc": 3226,
+   "section": "2.1",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "These signatures range in size from about 80 octets to 800 octets, most are going to be in the range of 80 to 200 octets."
+  },
+  {
+   "id": "G0052",
+   "rfc": 3335,
+   "section": "2.2.3",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "The \"rule\" is: - If a receipt is requested, explicitly specifying that the receipt be signed, then the receipt MUST be returned with a signature."
+  },
+  {
+   "id": "G0053",
+   "rfc": 3403,
+   "section": "5",
+   "tier": "weak",
+   "kw": "required",
+   "class": "lowercase-modal",
+   "probe": "In addition to the items required to specify a DDDS Application, an application wishing to use this Database must also define the following values: o What domain the Key that is produced by the First Well Known Rule belongs to."
+  },
+  {
+   "id": "G0078",
+   "rfc": 4253,
+   "section": "5.3",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "The minimum packet size is in the order of 28 bytes (depending on negotiated algorithms)."
+  },
+  {
+   "id": "G0080",
+   "rfc": 4291,
+   "section": "2.8",
+   "tier": "weak",
+   "kw": "required",
+   "class": "lowercase-modal",
+   "probe": "A host is required to recognize the following addresses as identifying itself: o Its required Link-Local address for each interface."
+  },
+  {
+   "id": "G0081",
+   "rfc": 4291,
+   "section": "2.2",
+   "tier": "weak",
+   "kw": "must",
+   "class": "lowercase-modal",
+   "probe": "Examples: ABCD:EF01:2345:6789:ABCD:EF01:2345:6789 2001:DB8:0:0:8:800:200C:417A Note that it is not necessary to write the leading zeros in an individual field, but there must be at least one numeral in every field (except for the case described in 2.)."
+  },
+  {
+   "id": "G0086",
+   "rfc": 4506,
+   "section": "4.6",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "The standard defines the floating-point data type \"float\" (32 bits or 4 bytes)."
+  },
+  {
+   "id": "G0090",
+   "rfc": 4635,
+   "section": "3",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "HMAC SHA-1 truncated to 96 bits is an option available in several IETF protocols, including IPsec and TLS."
+  },
+  {
+   "id": "G0095",
+   "rfc": 4764,
+   "section": "1.3",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "\"i\" denotes the unsigned binary representation on 16 bytes of the integer i in network byte order."
+  },
+  {
+   "id": "G0096",
+   "rfc": 4764,
+   "section": "4",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "EAP-PSK may consist of two different types of message flows: o The \"standard authentication\", which is: * Mandatory to implement."
+  },
+  {
+   "id": "G0103",
+   "rfc": 5282,
+   "section": "5.1",
+   "tier": "strict",
+   "kw": "MUST NOT",
+   "class": "uppercase-modal",
+   "probe": "IKEv2 Encrypted Payload Associated Data (A) for Authenticated Encryption The Initialization Vector and Ciphertext fields shown in Figure 1 (above) MUST NOT be included in the associated data."
+  },
+  {
+   "id": "G0104",
+   "rfc": 5282,
+   "section": "10.2.2",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "This algorithm is identical to AEAD_AES_128_CCM_SHORT, but with the following differences: K_LEN is 32 octets, instead of 16, and AES-256 CCM is used instead of AES-128 CCM."
+  },
+  {
+   "id": "G0111",
+   "rfc": 5689,
+   "section": "3.3",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "Name: valid-resourcetype Namespace: DAV: Use with: Typically 403 (Forbidden) Purpose: (precondition) -- The server MUST support the specified resourcetype value for the specified collection."
+  },
+  {
+   "id": "G0113",
+   "rfc": 5780,
+   "section": "8.5",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "While tests for the most commonly known NAT box behaviors are described, the BEHAVE mailing list regularly has descriptions of new behaviors, some of which may not be readily detected using the tests described herein."
+  },
+  {
+   "id": "G0116",
+   "rfc": 6066,
+   "section": "4",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "Without this extension, TLS specifies a fixed maximum plaintext fragment length of 2^14 bytes."
+  },
+  {
+   "id": "G0118",
+   "rfc": 6302,
+   "section": "2",
+   "tier": "strict",
+   "kw": "RECOMMENDED",
+   "class": "uppercase-modal",
+   "probe": "It is RECOMMENDED as best current practice that Internet-facing servers logging incoming IP addresses from inbound IP traffic also log: o The source port number."
+  },
+  {
+   "id": "G0121",
+   "rfc": 6455,
+   "section": "5.1",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "(Note that masking is done whether or not the WebSocket Protocol is running over TLS.) The server MUST close the connection upon receiving a frame that is not masked."
+  },
+  {
+   "id": "G0129",
+   "rfc": 6762,
+   "section": "13",
+   "tier": "strict",
+   "kw": "SHOULD",
+   "class": "uppercase-modal",
+   "probe": "The option to fail-over to Multicast DNS for names not ending in \".local.\" SHOULD be a user-configured option, and SHOULD be disabled by default because of the possible security issues related to unintended local resolution of apparently global names."
+  },
+  {
+   "id": "G0148",
+   "rfc": 7624,
+   "section": "3.2",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "Features of the security protocols themselves, e.g., the TLS session identifier, may leak information that can be used for correlation and inference."
+  },
+  {
+   "id": "G0156",
+   "rfc": 7719,
+   "section": "3",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "The header of a DNS message is its first 12 octets."
+  },
+  {
+   "id": "G0185",
+   "rfc": 8447,
+   "section": "10",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "The expert may provide more in-depth reviews, but their approval should not be taken as an endorsement of the identifier."
+  },
+  {
+   "id": "G0189",
+   "rfc": 8449,
+   "section": "4.1",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "In TLS 1.2, block ciphers allow from 1 to 256 octets of padding."
+  },
+  {
+   "id": "G0198",
+   "rfc": 8499,
+   "section": "9",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "(Note that this example might change in the future.) Note that the term \"public suffix\" is controversial in the DNS community for many reasons, and it may be significantly changed in the future."
+  },
+  {
+   "id": "G0199",
+   "rfc": 8499,
+   "section": "5",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "EDNS allows DNS clients and servers to specify message sizes larger than the original 512 octet limit, to expand the response code space and to carry additional options that affect the handling of a DNS query."
+  },
+  {
+   "id": "G0248",
+   "rfc": 9407,
+   "section": "5.3.1",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "Store the Source Symbol ID Format (I) (2 bits): * 0b00 means there is no source symbol ID information."
+  },
+  {
+   "id": "G0249",
+   "rfc": 9422,
+   "section": "3.8",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "Client and Server SMTP Clients MAY cache limits determined during one session and use them to optimize their behavior for subsequent sessions."
+  },
+  {
+   "id": "G0264",
+   "rfc": 9499,
+   "section": "4",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "The header of a DNS message is its first 12 octets."
+  },
+  {
+   "id": "G0272",
+   "rfc": 9999,
+   "section": "9.5.4",
+   "tier": "weak",
+   "kw": "must not",
+   "class": "lowercase-modal",
+   "probe": "It must not be used for CMWs that are not collections.) Encoding considerations: 8bit."
+  }
+ ],
+ "misses_the_bound_did_not_cause": [
+  {
+   "id": "G0185",
+   "rfc": 8447,
+   "section": "10",
+   "tier": "weak",
+   "chars": 121
+  }
+ ],
+ "invariants": {
+  "documents": 159,
+  "measured": 159,
+  "failed": 0,
+  "zero_strict_requirements": [
+   768,
+   791,
+   792,
+   793,
+   854,
+   1034,
+   1035,
+   1350,
+   1995,
+   2053,
+   2054,
+   2136,
+   2181,
+   2300,
+   2606,
+   3129,
+   3986,
+   3989,
+   4033,
+   4291,
+   4506,
+   5234,
+   7258,
+   7624,
+   7719,
+   7872,
+   8174,
+   8200,
+   8448,
+   8901,
+   8903,
+   9217,
+   9650,
+   9696
+  ],
+  "zero_candidates": [
+   8448,
+   9650
+  ],
+  "zero_strict_and_zero_candidates": [
+   8448,
+   9650
+  ],
+  "with_sentence_fragments": [
+   [
+    792,
+    1
+   ],
+   [
+    854,
+    4
+   ],
+   [
+    959,
+    3
+   ],
+   [
+    1034,
+    1
+   ],
+   [
+    1035,
+    2
+   ],
+   [
+    1122,
+    5
+   ],
+   [
+    1123,
+    2
+   ],
+   [
+    1812,
+    9
+   ],
+   [
+    2045,
+    1
+   ],
+   [
+    2181,
+    1
+   ],
+   [
+    2865,
+    2
+   ],
+   [
+    3261,
+    6
+   ],
+   [
+    3335,
+    1
+   ],
+   [
+    3501,
+    1
+   ],
+   [
+    3986,
+    1
+   ],
+   [
+    3987,
+    1
+   ],
+   [
+    3989,
+    3
+   ],
+   [
+    4035,
+    1
+   ],
+   [
+    4120,
+    9
+   ],
+   [
+    4253,
+    2
+   ],
+   [
+    4271,
+    1
+   ],
+   [
+    4291,
+    1
+   ],
+   [
+    4330,
+    1
+   ],
+   [
+    4506,
+    1
+   ],
+   [
+    4511,
+    1
+   ],
+   [
+    4764,
+    1
+   ],
+   [
+    5234,
+    1
+   ],
+   [
+    5246,
+    4
+   ],
+   [
+    5280,
+    10
+   ],
+   [
+    5321,
+    3
+   ],
+   [
+    5322,
+    1
+   ],
+   [
+    5780,
+    2
+   ],
+   [
+    6066,
+    1
+   ],
+   [
+    6455,
+    1
+   ],
+   [
+    6698,
+    1
+   ],
+   [
+    6762,
+    3
+   ],
+   [
+    7231,
+    2
+   ],
+   [
+    7235,
+    2
+   ],
+   [
+    7411,
+    2
+   ],
+   [
+    7638,
+    1
+   ],
+   [
+    7680,
+    1
+   ],
+   [
+    7929,
+    3
+   ],
+   [
+    8200,
+    5
+   ],
+   [
+    8446,
+    1
+   ],
+   [
+    8490,
+    1
+   ],
+   [
+    8499,
+    1
+   ],
+   [
+    8610,
+    2
+   ],
+   [
+    9110,
+    1
+   ],
+   [
+    9293,
+    1
+   ],
+   [
+    9472,
+    1
+   ]
+  ],
+  "with_unreadable_blocks": [],
+  "strict_duplicate_rows": {
+   "items": 8004,
+   "duplicates": 414,
+   "dup_pct": 5.2
+  },
+  "strict_median_chars": 144,
+  "strict_mean_chars": 156,
+  "keyword_bearing_blocks_skipped_total": 949,
+  "demand_share_median_pct": 66.7,
+  "keyword_stance": {
+   "none": 46,
+   "disclaims": 3,
+   "adopts": 110
+  },
+  "documents_over_200_requirements": [
+   [
+    1122,
+    274
+   ],
+   [
+    1123,
+    228
+   ],
+   [
+    1812,
+    577
+   ],
+   [
+    3261,
+    1000
+   ],
+   [
+    3501,
+    237
+   ],
+   [
+    4120,
+    278
+   ],
+   [
+    4271,
+    231
+   ],
+   [
+    5280,
+    365
+   ],
+   [
+    5321,
+    358
+   ],
+   [
+    7230,
+    208
+   ],
+   [
+    7540,
+    261
+   ],
+   [
+    8446,
+    428
+   ],
+   [
+    9000,
+    521
+   ],
+   [
+    9110,
+    408
+   ],
+   [
+    9113,
+    280
+   ],
+   [
+    9114,
+    239
+   ]
+  ],
+  "per_document": [
+   {
+    "rfc": 768,
+    "title": "User Datagram Protocol",
+    "published": "1980-08-01",
+    "total_requirements": 0,
+    "candidate_total": 4,
+    "demand_share": 75,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 791,
+    "title": "Internet Protocol",
+    "published": "1981-09-01",
+    "total_requirements": 0,
+    "candidate_total": 81,
+    "demand_share": 90.1,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 792,
+    "title": "Internet Control Message Protocol",
+    "published": "1981-09-01",
+    "total_requirements": 0,
+    "candidate_total": 66,
+    "demand_share": 95.5,
+    "sentence_fragments": 1,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 793,
+    "title": "Transmission Control Protocol",
+    "published": "1981-09-01",
+    "total_requirements": 0,
+    "candidate_total": 180,
+    "demand_share": 70.6,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 854,
+    "title": "Telnet Protocol Specification",
+    "published": "1983-05-01",
+    "total_requirements": 0,
+    "candidate_total": 82,
+    "demand_share": 63.4,
+    "sentence_fragments": 4,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 959,
+    "title": "File Transfer Protocol",
+    "published": "1985-10-01",
+    "total_requirements": 1,
+    "candidate_total": 216,
+    "demand_share": 79.2,
+    "sentence_fragments": 3,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 1034,
+    "title": "Domain names - concepts and facilities",
+    "published": "1987-11-01",
+    "total_requirements": 0,
+    "candidate_total": 144,
+    "demand_share": 73.6,
+    "sentence_fragments": 1,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 1035,
+    "title": "Domain names - implementation and specification",
+    "published": "1987-11-01",
+    "total_requirements": 0,
+    "candidate_total": 169,
+    "demand_share": 71.6,
+    "sentence_fragments": 2,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 1122,
+    "title": "Requirements for Internet Hosts - Communication Layers",
+    "published": "1989-10-01",
+    "total_requirements": 274,
+    "candidate_total": 273,
+    "demand_share": 68.9,
+    "sentence_fragments": 5,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 1123,
+    "title": "Requirements for Internet Hosts - Application and Support",
+    "published": "1989-10-01",
+    "total_requirements": 228,
+    "candidate_total": 210,
+    "demand_share": 71,
+    "sentence_fragments": 2,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 1350,
+    "title": "The TFTP Protocol (Revision 2)",
+    "published": "1992-07-01",
+    "total_requirements": 0,
+    "candidate_total": 29,
+    "demand_share": 89.7,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 1812,
+    "title": "Requirements for IP Version 4 Routers",
+    "published": "1995-06-01",
+    "total_requirements": 577,
+    "candidate_total": 412,
+    "demand_share": 66,
+    "sentence_fragments": 9,
+    "keyword_stance": "disclaims"
+   },
+   {
+    "rfc": 1939,
+    "title": "Post Office Protocol - Version 3",
+    "published": "1996-05-01",
+    "total_requirements": 7,
+    "candidate_total": 85,
+    "demand_share": 72.9,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 1995,
+    "title": "Incremental Zone Transfer in DNS",
+    "published": "1996-08-01",
+    "total_requirements": 0,
+    "candidate_total": 25,
+    "demand_share": 88,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 2045,
+    "title": "Multipurpose Internet Mail Extensions (MIME) Part One: Format of Internet Message Bodies",
+    "published": "1996-11-01",
+    "total_requirements": 7,
+    "candidate_total": 111,
+    "demand_share": 76.6,
+    "sentence_fragments": 1,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 2052,
+    "title": "A DNS RR for specifying the location of services (DNS SRV)",
+    "published": "1996-10-01",
+    "total_requirements": 9,
+    "candidate_total": 9,
+    "demand_share": 77.8,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 2053,
+    "title": "The AM (Armenia) Domain",
+    "published": "1996-10-01",
+    "total_requirements": 0,
+    "candidate_total": 2,
+    "demand_share": 50,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 2054,
+    "title": "WebNFS Client Specification",
+    "published": "1996-10-01",
+    "total_requirements": 0,
+    "candidate_total": 59,
+    "demand_share": 84.7,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 2119,
+    "title": "Key words for use in RFCs to Indicate Requirement Levels",
+    "published": "1997-03-01",
+    "total_requirements": 3,
+    "candidate_total": 11,
+    "demand_share": 36.4,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 2136,
+    "title": "Dynamic Updates in the Domain Name System (DNS UPDATE)",
+    "published": "1997-04-01",
+    "total_requirements": 0,
+    "candidate_total": 74,
+    "demand_share": 79.7,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 2181,
+    "title": "Clarifications to the DNS Specification",
+    "published": "1997-07-01",
+    "total_requirements": 0,
+    "candidate_total": 90,
+    "demand_share": 83.3,
+    "sentence_fragments": 1,
+    "keyword_stance": "disclaims"
+   },
+   {
+    "rfc": 2300,
+    "title": "Internet Official Protocol Standards",
+    "published": "1998-05-01",
+    "total_requirements": 0,
+    "candidate_total": 60,
+    "demand_share": 70,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 2308,
+    "title": "Negative Caching of DNS Queries (DNS NCACHE)",
+    "published": "1998-03-01",
+    "total_requirements": 17,
+    "candidate_total": 31,
+    "demand_share": 80.6,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 2606,
+    "title": "Reserved Top Level DNS Names",
+    "published": "1999-06-01",
+    "total_requirements": 0,
+    "candidate_total": 4,
+    "demand_share": 75,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 2615,
+    "title": "PPP over SONET/SDH",
+    "published": "1999-06-01",
+    "total_requirements": 8,
+    "candidate_total": 5,
+    "demand_share": 60,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 2845,
+    "title": "Secret Key Transaction Authentication for DNS (TSIG)",
+    "published": "2000-05-01",
+    "total_requirements": 48,
+    "candidate_total": 30,
+    "demand_share": 80,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 2865,
+    "title": "Remote Authentication Dial In User Service (RADIUS)",
+    "published": "2000-06-01",
+    "total_requirements": 166,
+    "candidate_total": 114,
+    "demand_share": 64.9,
+    "sentence_fragments": 2,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 3110,
+    "title": "RSA/SHA-1 SIGs and RSA KEYs in the Domain Name System (DNS)",
+    "published": "2001-05-01",
+    "total_requirements": 5,
+    "candidate_total": 10,
+    "demand_share": 90,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 3129,
+    "title": "Requirements for Kerberized Internet Negotiation of Keys",
+    "published": "2001-06-01",
+    "total_requirements": 0,
+    "candidate_total": 27,
+    "demand_share": 81.5,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 3225,
+    "title": "Indicating Resolver Support of DNSSEC",
+    "published": "2001-12-01",
+    "total_requirements": 7,
+    "candidate_total": 9,
+    "demand_share": 55.6,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 3226,
+    "title": "DNSSEC and IPv6 A6 aware server/resolver message size requirements",
+    "published": "2001-12-01",
+    "total_requirements": 4,
+    "candidate_total": 11,
+    "demand_share": 45.5,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 3229,
+    "title": "Delta encoding in HTTP",
+    "published": "2002-01-01",
+    "total_requirements": 38,
+    "candidate_total": 81,
+    "demand_share": 67.9,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 3261,
+    "title": "SIP: Session Initiation Protocol",
+    "published": "2002-07-03",
+    "total_requirements": 1000,
+    "candidate_total": 356,
+    "demand_share": 66,
+    "sentence_fragments": 6,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 3335,
+    "title": "MIME-based Secure Peer-to-Peer Business Data Interchange over the Internet",
+    "published": "2002-09-16",
+    "total_requirements": 37,
+    "candidate_total": 41,
+    "demand_share": 68.3,
+    "sentence_fragments": 1,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 3403,
+    "title": "Dynamic Delegation Discovery System (DDDS) Part Three: The Domain Name System (DNS) Database",
+    "published": "2002-10-17",
+    "total_requirements": 12,
+    "candidate_total": 28,
+    "demand_share": 85.7,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 3501,
+    "title": "INTERNET MESSAGE ACCESS PROTOCOL - VERSION 4rev1",
+    "published": "2003-03-18",
+    "total_requirements": 237,
+    "candidate_total": 57,
+    "demand_share": 52.6,
+    "sentence_fragments": 1,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 3597,
+    "title": "Handling of Unknown DNS Resource Record (RR) Types",
+    "published": "2003-09-10",
+    "total_requirements": 10,
+    "candidate_total": 6,
+    "demand_share": 50,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 3986,
+    "title": "Uniform Resource Identifier (URI): Generic Syntax",
+    "published": "2005-01-25",
+    "total_requirements": 0,
+    "candidate_total": 153,
+    "demand_share": 79.1,
+    "sentence_fragments": 1,
+    "keyword_stance": "disclaims"
+   },
+   {
+    "rfc": 3987,
+    "title": "Internationalized Resource Identifiers (IRIs)",
+    "published": "2005-01-25",
+    "total_requirements": 38,
+    "candidate_total": 122,
+    "demand_share": 79.5,
+    "sentence_fragments": 1,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 3988,
+    "title": "Maximum Transmission Unit Signalling Extensions for the Label Distribution Protocol",
+    "published": "2005-02-02",
+    "total_requirements": 8,
+    "candidate_total": 11,
+    "demand_share": 54.5,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 3989,
+    "title": "Middlebox Communications (MIDCOM) Protocol Semantics",
+    "published": "2005-02-18",
+    "total_requirements": 0,
+    "candidate_total": 144,
+    "demand_share": 61.1,
+    "sentence_fragments": 3,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 4033,
+    "title": "DNS Security Introduction and Requirements",
+    "published": "2005-03-29",
+    "total_requirements": 0,
+    "candidate_total": 51,
+    "demand_share": 82.4,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 4034,
+    "title": "Resource Records for the DNS Security Extensions",
+    "published": "2005-03-29",
+    "total_requirements": 57,
+    "candidate_total": 20,
+    "demand_share": 70,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 4035,
+    "title": "Protocol Modifications for the DNS Security Extensions",
+    "published": "2005-03-29",
+    "total_requirements": 144,
+    "candidate_total": 44,
+    "demand_share": 65.9,
+    "sentence_fragments": 1,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 4045,
+    "title": "Extensions to Support Efficient Carrying of Multicast Traffic in Layer-2 Tunneling Protocol (L2TP)",
+    "published": "2005-04-20",
+    "total_requirements": 55,
+    "candidate_total": 26,
+    "demand_share": 61.5,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 4113,
+    "title": "Management Information Base for the User Datagram Protocol (UDP)",
+    "published": "2005-06-10",
+    "total_requirements": 2,
+    "candidate_total": 12,
+    "demand_share": 66.7,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 4120,
+    "title": "The Kerberos Network Authentication Service (V5)",
+    "published": "2005-07-15",
+    "total_requirements": 278,
+    "candidate_total": 287,
+    "demand_share": 58.5,
+    "sentence_fragments": 9,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 4253,
+    "title": "The Secure Shell (SSH) Transport Layer Protocol",
+    "published": "2006-01-06",
+    "total_requirements": 121,
+    "candidate_total": 46,
+    "demand_share": 65.2,
+    "sentence_fragments": 2,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 4271,
+    "title": "A Border Gateway Protocol 4 (BGP-4)",
+    "published": "2006-01-13",
+    "total_requirements": 231,
+    "candidate_total": 200,
+    "demand_share": 43.5,
+    "sentence_fragments": 1,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 4291,
+    "title": "IP Version 6 Addressing Architecture",
+    "published": "2006-02-17",
+    "total_requirements": 0,
+    "candidate_total": 67,
+    "demand_share": 74.6,
+    "sentence_fragments": 1,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 4330,
+    "title": "Simple Network Time Protocol (SNTP) Version 4 for IPv4, IPv6 and OSI",
+    "published": "2006-01-31",
+    "total_requirements": 8,
+    "candidate_total": 62,
+    "demand_share": 58.1,
+    "sentence_fragments": 1,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 4343,
+    "title": "Domain Name System (DNS) Case Insensitivity Clarification",
+    "published": "2006-01-11",
+    "total_requirements": 4,
+    "candidate_total": 11,
+    "demand_share": 54.5,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 4506,
+    "title": "XDR: External Data Representation Standard",
+    "published": "2006-05-12",
+    "total_requirements": 0,
+    "candidate_total": 41,
+    "demand_share": 51.2,
+    "sentence_fragments": 1,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 4511,
+    "title": "Lightweight Directory Access Protocol (LDAP): The Protocol",
+    "published": "2006-06-08",
+    "total_requirements": 109,
+    "candidate_total": 148,
+    "demand_share": 68.2,
+    "sentence_fragments": 1,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 4635,
+    "title": "HMAC SHA (Hashed Message Authentication Code, Secure Hash Algorithm) TSIG Algorithm Identifiers",
+    "published": "2006-08-31",
+    "total_requirements": 10,
+    "candidate_total": 6,
+    "demand_share": 16.7,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 4636,
+    "title": "Foreign Agent Error Extension for Mobile IPv4",
+    "published": "2006-10-10",
+    "total_requirements": 4,
+    "candidate_total": 8,
+    "demand_share": 75,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 4649,
+    "title": "Dynamic Host Configuration Protocol for IPv6 (DHCPv6) Relay Agent Remote-ID Option",
+    "published": "2006-08-17",
+    "total_requirements": 1,
+    "candidate_total": 9,
+    "demand_share": 77.8,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 4764,
+    "title": "The EAP-PSK Protocol: A Pre-Shared Key Extensible Authentication Protocol (EAP) Method",
+    "published": "2007-01-18",
+    "total_requirements": 5,
+    "candidate_total": 116,
+    "demand_share": 72.4,
+    "sentence_fragments": 1,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 5155,
+    "title": "DNS Security (DNSSEC) Hashed Authenticated Denial of Existence",
+    "published": "2008-03-06",
+    "total_requirements": 86,
+    "candidate_total": 43,
+    "demand_share": 58.1,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 5234,
+    "title": "Augmented BNF for Syntax Specifications: ABNF",
+    "published": "2008-01-31",
+    "total_requirements": 0,
+    "candidate_total": 12,
+    "demand_share": 58.3,
+    "sentence_fragments": 1,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 5246,
+    "title": "The Transport Layer Security (TLS) Protocol Version 1.2",
+    "published": "2008-08-15",
+    "total_requirements": 172,
+    "candidate_total": 174,
+    "demand_share": 74.1,
+    "sentence_fragments": 4,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 5280,
+    "title": "Internet X.509 Public Key Infrastructure Certificate and Certificate Revocation List (CRL) Profile",
+    "published": "2008-05-08",
+    "total_requirements": 365,
+    "candidate_total": 277,
+    "demand_share": 62.5,
+    "sentence_fragments": 10,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 5282,
+    "title": "Using Authenticated Encryption Algorithms with the Encrypted Payload of the Internet Key Exchange version 2 (IKEv2) Protocol",
+    "published": "2008-08-21",
+    "total_requirements": 23,
+    "candidate_total": 9,
+    "demand_share": 44.4,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 5321,
+    "title": "Simple Mail Transfer Protocol",
+    "published": "2008-10-01",
+    "total_requirements": 358,
+    "candidate_total": 211,
+    "demand_share": 72,
+    "sentence_fragments": 3,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 5322,
+    "title": "Internet Message Format",
+    "published": "2008-10-01",
+    "total_requirements": 59,
+    "candidate_total": 71,
+    "demand_share": 56.3,
+    "sentence_fragments": 1,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 5689,
+    "title": "Extended MKCOL for Web Distributed Authoring and Versioning (WebDAV)",
+    "published": "2009-09-30",
+    "total_requirements": 11,
+    "candidate_total": 6,
+    "demand_share": 100,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 5780,
+    "title": "NAT Behavior Discovery Using Session Traversal Utilities for NAT (STUN)",
+    "published": "2010-05-18",
+    "total_requirements": 33,
+    "candidate_total": 79,
+    "demand_share": 65.8,
+    "sentence_fragments": 2,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 5936,
+    "title": "DNS Zone Transfer Protocol (AXFR)",
+    "published": "2010-06-28",
+    "total_requirements": 82,
+    "candidate_total": 36,
+    "demand_share": 77.8,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 6066,
+    "title": "Transport Layer Security (TLS) Extensions: Extension Definitions",
+    "published": "2011-01-18",
+    "total_requirements": 77,
+    "candidate_total": 42,
+    "demand_share": 71.4,
+    "sentence_fragments": 1,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 6265,
+    "title": "HTTP State Management Mechanism",
+    "published": "2011-04-27",
+    "total_requirements": 60,
+    "candidate_total": 13,
+    "demand_share": 53.8,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 6302,
+    "title": "Logging Recommendations for Internet-Facing Servers",
+    "published": "2011-06-30",
+    "total_requirements": 3,
+    "candidate_total": 6,
+    "demand_share": 100,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 6455,
+    "title": "The WebSocket Protocol",
+    "published": "2011-12-11",
+    "total_requirements": 184,
+    "candidate_total": 92,
+    "demand_share": 73.9,
+    "sentence_fragments": 1,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 6648,
+    "title": "Deprecating the \"X-\" Prefix and Similar Constructs in Application Protocols",
+    "published": "2012-06-26",
+    "total_requirements": 13,
+    "candidate_total": 6,
+    "demand_share": 66.7,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 6672,
+    "title": "DNAME Redirection in the DNS",
+    "published": "2012-06-18",
+    "total_requirements": 26,
+    "candidate_total": 26,
+    "demand_share": 69.2,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 6698,
+    "title": "The DNS-Based Authentication of Named Entities (DANE) Transport Layer Security (TLS) Protocol: TLSA",
+    "published": "2012-08-07",
+    "total_requirements": 34,
+    "candidate_total": 23,
+    "demand_share": 65.2,
+    "sentence_fragments": 1,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 6761,
+    "title": "Special-Use Domain Names",
+    "published": "2013-02-20",
+    "total_requirements": 48,
+    "candidate_total": 19,
+    "demand_share": 78.9,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 6762,
+    "title": "Multicast DNS",
+    "published": "2013-02-20",
+    "total_requirements": 190,
+    "candidate_total": 166,
+    "demand_share": 69.3,
+    "sentence_fragments": 3,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 6891,
+    "title": "Extension Mechanisms for DNS (EDNS(0))",
+    "published": "2013-04-16",
+    "total_requirements": 42,
+    "candidate_total": 23,
+    "demand_share": 69.6,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 7230,
+    "title": "Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing",
+    "published": "2014-06-06",
+    "total_requirements": 208,
+    "candidate_total": 35,
+    "demand_share": 42.9,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 7231,
+    "title": "Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content",
+    "published": "2014-06-06",
+    "total_requirements": 152,
+    "candidate_total": 31,
+    "demand_share": 61.3,
+    "sentence_fragments": 2,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 7232,
+    "title": "Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests",
+    "published": "2014-06-06",
+    "total_requirements": 44,
+    "candidate_total": 2,
+    "demand_share": 100,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 7233,
+    "title": "Hypertext Transfer Protocol (HTTP/1.1): Range Requests",
+    "published": "2014-06-06",
+    "total_requirements": 46,
+    "candidate_total": 9,
+    "demand_share": 22.2,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 7234,
+    "title": "Hypertext Transfer Protocol (HTTP/1.1): Caching",
+    "published": "2014-06-06",
+    "total_requirements": 102,
+    "candidate_total": 21,
+    "demand_share": 52.4,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 7235,
+    "title": "Hypertext Transfer Protocol (HTTP/1.1): Authentication",
+    "published": "2014-06-06",
+    "total_requirements": 18,
+    "candidate_total": 12,
+    "demand_share": 66.7,
+    "sentence_fragments": 2,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 7258,
+    "title": "Pervasive Monitoring Is an Attack",
+    "published": "2014-05-12",
+    "total_requirements": 0,
+    "candidate_total": 7,
+    "demand_share": 57.1,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 7411,
+    "title": "Multicast Listener Extensions for Mobile IPv6 (MIPv6) and Proxy Mobile IPv6 (PMIPv6) Fast Handovers",
+    "published": "2014-11-30",
+    "total_requirements": 28,
+    "candidate_total": 35,
+    "demand_share": 62.9,
+    "sentence_fragments": 2,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 7540,
+    "title": "Hypertext Transfer Protocol Version 2 (HTTP/2)",
+    "published": "2015-05-14",
+    "total_requirements": 261,
+    "candidate_total": 12,
+    "demand_share": 58.3,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 7624,
+    "title": "Confidentiality in the Face of Pervasive Surveillance: A Threat Model and Problem Statement",
+    "published": "2015-08-20",
+    "total_requirements": 0,
+    "candidate_total": 23,
+    "demand_share": 87,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 7638,
+    "title": "JSON Web Key (JWK) Thumbprint",
+    "published": "2015-09-08",
+    "total_requirements": 4,
+    "candidate_total": 30,
+    "demand_share": 56.7,
+    "sentence_fragments": 1,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 7671,
+    "title": "The DNS-Based Authentication of Named Entities (DANE) Protocol: Updates and Operational Guidance",
+    "published": "2015-10-14",
+    "total_requirements": 73,
+    "candidate_total": 53,
+    "demand_share": 58.5,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 7680,
+    "title": "A One-Way Loss Metric for IP Performance Metrics (IPPM)",
+    "published": "2016-01-29",
+    "total_requirements": 9,
+    "candidate_total": 34,
+    "demand_share": 70.6,
+    "sentence_fragments": 1,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 7719,
+    "title": "DNS Terminology",
+    "published": "2015-12-15",
+    "total_requirements": 0,
+    "candidate_total": 32,
+    "demand_share": 56.3,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 7830,
+    "title": "The EDNS(0) Padding Option",
+    "published": "2016-05-10",
+    "total_requirements": 10,
+    "candidate_total": 3,
+    "demand_share": 33.3,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 7838,
+    "title": "HTTP Alternative Services",
+    "published": "2016-04-07",
+    "total_requirements": 38,
+    "candidate_total": 2,
+    "demand_share": 50,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 7858,
+    "title": "Specification for DNS over Transport Layer Security (TLS)",
+    "published": "2016-05-17",
+    "total_requirements": 34,
+    "candidate_total": 21,
+    "demand_share": 57.1,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 7871,
+    "title": "Client Subnet in DNS Queries",
+    "published": "2016-05-20",
+    "total_requirements": 75,
+    "candidate_total": 33,
+    "demand_share": 60.6,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 7872,
+    "title": "Observations on the Dropping of Packets with IPv6 Extension Headers in the Real World",
+    "published": "2016-06-21",
+    "total_requirements": 0,
+    "candidate_total": 5,
+    "demand_share": 60,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 7873,
+    "title": "Domain Name System (DNS) Cookies",
+    "published": "2016-05-27",
+    "total_requirements": 28,
+    "candidate_total": 27,
+    "demand_share": 66.7,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 7874,
+    "title": "WebRTC Audio Codec and Processing Requirements",
+    "published": "2016-05-25",
+    "total_requirements": 24,
+    "candidate_total": 11,
+    "demand_share": 36.4,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 7919,
+    "title": "Negotiated Finite Field Diffie-Hellman Ephemeral Parameters for Transport Layer Security (TLS)",
+    "published": "2016-08-10",
+    "total_requirements": 35,
+    "candidate_total": 42,
+    "demand_share": 78.6,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 7929,
+    "title": "DNS-Based Authentication of Named Entities (DANE) Bindings for OpenPGP",
+    "published": "2016-08-05",
+    "total_requirements": 29,
+    "candidate_total": 27,
+    "demand_share": 66.7,
+    "sentence_fragments": 3,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 8020,
+    "title": "NXDOMAIN: There Really Is Nothing Underneath",
+    "published": "2016-11-08",
+    "total_requirements": 7,
+    "candidate_total": 15,
+    "demand_share": 53.3,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 8078,
+    "title": "Managing DS Records from the Parent via CDS/CDNSKEY",
+    "published": "2017-03-10",
+    "total_requirements": 5,
+    "candidate_total": 16,
+    "demand_share": 68.8,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 8174,
+    "title": "Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words",
+    "published": "2017-05-18",
+    "total_requirements": 0,
+    "candidate_total": 10,
+    "demand_share": 40,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 8200,
+    "title": "Internet Protocol, Version 6 (IPv6) Specification",
+    "published": "2017-07-14",
+    "total_requirements": 0,
+    "candidate_total": 110,
+    "demand_share": 71.8,
+    "sentence_fragments": 5,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 8252,
+    "title": "OAuth 2.0 for Native Apps",
+    "published": "2017-10-04",
+    "total_requirements": 34,
+    "candidate_total": 33,
+    "demand_share": 72.7,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 8445,
+    "title": "Interactive Connectivity Establishment (ICE): A Protocol for Network Address Translator (NAT) Traversal",
+    "published": "2018-07-19",
+    "total_requirements": 175,
+    "candidate_total": 42,
+    "demand_share": 57.1,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 8446,
+    "title": "The Transport Layer Security (TLS) Protocol Version 1.3",
+    "published": "2018-08-10",
+    "total_requirements": 428,
+    "candidate_total": 166,
+    "demand_share": 68.1,
+    "sentence_fragments": 1,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 8447,
+    "title": "IANA Registry Updates for TLS and DTLS",
+    "published": "2018-08-10",
+    "total_requirements": 11,
+    "candidate_total": 53,
+    "demand_share": 37.7,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 8448,
+    "title": "Example Handshake Traces for TLS 1.3",
+    "published": "2019-01-14",
+    "total_requirements": 0,
+    "candidate_total": 0,
+    "demand_share": null,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 8449,
+    "title": "Record Size Limit Extension for TLS",
+    "published": "2018-08-10",
+    "total_requirements": 12,
+    "candidate_total": 8,
+    "demand_share": 62.5,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 8470,
+    "title": "Using Early Data in HTTP",
+    "published": "2018-09-21",
+    "total_requirements": 25,
+    "candidate_total": 1,
+    "demand_share": 100,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 8484,
+    "title": "DNS Queries over HTTPS (DoH)",
+    "published": "2018-10-19",
+    "total_requirements": 26,
+    "candidate_total": 27,
+    "demand_share": 63,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 8490,
+    "title": "DNS Stateful Operations",
+    "published": "2019-03-15",
+    "total_requirements": 144,
+    "candidate_total": 133,
+    "demand_share": 69.2,
+    "sentence_fragments": 1,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 8499,
+    "title": "DNS Terminology",
+    "published": "2019-01-02",
+    "total_requirements": 1,
+    "candidate_total": 52,
+    "demand_share": 71.2,
+    "sentence_fragments": 1,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 8610,
+    "title": "Concise Data Definition Language (CDDL): A Notational Convention to Express Concise Binary Object Representation (CBOR) and JSON Data Structures",
+    "published": "2019-06-12",
+    "total_requirements": 2,
+    "candidate_total": 62,
+    "demand_share": 48.4,
+    "sentence_fragments": 2,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 8659,
+    "title": "DNS Certification Authority Authorization (CAA) Resource Record",
+    "published": "2019-11-19",
+    "total_requirements": 31,
+    "candidate_total": 12,
+    "demand_share": 75,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 8767,
+    "title": "Serving Stale Data to Improve DNS Resiliency",
+    "published": "2020-03-31",
+    "total_requirements": 8,
+    "candidate_total": 32,
+    "demand_share": 71.9,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 8833,
+    "title": "Application-Layer Protocol Negotiation (ALPN) for WebRTC",
+    "published": "2021-01-18",
+    "total_requirements": 8,
+    "candidate_total": 2,
+    "demand_share": 100,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 8834,
+    "title": "Media Transport and Use of RTP in WebRTC",
+    "published": "2021-01-18",
+    "total_requirements": 102,
+    "candidate_total": 1,
+    "demand_share": 0,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 8894,
+    "title": "Simple Certificate Enrolment Protocol",
+    "published": "2020-09-10",
+    "total_requirements": 89,
+    "candidate_total": 81,
+    "demand_share": 56.8,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 8901,
+    "title": "Multi-Signer DNSSEC Models",
+    "published": "2020-09-24",
+    "total_requirements": 0,
+    "candidate_total": 27,
+    "demand_share": 81.5,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 8902,
+    "title": "TLS Authentication Using Intelligent Transport System (ITS) Certificates",
+    "published": "2020-09-30",
+    "total_requirements": 17,
+    "candidate_total": 7,
+    "demand_share": 85.7,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 8903,
+    "title": "Use Cases for DDoS Open Threat Signaling",
+    "published": "2021-05-27",
+    "total_requirements": 0,
+    "candidate_total": 29,
+    "demand_share": 65.5,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 8914,
+    "title": "Extended DNS Errors",
+    "published": "2020-10-23",
+    "total_requirements": 14,
+    "candidate_total": 16,
+    "demand_share": 62.5,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 8949,
+    "title": "Concise Binary Object Representation (CBOR)",
+    "published": "2020-12-04",
+    "total_requirements": 32,
+    "candidate_total": 124,
+    "demand_share": 71,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 8959,
+    "title": "The \"secret-token\" URI Scheme",
+    "published": "2021-01-29",
+    "total_requirements": 2,
+    "candidate_total": 3,
+    "demand_share": 33.3,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9000,
+    "title": "QUIC: A UDP-Based Multiplexed and Secure Transport",
+    "published": "2021-05-27",
+    "total_requirements": 521,
+    "candidate_total": 44,
+    "demand_share": 63.6,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9001,
+    "title": "Using TLS to Secure QUIC",
+    "published": "2021-05-27",
+    "total_requirements": 121,
+    "candidate_total": 11,
+    "demand_share": 45.5,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9002,
+    "title": "QUIC Loss Detection and Congestion Control",
+    "published": "2021-05-27",
+    "total_requirements": 79,
+    "candidate_total": 27,
+    "demand_share": 63,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9110,
+    "title": "HTTP Semantics",
+    "published": "2022-06-06",
+    "total_requirements": 408,
+    "candidate_total": 81,
+    "demand_share": 53.1,
+    "sentence_fragments": 1,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9111,
+    "title": "HTTP Caching",
+    "published": "2022-06-06",
+    "total_requirements": 96,
+    "candidate_total": 31,
+    "demand_share": 41.9,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9112,
+    "title": "HTTP/1.1",
+    "published": "2022-06-06",
+    "total_requirements": 131,
+    "candidate_total": 19,
+    "demand_share": 52.6,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9113,
+    "title": "HTTP/2",
+    "published": "2022-06-06",
+    "total_requirements": 280,
+    "candidate_total": 17,
+    "demand_share": 88.2,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9114,
+    "title": "HTTP/3",
+    "published": "2022-06-06",
+    "total_requirements": 239,
+    "candidate_total": 29,
+    "demand_share": 72.4,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9117,
+    "title": "Revised Validation Procedure for BGP Flow Specifications",
+    "published": "2021-08-23",
+    "total_requirements": 3,
+    "candidate_total": 23,
+    "demand_share": 52.2,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9118,
+    "title": "Enhanced JSON Web Token (JWT) Claim Constraints for Secure Telephone Identity Revisited (STIR) Certificates",
+    "published": "2021-08-23",
+    "total_requirements": 12,
+    "candidate_total": 12,
+    "demand_share": 83.3,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9197,
+    "title": "Data Fields for In Situ Operations, Administration, and Maintenance (IOAM)",
+    "published": "2022-05-23",
+    "total_requirements": 59,
+    "candidate_total": 9,
+    "demand_share": 88.9,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9205,
+    "title": "Building Protocols with HTTP",
+    "published": "2022-06-08",
+    "total_requirements": 15,
+    "candidate_total": 45,
+    "demand_share": 80,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9217,
+    "title": "Current Open Questions in Path-Aware Networking",
+    "published": "2022-03-16",
+    "total_requirements": 0,
+    "candidate_total": 30,
+    "demand_share": 73.3,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 9221,
+    "title": "An Unreliable Datagram Extension to QUIC",
+    "published": "2022-03-31",
+    "total_requirements": 20,
+    "candidate_total": 3,
+    "demand_share": 66.7,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9293,
+    "title": "Transmission Control Protocol (TCP)",
+    "published": "2022-08-18",
+    "total_requirements": 112,
+    "candidate_total": 202,
+    "demand_share": 67.8,
+    "sentence_fragments": 1,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9407,
+    "title": "Tetrys: An On-the-Fly Network Coding Protocol",
+    "published": "2023-06-12",
+    "total_requirements": 39,
+    "candidate_total": 30,
+    "demand_share": 73.3,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9422,
+    "title": "The LIMITS SMTP Service Extension",
+    "published": "2024-02-07",
+    "total_requirements": 13,
+    "candidate_total": 18,
+    "demand_share": 50,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9439,
+    "title": "Application-Layer Traffic Optimization (ALTO) Performance Cost Metrics",
+    "published": "2023-08-11",
+    "total_requirements": 39,
+    "candidate_total": 46,
+    "demand_share": 67.4,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9458,
+    "title": "Oblivious HTTP",
+    "published": "2024-01-12",
+    "total_requirements": 40,
+    "candidate_total": 11,
+    "demand_share": 45.5,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9460,
+    "title": "Service Binding and Parameter Specification via the DNS (SVCB and HTTPS Resource Records)",
+    "published": "2023-11-06",
+    "total_requirements": 141,
+    "candidate_total": 49,
+    "demand_share": 69.4,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9461,
+    "title": "Service Binding Mapping for DNS Servers",
+    "published": "2023-11-06",
+    "total_requirements": 21,
+    "candidate_total": 7,
+    "demand_share": 71.4,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9462,
+    "title": "Discovery of Designated Resolvers",
+    "published": "2023-11-06",
+    "total_requirements": 38,
+    "candidate_total": 15,
+    "demand_share": 66.7,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9463,
+    "title": "DHCP and Router Advertisement Options for the Discovery of Network-designated Resolvers (DNR)",
+    "published": "2023-11-06",
+    "total_requirements": 31,
+    "candidate_total": 30,
+    "demand_share": 66.7,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9472,
+    "title": "A YANG Data Model for Reporting Software Bills of Materials (SBOMs) and Vulnerability Information",
+    "published": "2023-10-10",
+    "total_requirements": 10,
+    "candidate_total": 32,
+    "demand_share": 56.3,
+    "sentence_fragments": 1,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9499,
+    "title": "DNS Terminology",
+    "published": "2024-03-21",
+    "total_requirements": 1,
+    "candidate_total": 47,
+    "demand_share": 74.5,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 9520,
+    "title": "Negative Caching of DNS Resolution Failures",
+    "published": "2023-12-22",
+    "total_requirements": 11,
+    "candidate_total": 29,
+    "demand_share": 62.1,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9552,
+    "title": "Distribution of Link-State and Traffic Engineering Information Using BGP",
+    "published": "2023-12-22",
+    "total_requirements": 124,
+    "candidate_total": 83,
+    "demand_share": 61.4,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9606,
+    "title": "DNS Resolver Information",
+    "published": "2024-06-28",
+    "total_requirements": 17,
+    "candidate_total": 15,
+    "demand_share": 60,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9650,
+    "title": "Revision to Registration Procedures for IS-IS Neighbor Link-Attribute Bit Values",
+    "published": "2024-08-26",
+    "total_requirements": 0,
+    "candidate_total": 0,
+    "demand_share": null,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 9651,
+    "title": "Structured Field Values for HTTP",
+    "published": "2024-09-30",
+    "total_requirements": 26,
+    "candidate_total": 30,
+    "demand_share": 66.7,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   },
+   {
+    "rfc": 9696,
+    "title": "Routing in Fat Trees (RIFT) Applicability and Operational Considerations",
+    "published": "2025-04-03",
+    "total_requirements": 0,
+    "candidate_total": 56,
+    "demand_share": 64.3,
+    "sentence_fragments": 0,
+    "keyword_stance": null
+   },
+   {
+    "rfc": 9999,
+    "title": "Remote ATtestation procedureS (RATS) Conceptual Message Wrapper (CMW)",
+    "published": "2026-07-14",
+    "total_requirements": 23,
+    "candidate_total": 40,
+    "demand_share": 62.5,
+    "sentence_fragments": 0,
+    "keyword_stance": "adopts"
+   }
+  ],
+  "in_CALLS": false,
+  "why_not_in_CALLS": "Corpus invariants are a check on the corpus, not a step of the scenario a caller performs. They cost 3-4 calls per document over all 159 documents; folding them into CALLS would make the cost of the guard part of the number it guards. They are counted separately in `calls_after_invariants`."
+ },
+ "dangling_headings": {
+  "note": "Label-free. Section headings that the sections this protocol sampled show in their text and that its outline does not list. Non-zero means the statements under those headings are unreachable through any query, and it is the defect the golden set cannot see because it samples sections FROM the outline. The read calls behind it are not counted in CALLS.",
+  "protocols_measured": 96,
+  "protocols_with_dangling": 0,
+  "per_protocol": [
+   [
+    793,
+    0
+   ],
+   [
+    959,
+    0
+   ],
+   [
+    1034,
+    0
+   ],
+   [
+    1122,
+    0
+   ],
+   [
+    1123,
+    0
+   ],
+   [
+    1812,
+    0
+   ],
+   [
+    1939,
+    0
+   ],
+   [
+    2045,
+    0
+   ],
+   [
+    2054,
+    0
+   ],
+   [
+    2119,
+    0
+   ],
+   [
+    2181,
+    0
+   ],
+   [
+    2308,
+    0
+   ],
+   [
+    2606,
+    0
+   ],
+   [
+    2845,
+    0
+   ],
+   [
+    3110,
+    0
+   ],
+   [
+    3129,
+    0
+   ],
+   [
+    3226,
+    0
+   ],
+   [
+    3229,
+    0
+   ],
+   [
+    3335,
+    0
+   ],
+   [
+    3403,
+    0
+   ],
+   [
+    3597,
+    0
+   ],
+   [
+    3987,
+    0
+   ],
+   [
+    3988,
+    0
+   ],
+   [
+    4033,
+    0
+   ],
+   [
+    4035,
+    0
+   ],
+   [
+    4045,
+    0
+   ],
+   [
+    4120,
+    0
+   ],
+   [
+    4253,
+    0
+   ],
+   [
+    4291,
+    0
+   ],
+   [
+    4330,
+    0
+   ],
+   [
+    4506,
+    0
+   ],
+   [
+    4635,
+    0
+   ],
+   [
+    4636,
+    0
+   ],
+   [
+    4764,
+    0
+   ],
+   [
+    5234,
+    0
+   ],
+   [
+    5246,
+    0
+   ],
+   [
+    5282,
+    0
+   ],
+   [
+    5321,
+    0
+   ],
+   [
+    5689,
+    0
+   ],
+   [
+    5780,
+    0
+   ],
+   [
+    6066,
+    0
+   ],
+   [
+    6302,
+    0
+   ],
+   [
+    6455,
+    0
+   ],
+   [
+    6672,
+    0
+   ],
+   [
+    6761,
+    0
+   ],
+   [
+    6762,
+    0
+   ],
+   [
+    7230,
+    0
+   ],
+   [
+    7231,
+    0
+   ],
+   [
+    7233,
+    0
+   ],
+   [
+    7234,
+    0
+   ],
+   [
+    7258,
+    0
+   ],
+   [
+    7540,
+    0
+   ],
+   [
+    7624,
+    0
+   ],
+   [
+    7671,
+    0
+   ],
+   [
+    7719,
+    0
+   ],
+   [
+    7830,
+    0
+   ],
+   [
+    7858,
+    0
+   ],
+   [
+    7871,
+    0
+   ],
+   [
+    7873,
+    0
+   ],
+   [
+    7874,
+    0
+   ],
+   [
+    7929,
+    0
+   ],
+   [
+    8078,
+    0
+   ],
+   [
+    8174,
+    0
+   ],
+   [
+    8252,
+    0
+   ],
+   [
+    8446,
+    0
+   ],
+   [
+    8447,
+    0
+   ],
+   [
+    8449,
+    0
+   ],
+   [
+    8470,
+    0
+   ],
+   [
+    8490,
+    0
+   ],
+   [
+    8499,
+    0
+   ],
+   [
+    8659,
+    0
+   ],
+   [
+    8833,
+    0
+   ],
+   [
+    8834,
+    0
+   ],
+   [
+    8901,
+    0
+   ],
+   [
+    8903,
+    0
+   ],
+   [
+    8914,
+    0
+   ],
+   [
+    8959,
+    0
+   ],
+   [
+    9000,
+    0
+   ],
+   [
+    9002,
+    0
+   ],
+   [
+    9110,
+    0
+   ],
+   [
+    9112,
+    0
+   ],
+   [
+    9114,
+    0
+   ],
+   [
+    9117,
+    0
+   ],
+   [
+    9197,
+    0
+   ],
+   [
+    9217,
+    0
+   ],
+   [
+    9221,
+    0
+   ],
+   [
+    9407,
+    0
+   ],
+   [
+    9422,
+    0
+   ],
+   [
+    9458,
+    0
+   ],
+   [
+    9460,
+    0
+   ],
+   [
+    9462,
+    0
+   ],
+   [
+    9472,
+    0
+   ],
+   [
+    9499,
+    0
+   ],
+   [
+    9552,
+    0
+   ],
+   [
+    9651,
+    0
+   ],
+   [
+    9999,
+    0
+   ]
+  ],
+  "detail": []
+ }
+}

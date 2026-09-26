@@ -1,6 +1,6 @@
 {
   "name": "rfc-mcp",
-  "version": "0.5.3",
+  "version": "0.6.0",
   "private": true,
   "description": "Evidence-first, read-only Model Context Protocol server for IETF RFCs: pinned snapshots, byte-exact citations, RFC 2119/8174 requirement extraction",
   "type": "module",

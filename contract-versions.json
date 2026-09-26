@@ -9,7 +9,7 @@
     "parser or extractor bump cannot ship under an unchanged server version. That",
     "coupling was promised once and not kept; this makes it enforced instead."
   ],
-  "server": "0.5.3",
-  "parser": "rfc-text-1.7.3",
-  "extractor": "normative-2119-8174-1.6.3"
+  "server": "0.6.0",
+  "parser": "rfc-text-1.8.0",
+  "extractor": "normative-2119-8174-1.7.1"
 }

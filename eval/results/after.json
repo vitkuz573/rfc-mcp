@@ -1,4 +1,18 @@
 {
+ "$comparability": {
+  "comparable_with": "eval/results/<new-tag>.json: NO",
+  "golden_set_measured_against": "eval/golden-baseline-2026-09-26.json (status: historical_baseline)",
+  "why": "This file was measured against the previous golden set, which is not a golden set: 33 of its 100 protocols are not what the published stratified rule produces from the committed 159-document corpus, 95 of 95 protocols had drifted, 0 of 260 rules carried a snapshot id or a character offset, and 10 probes were unreachable in the section they named. node eval/build-golden.mjs did not reproduce it. These numbers are NOT comparable to any run made against eval/golden.json.",
+  "what_changed_in_the_instrument": [
+   "RECALL is now reported under a BOUNDED matcher (the emitted row may not exceed the probe by more than 1.5x) beside the containment matcher that was used here; both are in every new results file.",
+   "RECALL is now reported beside its own FLOOR (three deliberately trivial extractors) and marked VOID where the floor beats it.",
+   "VERIFY is now one number per verdict condition, not one pooled percentage of the store against itself.",
+   "CALLS is now over three divisors, with the harness auditing calls separated from the calls a caller pays.",
+   "NEGATIVE PROBES and CONSERVATION are new; neither has a counterpart in this file."
+  ],
+  "supersedes_note": "Nothing in this file is wrong about the build it measured. It is simply measured against a set that cannot be rebuilt, and a number without a rebuildable denominator is an anecdote with decimals.",
+  "tag_of_record": "after"
+ },
  "tag": "after",
  "run_at": "2026-09-26T06:04:56.954Z",
  "corpus": {

@@ -248,9 +248,42 @@ export class RfcEditorSource {
       signal,
       revalidate: options.revalidate,
     });
+    const contentType = result.contentType ?? guessContentType(format);
+    // A 200 carrying the wrong body is not a document. Measured: an HTML 503 error page
+    // saved as RFC 1000 produced `status: "ok"`, 2 requirements at parse_status "complete",
+    // and verify_citation "verified" - quoting `<p>The server MUST be restarted.` A tool
+    // whose entire value is that a citation resolves to bytes cannot be handed an error
+    // page and still be right, and this needs no adversary: any upstream hiccup during a
+    // sync does it. The content type is recorded and was never compared, so the check is
+    // here, at the boundary where the bytes enter, not at the parser.
+    //
+    // The content type alone is not sufficient - a server can serve an error page with a
+    // correct content type, and a reverse proxy in front of a working server can rewrite
+    // the header - so the body is sniffed as a second gate. Order matters: the header is
+    // the cheap, specific check, the sniff the last resort.
+    // The bytes are the evidence and the header is corroboration, so the sniff is the gate
+    // and a missing header is tolerated: a proxy that strips `content-type` has still sent
+    // the document, and refusing on the header alone would break ingestion against a server
+    // that is doing nothing wrong. What is not tolerated is a body that is markup when a
+    // text rendition was requested, a body that is binary, or a header that positively
+    // contradicts the rendition.
+    //
+    // The sniff does not run for `xml` or `html`, where markup IS the document, and not for
+    // `pdf`, which is binary by design.
+    const sniffed = format === "txt" ? sniffTextBody(result.body) : "text";
+    if (sniffed !== "text" || !acceptsTextFor(format, contentType)) {
+      throw new RfcMcpError(
+        "UPSTREAM_CONTRACT",
+        `rfc-editor.org returned ${contentType} for the ${format} rendition of RFC ${rfc}, ` +
+          `and the body is ${sniffed === "markup" ? "a web page rather than the document" : sniffed === "binary" ? "binary, so it is not a text rendition" : "not the rendition that was requested"}. ` +
+          `Nothing was stored: a document is never built from a body that is not the document. ` +
+          `If this persists, the rendition for this RFC may be unavailable upstream rather than failing here.`,
+        { retryable: true, details: { rfc, format, content_type: contentType, body_sniff: sniffed } },
+      );
+    }
     return {
       format,
-      contentType: result.contentType ?? guessContentType(format),
+      contentType,
       bytes: result.body.byteLength,
       sha256: `sha256:${sha256Hex(result.body)}`,
       body: result.body,
@@ -633,6 +666,52 @@ function asNumber(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && /^\d+$/u.test(value.trim())) return Number.parseInt(value.trim(), 10);
   return null;
+}
+
+/**
+ * Does this content type carry the rendition we asked for?
+ *
+ * The `txt` rendition of an RFC is served as `text/plain` by rfc-editor.org, and an
+ * omitted or wrong type is treated as a failure rather than as permission: a missing
+ * header tells us nothing, and assuming the body is what we asked for is the assumption
+ * that produced a verified requirement quoting a 503 page.
+ */
+function acceptsTextFor(format: string, contentType: string): boolean {
+  const type = contentType.split(";")[0]!.trim().toLowerCase();
+  if (format === "xml") return type === "application/rfc+xml" || type === "application/xml" || type === "text/xml";
+  // PDF is binary and is served as such; there is no text rendition to sniff.
+  if (format === "pdf") return type === "application/pdf";
+  if (format === "html") return type === "text/html" || type === "application/xhtml+xml";
+  // A text/plain rendition is asked for by name, so anything else is a contradiction. An
+  // empty type is tolerated here because `guessContentType` has already filled it in, and
+  // because the body sniff is the real gate.
+  return type === "" || type === "text/plain";
+}
+
+/**
+ * Classify the first bytes of a body as text, markup, or neither.
+ *
+ * Only the head is inspected and only enough of it to be certain. A `txt` rendition may
+ * legitimately open with a form feed, a line of dashes, or the RFC's own header block,
+ * so the test is for a document root, not for "does not look like text". An RFC's own
+ * content can contain `<` in examples, but not a document root in the first bytes.
+ */
+function sniffTextBody(body: Uint8Array): "text" | "markup" | "binary" {
+  const head = body.subarray(0, 512);
+  if (head.length === 0) return "text";
+  // NUL in the head means binary whatever the header claimed.
+  for (const byte of head) {
+    if (byte === 0) return "binary";
+  }
+  // A BOM is text. UTF-8 EFBBBF, UTF-16 FFFE / FEFF little/big endian.
+  if (head.length >= 3 && head[0] === 0xef && head[1] === 0xbb && head[2] === 0xbf) return "text";
+  if (head.length >= 2 && ((head[0] === 0xff && head[1] === 0xfe) || (head[0] === 0xfe && head[1] === 0xff)))
+    return "text";
+  const prefix = new TextDecoder("utf-8", { fatal: false }).decode(head);
+  const trimmed = prefix.replace(/^[\s\uFEFF\u0000\u00A0]+/, "");
+  if (/^<(?:!doctype\s+html|html\b|head\b|body\b|title\b|meta\b|\?xml\b)/i.test(trimmed)) return "markup";
+  if (/^\s*[[{]/.test(trimmed) && /^\s*[[{][^\n]{0,2000}["'][a-z-]+["']\s*:/.test(trimmed)) return "markup";
+  return "text";
 }
 
 function guessContentType(format: string): string {

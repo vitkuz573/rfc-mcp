@@ -54,13 +54,42 @@ interface TocInfo {
 
 interface Heading {
   readonly line: Line;
+  /**
+   * The rule of dashes or equals signs under a typeset title, when the heading is one.
+   *
+   * The heading SPANS both lines. Recognising the title and leaving its underline in the
+   * body put a row of dashes at the head of the section's first block, so the section's
+   * first real statement began `------ <sentence>`: not classifiable as a sentence, and
+   * not quotable, in all 75 underlined headings the parser recognises. It is the same
+   * class of defect as the running heads this file already drops, one document class
+   * later, and it is the reason RFC 768 yielded zero golden rules while containing "The
+   * UDP module must be able to determine the source and destination internet addresses".
+   */
+  readonly underlineLine: number | null;
   readonly number: string;
   readonly title: string;
   readonly kind: SectionKind;
 }
 
 const NUMBERED_HEADING = /^(\d+(?:\.\d+)*)\.?\s+(\S.*)$/u;
-const APPENDIX_HEADING = /^Appendix\s+([A-Z](?:\.\d+)*)\.?\s*(\S.*)?$/u;
+/**
+ * An appendix heading, matched without regard to capitalisation.
+ *
+ * The `i` flag is load-bearing and was a silent data loss. RFC 1812 writes its appendix
+ * titles in capitals - `APPENDIX A. REQUIREMENTS FOR SOURCE-ROUTING HOSTS` at L8071 - and
+ * a case-sensitive pattern does not match, so no appendix heading existed, section 11
+ * (`11. REFERENCES`, typed `references`) ran from L7433 to L9258 and CONTAINED Appendices
+ * A through F. The extractor's design skips a `references` section, so every requirement
+ * those appendices state was absent from `requirements` with nothing to say so: the
+ * tool's own answer to "where are the appendix obligations" was "those are references".
+ * The same flag fixes the contents scan, which used the identical pattern, so a document
+ * whose contents lists `APPENDIX B. GLOSSARY` now has a promised number to match against.
+ *
+ * The label is a RUN of capitals, not one capital, because RFC 959 numbers its appendices
+ * `APPENDIX I`, `APPENDIX II` and `APPENDIX III`: with a single `[A-Z]` all three were
+ * read as appendix I, and the outline offered the caller the same address three times.
+ */
+const APPENDIX_HEADING = /^Appendix\s+([A-Z]+(?:\.\d+)*)\.?\s*(\S.*)?$/iu;
 const UNNUMBERED_HEADING =
   /^(Abstract|Status of (?:This|These) Memo|Copyright Notice|Notice of TBD|Errata|Acknowledg(?:e)?ments?|Authors?'?s? Address(?:es)?|Contributors|Index|References|Normative References|Informative References|Change Log|Intellectual Property|Full Copyright Statement|Preface)$/iu;
 
@@ -173,6 +202,8 @@ export function parseRfcText(input: ParseInput): ParsedDocument {
     readonly startLine: number;
     readonly endLine: number;
     readonly headingLine: number;
+    /** The rule under a typeset title, part of the heading and skipped with it. */
+    readonly underlineLine: number | null;
   }
 
   const regions: Region[] = [];
@@ -189,6 +220,7 @@ export function parseRfcText(input: ParseInput): ParsedDocument {
       startLine: 1,
       endLine: firstHeadingLine - 1,
       headingLine: 0,
+      underlineLine: null,
     });
   }
 
@@ -206,6 +238,7 @@ export function parseRfcText(input: ParseInput): ParsedDocument {
       startLine,
       endLine: nextStart - 1,
       headingLine: startLine,
+      underlineLine: heading.underlineLine,
     });
   });
 
@@ -261,14 +294,44 @@ export function parseRfcText(input: ParseInput): ParsedDocument {
       furnitureLines,
     });
 
-    const contentLines = sectionLines.filter((line) => line.number !== region.headingLine);
-    for (const group of groupBlocks(contentLines)) {
+    const contentLines = sectionLines.filter(
+      (line) => line.number !== region.headingLine && line.number !== region.underlineLine,
+    );
+    for (const group of groupBlocks(contentLines, region.kind)) {
+      // `ordinal` is a DOCUMENT counter, not a per-section one, and the difference is
+      // not cosmetic: `listBlocksWithKeywords` reads blocks `ORDER BY ordinal` and hands
+      // them to the candidate pass as the document's block sequence. With a per-section
+      // counter that order is `ordinal 0 of every section, then ordinal 1 of every
+      // section, ...`, so the block that is first in the document was read LAST -
+      // measured on 155 of 159 snapshots - and because the counter repeats, the SQL
+      // `ORDER BY` is not a total order at all: 3 864 duplicate `(snapshot_id, ordinal)`
+      // pairs were resolved by the `blocks` primary key, which is `id`, which is a
+      // sha256. So the content of a derived, quotable candidate list depended on hash
+      // order within an ordinal bucket, and `max_candidates` truncation decided which
+      // candidates survive by that order. `rawBlocks.length` is a single running count
+      // over regions in document order and blocks in document order within a region, so
+      // it is unique per snapshot and reading by it is reading in document order.
+      //
+      // The per-section index is still computed, and still used, for the block ID. Keeping
+      // the identity formula on the old input is deliberate: `blk_` ids are cited, they
+      // are in `citation_id` derivations, and a document whose structure did not change
+      // must not have its ids change. `ordinal` is an ordering field; the id is an
+      // identity. MIGRATION, for whoever owns the store: no schema change is needed -
+      // `blocks.ordinal` is `INTEGER NOT NULL` with `PRIMARY KEY (snapshot_id, id)` and no
+      // uniqueness constraint on `(snapshot_id, ordinal)` - but every stored value is now
+      // a document counter, so every snapshot must be RE-DERIVED (`reanalyze`) for the new
+      // order to take effect, and a snapshot derived by an older parser keeps the old
+      // per-section values. `ensureLossCounters` is the precedent for a repair that is
+      // applied where the value is read rather than by re-minting every id; an
+      // `ORDER BY char_start` in `listBlocksWithKeywords` would be the same repair with
+      // no re-derive at all, and is the better long-term fix because it is a property of
+      // the bytes rather than of the counter.
       const blockOrdinal = rawBlocks.filter((block) => block.sectionId === region.id).length;
       const id = `blk_${shortHash(`${input.snapshotId}|${region.id}|${blockOrdinal}|${group.start}`)}`;
       rawBlocks.push({
         id,
         sectionId: region.id,
-        ordinal: blockOrdinal,
+        ordinal: rawBlocks.length,
         kind: group.kind,
         start: group.start,
         end: group.end,
@@ -401,7 +464,7 @@ function nextContentLine(lines: readonly Line[], line: Line): Line | null {
 const UNDERLINE = /^([-=*~+])\1{2,}$/u;
 
 /**
- * A heading underlined with a rule of dashes or equals signs.
+ * A heading underlined with a rule of dashes or equals signs, and the line of that rule.
  *
  * RFCs from 1973 to the mid-1980s were typeset rather than generated, and their
  * section titles carry no number and no fixed name - RFC 768 titles its sections
@@ -415,17 +478,27 @@ const UNDERLINE = /^([-=*~+])\1{2,}$/u;
  * underlined does not have a title line above the rule, and the rule is required to be
  * at least three characters and most of the title's width, which is what a typeset
  * underline looks like and what a stray dash row does not.
+ *
+ * The rule's LINE NUMBER is returned, not a boolean, because the rule is part of the
+ * heading. It used to be left in the body, where it became the first line of the
+ * section's first block: `read(768, "Fields")` returned `"------\n\nSource Port is an
+ * optional field, ..."`, so the section's first real statement opened with a row of
+ * dashes and was neither classifiable as a sentence nor quotable. All 75 underlined
+ * headings the parser recognises had it, and it is why RFC 768 produced zero golden
+ * rules while containing "The UDP module must be able to determine the source and
+ * destination internet addresses".
  */
-function isUnderlinedHeading(lines: readonly Line[], line: Line): boolean {
+function underlinedHeadingRule(lines: readonly Line[], line: Line): number | null {
   const title = line.value.trim();
-  if (title.length === 0 || title.length > MAX_HEADING_CHARS) return false;
-  if (!/\p{L}/u.test(title)) return false;
-  if (/[.,;]\s*$/u.test(title)) return false;
+  if (title.length === 0 || title.length > MAX_HEADING_CHARS) return null;
+  if (!/\p{L}/u.test(title)) return null;
+  if (/[.,;]\s*$/u.test(title)) return null;
   const next = nextContentLine(lines, line);
-  if (!next) return false;
+  if (!next) return null;
   const rule = next.value.trim();
-  if (!UNDERLINE.test(rule)) return false;
-  return rule.length >= 3 && rule.length * 5 >= title.length * 3;
+  if (!UNDERLINE.test(rule)) return null;
+  if (!(rule.length >= 3 && rule.length * 5 >= title.length * 3)) return null;
+  return next.number;
 }
 
 /**
@@ -535,12 +608,93 @@ function isHeadingLike(rest: string): boolean {
   if (text === "" || text.length > MAX_HEADING_CHARS) return false;
   if (/[,;]/u.test(text)) return false;
   if (/\.$/u.test(text)) return false;
+  // A dot leader is a contents entry, and a contents entry is a promise about a heading,
+  // not a heading. The `inToc` region test already says that for a document whose
+  // contents header was found; this says it for one whose contents header was NOT found,
+  // which is how RFC 791's `APPENDIX A:  Examples & Scenarios ..... 34` became a section
+  // the moment `APPENDIX_HEADING` learned to match capitals - a contents entry with a
+  // page number on it, filed as a body section with a 34 in its title.
+  if (/\.{3,}/u.test(text)) return false;
   if (text.split(/\s+/u).length > MAX_HEADING_WORDS) return false;
   // RFC 2119 and friends enumerate the keywords themselves as column-1
   // numbered content ("1. MUST   This word, or the terms ..."). A heading
   // that merely starts with a keyword is a definition entry, not a section.
   if (KEYWORD_LEAD.test(text)) return false;
   return true;
+}
+
+/**
+ * Does this document number its sections at all?
+ *
+ * A bare integer at column 0 is offered to the heading matcher because that is what a
+ * section heading looks like, and a bare integer at column 0 is also how a typeset
+ * survey writes its findings. RFC 876 has no numbered sections at all; its host table
+ * and its prose produce `483 hosts were tested`, `283 are claimed by the host table to
+ * support SMTP`, `162 hosts out of the 285 connectable hosts (57%) ...`, and nine of
+ * those became sections, so 33 600 of the document's 36 300 bytes (93%) were filed under
+ * numbers lifted from the middle of sentences and the response said `quality: complete`.
+ * The outline a caller navigates by read:
+ *
+ *     483 body :: hosts were tested
+ *     162 body :: hosts out of the 285 connectable hosts (57%) immediately rejected
+ *
+ * The test is label-free and structural, and it asks the document itself: a document that
+ * numbers its sections leaves at least one of four marks, and a document that leaves none
+ * of them is not numbering anything, so a bare integer in it is prose.
+ *
+ *   (a) a table of contents that promises at least one number;
+ *   (b) a DOTTED number anywhere in the document - `3.3`, `7.1`, `9.3.5` - which only a
+ *       numbering document has, and which RFC 876 and RFC 768 both lack entirely. This
+ *       includes the indented form, because the 1989 host-requirements RFCs set their
+ *       subsection titles by indenting them and are numbered at every level;
+ *   (c) a top-level `1` at column 0;
+ *   (d) an appendix heading, which is numbered even in a document whose sections are not.
+ *
+ * It rejects exactly two things across the 43-document measurement set: RFC 876's nine
+ * fabricated numbers (33.6 KB, 93% of the document) and RFC 768's `28 Aug 1980` date
+ * stamp - which `findHeadings` now also refuses because it is page furniture, see
+ * `isPageFurniture`, and which this test catches independently. It accepts every real
+ * heading in the same 43 documents, including RFC 2459's 307 numbered lines in a document
+ * with no contents at all, and RFC 3207's `4.1`/`4.2`/`4.3`, whose level-1 sections are
+ * written with a period and a title-case letter.
+ *
+ * It is not a general filter for fabricated sections, and it is not claimed to be one: the
+ * numbers it cannot reach are the ones in a document that DOES number its sections - RFC
+ * 2300's `1305 obsoletes 1119 Stan/Rec ...`, a table row, and RFC 1035's `25 (SMTP). If
+ * this bit is set, ...`, a wrapped sentence. Every bound I tried that reached those also
+ * reached real sections - a "top-level numbers are at most K distinct values" bound
+ * deletes RFC 1057's seventeen real `7.x`/`9.x` titles, and dropping the indented-form
+ * clause in (b) here deletes RFC 1122's and RFC 1123's whole outline - so the wider class
+ * is reported as measured rather than half-fixed.
+ *
+ * The fourth condition lives at the call site and is the reason this test is safe to run
+ * on a document with no contents at all: a bare, undotted number that CARRIES ITS
+ * TERMINATING PERIOD is accepted whatever else the document does, because `2.  Rules` is
+ * the publication format's own spelling of a heading and `483 hosts were tested` is not
+ * one. Measured over the 43-document set, every undotted number without a period is either
+ * a fabricated count (RFC 876, RFC 768's date stamp) or lives in a document that has a
+ * mark of its own (RFC 2459's `1 Introduction`, RFC 2136's `1 - Definitions`, RFC 2845's
+ * `1 - Introduction`).
+ */
+function numbersItsSections(lines: readonly Line[], toc: TocInfo): boolean {
+  if (toc.numbers.size > 0) return true;
+  for (const line of lines) {
+    if (isBlank(line) || isPageFurniture(line)) continue;
+    const trimmed = line.value.trim();
+    if (!/^\s/u.test(line.value) && APPENDIX_HEADING.test(trimmed)) return true;
+    const numbered = NUMBERED_HEADING.exec(trimmed);
+    if (!numbered) continue;
+    // (b) A dotted number, indented or not, is a hierarchy and hierarchies are numbered.
+    if (numbered[1]!.includes(".")) return true;
+    // (c) A level-1 `1`, at column 0, where a level-1 title sits in every era.
+    if (numbered[1] === "1" && !/^\s/u.test(line.value)) return true;
+  }
+  return false;
+}
+
+/** `2.  Rules` carries its period; `483 hosts were tested` does not. */
+function numberCarriesItsPeriod(trimmed: string): boolean {
+  return /^\d+\.(?:\s|$)/u.test(trimmed);
 }
 
 function findHeadings(
@@ -552,33 +706,56 @@ function findHeadings(
   let underlined = 0;
   let indentedSubsections = 0;
   const inToc = (line: Line) => line.number > toc.startLine && line.number <= toc.endLine;
+  // Page furniture is not offered to the heading matcher at all, exactly as `collectLines`
+  // does not offer it to the block grouper. These are two different decisions and only one
+  // of them used to be made: the 1973-1984 date stamp `28 Aug 1980` was added to
+  // PAGE_FURNITURE, so the TEXT was blanked, but `findHeadings` never consulted it, so
+  // NUMBERED_HEADING still read "28" as a number and "Aug 1980" as a title and the
+  // section was created regardless. RFC 768's outline listed a section called `28` whose
+  // content was the running head of a printed page. Checked against the whole corpus
+  // because a date stamp is a page-level artefact: every typeset-era document carries one
+  // per page, and the same line in a front matter would be read as a section numbered 28.
+  const furniture = (line: Line): boolean => isPageFurniture(line);
+  // A bare integer in a document that shows no sign of numbering its sections is a
+  // quantity in a sentence, unless it carries its terminating period - which is how the
+  // publication format spells a heading. See `numbersItsSections` and
+  // `numberCarriesItsPeriod`.
+  const numberedDocument = numbersItsSections(lines, toc);
+  const numberIsAddressable = (number: string, trimmed: string): boolean => {
+    if (toc.numbers.has(number)) return true;
+    if (numberedDocument) return true;
+    if (number.includes(".")) return true;
+    return numberCarriesItsPeriod(trimmed);
+  };
   // A number is only a heading if its first component is a heading this document
   // already has, or the contents promises it. Collected first because it is what
   // separates an indented subsection title from a paragraph that opens with a number.
   const knownTopLevel = new Set<string>();
   for (const line of lines) {
-    if (isBlank(line) || isPageFurniture(line)) continue;
+    if (isBlank(line) || furniture(line)) continue;
     if (/^\s/u.test(line.value)) continue;
-    const numbered = NUMBERED_HEADING.exec(line.value.trim());
-    if (numbered && (toc.numbers.has(numbered[1]!) || isHeadingLike(numbered[2]!))) {
+    const trimmed = line.value.trim();
+    const numbered = NUMBERED_HEADING.exec(trimmed);
+    if (
+      numbered &&
+      numberIsAddressable(numbered[1]!, trimmed) &&
+      (toc.numbers.has(numbered[1]!) || isHeadingLike(numbered[2]!))
+    ) {
       knownTopLevel.add(numbered[1]!);
     }
   }
 
   for (const line of lines) {
     if (line.value.trim() === "") continue;
+    if (furniture(line)) continue;
     const trimmed = line.value.trim();
+    const ruleLine = underlinedHeadingRule(lines, line);
     // An indented line is body text, except when its whole content is one of the
     // fixed unnumbered titles, when it is a subsection title of a typeset page, or
     // when it is underlined. Each of those is a heading wherever it sits - except
     // inside the contents, where an entry is a promise about a heading, not one.
     const indentedSubsection = !inToc(line) && isIndentedSubsectionHeading(lines, line, knownTopLevel);
-    if (
-      /^\s/u.test(line.value) &&
-      !UNNUMBERED_HEADING.test(trimmed) &&
-      !indentedSubsection &&
-      !isUnderlinedHeading(lines, line)
-    ) {
+    if (/^\s/u.test(line.value) && !UNNUMBERED_HEADING.test(trimmed) && !indentedSubsection && ruleLine === null) {
       continue;
     }
 
@@ -586,11 +763,15 @@ function findHeadings(
     if (appendix) {
       let title = (appendix[2] ?? "").trim();
       if (title === "") {
+        // The title is on its own line under the label, set in from the margin. A rule of
+        // dashes under the label is that line's underline and not its title, and reading
+        // it as one gave RFC 820 a section called "Appendix A" titled "----------".
         const next = lines[line.number];
-        title = next && /^\s/u.test(next.value) ? next.value.trim() : "";
+        const below = next ? next.value.trim() : "";
+        title = next && /^\s/u.test(next.value) && !UNDERLINE.test(below) ? below : "";
       }
-      if (title.length > 0 && title.length <= MAX_HEADING_CHARS) {
-        out.push({ line, number: `Appendix ${appendix[1]!}`, title, kind: "appendix" });
+      if (title.length > 0 && title.length <= MAX_HEADING_CHARS && isHeadingLike(title)) {
+        out.push({ line, underlineLine: ruleLine, number: `Appendix ${appendix[1]!}`, title, kind: "appendix" });
         continue;
       }
     }
@@ -599,19 +780,19 @@ function findHeadings(
     if (numbered) {
       const number = numbered[1]!;
       const rest = numbered[2]!;
-      if (toc.numbers.has(number) || isHeadingLike(rest)) {
+      if (numberIsAddressable(number, trimmed) && (toc.numbers.has(number) || isHeadingLike(rest))) {
         const title = rest.trim();
         if (indentedSubsection) indentedSubsections += 1;
-        out.push({ line, number, title, kind: classifyKind(number, title) });
+        out.push({ line, underlineLine: ruleLine, number, title, kind: classifyKind(number, title) });
       } else {
         rejected += 1;
       }
       continue;
     }
 
-    if (isUnderlinedHeading(lines, line)) {
+    if (ruleLine !== null) {
       underlined += 1;
-      out.push({ line, number: trimmed, title: trimmed, kind: classifyKind("", trimmed) });
+      out.push({ line, underlineLine: ruleLine, number: trimmed, title: trimmed, kind: classifyKind("", trimmed) });
       continue;
     }
 
@@ -622,7 +803,7 @@ function findHeadings(
       // RFC 1035 writes its contents header at column 28, and a document whose
       // contents could not be addressed could not be told apart from one that has
       // none.
-      out.push({ line, number: trimmed, title: trimmed, kind: classifyKind("", trimmed) });
+      out.push({ line, underlineLine: null, number: trimmed, title: trimmed, kind: classifyKind("", trimmed) });
     }
   }
   return { headings: out, rejected, underlined, indentedSubsections };
@@ -678,6 +859,7 @@ function findParentId(
 
 interface RegionLike {
   readonly headingLine: number;
+  readonly underlineLine: number | null;
   readonly startLine: number;
   readonly endLine: number;
   readonly kind: SectionKind;
@@ -695,6 +877,9 @@ function collectLines(
     const line = lines[number - 1]!;
     if (number >= toc.startLine && number <= toc.endLine) continue;
     if (number === region.headingLine) continue;
+    // The rule of dashes under a typeset title belongs to the heading, so it leaves with
+    // it. See `underlinedHeadingRule`.
+    if (region.underlineLine !== null && number === region.underlineLine) continue;
     // Furniture is tested before blankness, and the order matters. A form feed is
     // whitespace, so `trim()` empties it and a `\f`-only line looks like any other
     // blank line. That is right for grouping — it separates blocks — but it left the
@@ -723,11 +908,13 @@ interface BlockGroup {
   readonly end: number;
   readonly startLine: number;
   readonly endLine: number;
-  readonly kind: BlockKind;
+  /** Assigned in a second pass, once the section-level facts are known. */
+  kind: BlockKind;
 }
 
-function groupBlocks(lines: readonly Line[]): BlockGroup[] {
+function groupBlocks(lines: readonly Line[], sectionKind: SectionKind): BlockGroup[] {
   const groups: BlockGroup[] = [];
+  const chunks: Line[][] = [];
   let index = 0;
   while (index < lines.length) {
     while (index < lines.length && lines[index]!.value.trim() === "") index += 1;
@@ -742,8 +929,46 @@ function groupBlocks(lines: readonly Line[]): BlockGroup[] {
       end: last.end,
       startLine: first.number,
       endLine: last.number,
-      kind: classifyBlock(chunk),
+      kind: "unknown",
     });
+    chunks.push(chunk);
+  }
+  // Two facts about the SECTION, decided before any block is typed, because both are
+  // statements about the section rather than about one block:
+  //
+  //   - how many of its blocks open with a citation tag. One is a sentence about a
+  //     document; two or more is a printed reference list. See `looksLikeCitationEntry`.
+  //   - the page's right margin, taken from the masthead if the front matter has one, and
+  //     with it the index of the document's title. See `isCentredTitleBlock`.
+  let tagged = 0;
+  let margin: number | null = null;
+  let mastheadIndex = -1;
+  for (let i = 0; i < chunks.length; i += 1) {
+    if (CITATION_TAG.test(chunks[i]![0]!.value)) tagged += 1;
+    if (margin === null) {
+      const found = mastheadRightMargin(chunks[i]!);
+      if (found !== null) {
+        margin = found;
+        mastheadIndex = i;
+      }
+    }
+  }
+  // RFC 9920 section 5 fixes the order of the front page: the header field block, then the
+  // title, then the abstract. So the title is the first block after the masthead that is
+  // centred on the measure the masthead establishes - and the centring is what makes it
+  // the title rather than whatever is printed next, which in RFC 820 is a line reading
+  // `Obsoletes RFCs:  790, 776, 770, 762,`.
+  let titleIndex = -1;
+  if (sectionKind === "front_matter" && margin !== null) {
+    for (let i = mastheadIndex + 1; i < chunks.length; i += 1) {
+      if (isCentredTitleBlock(chunks[i]!, sectionKind, margin)) {
+        titleIndex = i;
+        break;
+      }
+    }
+  }
+  for (let i = 0; i < groups.length; i += 1) {
+    groups[i]!.kind = classifyBlock(chunks[i]!, sectionKind, tagged >= 2, i === titleIndex);
   }
   return groups;
 }
@@ -784,6 +1009,163 @@ function looksLikeProse(chunk: readonly Line[]): boolean {
 }
 
 /**
+ * Is this the RFC's masthead - the RFC 9920 section 5 header field block?
+ *
+ * THE TEST, and it is entirely internal to the block. A masthead is a block in which
+ *
+ *   1. no line carries a table delimiter (`|`, `+`) and no line is a rule row;
+ *   2. no line carries MORE THAN ONE run of three or more spaces, so the block has at
+ *      most two columns and therefore no internal column structure to read as data;
+ *   3. at least two lines have a second column, and the second column is RIGHT-ALIGNED -
+ *      see `rightAlignedEdge`.
+ *
+ * (3) is the discriminator, and it is the only one that matters. A data table's columns
+ * are left-aligned at fixed start positions, so its last column is ragged on the right;
+ * a header field block's right column is right-aligned to a shared right margin, because
+ * the second column holds a list of unrelated values (author, organisation, month, year)
+ * that have nothing to do with one another. `Network Working Group ... J. Iyengar, Ed.`,
+ * `Request for Comments: 9000 ... Fastly`, `ISSN: 2070-1721 ... Mozilla` and a bare
+ * `... May 2021` all end at column 72. A table does not do that.
+ *
+ * Why it had to be fixed: every RFC's masthead was typed `table` or `preformatted`, so
+ * every ingested document had at least one block of a kind the extractor refuses to read
+ * on its kind alone, and `coverage.completeness` was therefore `partial` for all of them
+ * and `complete` was unreachable for any document ever. The honest answer to "may I treat
+ * `total_requirements` as this document's normative content?" was "no" for the whole
+ * corpus, on the strength of a block that cannot state a rule - it is a closed vocabulary
+ * of document metadata, all of which the catalog row already carries.
+ *
+ * What it is NOT tested on: position, indent, or the word "Network". A test that says
+ * "the block above the abstract is the masthead" is a test about where the block sits, and
+ * it would keep mis-typing every two-column table in the corpus as a header. It is also
+ * not tested on the *count* of documents, so the same predicate runs on a body table:
+ * measured over 43 documents spanning 1980-2022, the only blocks that satisfy it are
+ * mastheads.
+ */
+function isMastheadHeaderBlock(chunk: readonly Line[]): boolean {
+  const values = chunk.map((line) => line.value).filter((value) => value.trim() !== "");
+  if (values.length < 2) return false;
+  if (values.some((value) => /[|+]/u.test(value) || UNDERLINE.test(value.trim()))) return false;
+  return rightAlignedEdge(values) !== null;
+}
+
+/**
+ * The right margin a two-column block is set to, if it is right-aligned to one.
+ *
+ * The masthead is the one block in a document that states the measure the rest of the front
+ * page is set to, and it states it by right-aligning its second column.
+ *
+ * The MODAL edge rather than a unanimous one, because a masthead's left column can wrap
+ * and a wrapped label is a one-column line that still ends at the margin:
+ * `           7538, 7615, 7694` in RFC 9110 ends at column 40, not 72. Most of the
+ * two-column lines still end at 72. A data table's last column is ragged on the right, so
+ * no edge repeats at all - which is the whole discriminator - so the test is the most
+ * common edge, shared by at least two lines and by at least 60% of the two-column lines.
+ */
+function rightAlignedEdge(values: readonly string[]): number | null {
+  const counts = new Map<number, number>();
+  let twoColumn = 0;
+  for (const value of values) {
+    // Gaps are counted from column 0, leading indent included, and that is deliberate
+    // rather than lazy. Counting from the first non-space character instead would read a
+    // dot-leader contents as a header field block - RFC 2459's `   1  Introduction
+    // .......................................... 1` is two columns whose right column is
+    // right-aligned, which is the masthead's signature exactly - and would then type a
+    // table of contents as body prose. The cost of the strict reading is one document:
+    // RFC 9110's masthead wraps its left column (`Obsoletes: 2818, ... 7235,` then
+    // `           7538, 7615, 7694`), so its masthead and its title keep the kinds they
+    // had. Two blocks in one document, and stated rather than bought with a contents.
+    const gaps = value.match(/ {3,}(?=\S)/gu) ?? [];
+    // Two gaps means three columns: a table, and the question is a different one.
+    if (gaps.length > 1) return null;
+    if (gaps.length === 0) continue;
+    twoColumn += 1;
+    const edge = value.replace(/\s+$/u, "").length;
+    counts.set(edge, (counts.get(edge) ?? 0) + 1);
+  }
+  if (twoColumn < 2) return null;
+  let best = 0;
+  let bestCount = 0;
+  for (const [edge, count] of counts) {
+    if (count > bestCount) {
+      best = edge;
+      bestCount = count;
+    }
+  }
+  if (bestCount < 2 || bestCount * 5 < twoColumn * 3) return null;
+  return best;
+}
+
+/**
+ * The page's right margin, as the masthead establishes it. `null` for a front matter with
+ * no masthead, and the title test then does not run - see `isCentredTitleBlock`.
+ */
+function mastheadRightMargin(chunk: readonly Line[]): number | null {
+  const values = chunk.map((line) => line.value).filter((value) => value.trim() !== "");
+  if (values.length < 2) return null;
+  if (values.some((value) => /[|+]/u.test(value) || UNDERLINE.test(value.trim()))) return null;
+  return rightAlignedEdge(values);
+}
+
+/**
+ * Is this block set as a title - centred on the front page's measure?
+ *
+ * A title is not prose and it is not notation, and it is the one block kind in the
+ * vocabulary that cannot state a rule by construction - which is why the loss counter
+ * in `src/store/database.ts` already declines to count `heading` towards "may contain
+ * normative text", with the reason written there: a heading is a title. Using that kind is
+ * what keeps the counter's number TRUE rather than blind: the block is still counted as
+ * unscanned and is still bucketed as `heading` in `blocks_skipped_by_kind`; what it is not
+ * counted as is a possible source of obligations. Typing it `paragraph` would have been
+ * the blind fix - it would have removed the entry and handed the extractor's strict pass a
+ * document title to scan for RFC 2119 keywords.
+ *
+ * The test: the block is in the front matter; every line is set in from the margin, none
+ * carries a delimiter or a rule, none carries an internal run of three or more spaces (so
+ * there is no column structure - and a title that wraps over two or three lines still
+ * passes, which a "single line" test would not); none ends in sentence punctuation; the
+ * lines do not all end at one column (that is the masthead's signature, not a title's);
+ * and the FIRST line is CENTRED on the margin the masthead establishes - its own left
+ * indent within two columns of half the space the margin leaves over, and at least four
+ * columns in, which is the smallest measured real indent (RFC 5155) and one more than the
+ * three a diagram label or a change-log row starts at.
+ *
+ * `groupBlocks` supplies the last, structural-ordering condition and it is stated there:
+ * RFC 9920 section 5 puts the title after the masthead, so this predicate is asked only of
+ * the blocks that follow it. Both conditions are needed. Centring alone admits 155 blocks
+ * in RFC 792's front matter - a 1 163-line packet-diagram legend whose field names,
+ * `Version`, `IHL`, `Type of Service`, are single indented sentence-free lines - and ten
+ * more single-line prose blocks in the front matter of RFC 792, RFC 854 and RFC 881,
+ * whose whole documents are front matter because those typeset RFCs have no recognisable
+ * heading until deep into the page.
+ */
+function isCentredTitleBlock(chunk: readonly Line[], sectionKind: SectionKind, margin: number | null): boolean {
+  if (sectionKind !== "front_matter") return false;
+  if (margin === null) return false;
+  const values = chunk.map((line) => line.value).filter((value) => value.trim() !== "");
+  if (values.length === 0) return false;
+  const rightEdges = new Set<number>();
+  for (const value of values) {
+    if (!/^\s/u.test(value)) return false;
+    if (/[|+]/u.test(value)) return false;
+    if (UNDERLINE.test(value.trim())) return false;
+    if (/ {3,}(?=\S)/u.test(value.trim())) return false;
+    if (/[.!?]\s*$/u.test(value.trim())) return false;
+    if (/^\s*(?:[-*•]|\(?[0-9a-zA-Z]{1,4}[.)])\s+\S/u.test(value)) return false;
+    rightEdges.add(value.replace(/\s+$/u, "").length);
+  }
+  // A block whose lines all end at one column is right-aligned, which is the masthead's
+  // signature, not a title's.
+  if (values.length > 1 && rightEdges.size === 1) return false;
+  const first = values[0]!;
+  const left = indentWidth(first);
+  const width = first.trim().length;
+  if (left < 4) return false;
+  if (Math.abs(left - (margin - width) / 2) > 2) return false;
+  return values.some((value) => /\p{L}/u.test(value));
+}
+
+/**
  * Structural notation, decided without reference to how far the block is indented.
  *
  * A pipe table, a `+---+` rule, a CDDL or schema rule header, a block that is mostly one
@@ -798,6 +1180,10 @@ function looksLikeNotation(chunk: readonly Line[]): boolean {
     .filter((value) => value !== "")
     .join(" ");
   if (text === "") return true;
+  // A header field block is two columns because the page is set in two columns, not
+  // because the data is tabular. See `isMastheadHeaderBlock` for the test and for why
+  // leaving it here made `coverage.completeness` unreachable for every document.
+  if (isMastheadHeaderBlock(chunk)) return false;
 
   // A prose paragraph has pipes and internal alignment on a few lines at most; a table
   // has them on nearly all of them.
@@ -820,11 +1206,89 @@ function looksLikeNotation(chunk: readonly Line[]): boolean {
   return /[┌┐└┘├┤─│]/u.test(text);
 }
 
-function classifyBlock(chunk: readonly Line[]): BlockKind {
+/**
+ * Section kinds whose whole content is citation-shaped, so a bracket tag inside one is
+ * evidence of a bibliography.
+ */
+const BIBLIOGRAPHY_SECTION_KINDS: ReadonlySet<SectionKind> = new Set(["references", "index", "authors"]);
+
+/** A leading `[TAG]`, the shape RFC 2119 section 5 gives a reference entry. */
+const CITATION_TAG = /^\s*\[\s*[A-Za-z0-9][A-Za-z0-9._-]*(?:\s*,\s*(?:Section|Appendix)[^\]]*)?\s*\]/u;
+
+/**
+ * A bracket tag is not a bibliography. It has to be followed by a citation.
+ *
+ * `classifyBlock` used to return `reference_entry` for any block whose first line opens
+ * with `[...]`, in any section, and a tag at the start of a line is not evidence of
+ * anything: RFC 4343 section 4.1's `[STD13] views the DNS namespace as a node tree.` and
+ * RFC 9117 section 5's `[RFC8955] indicates that the originator may refer to ...` are
+ * whole body paragraphs, quoted from another document, dropped before sentence splitting
+ * by both passes. Measured over the 43-document measurement set, 144 blocks sat outside
+ * any bibliography section; of those, 22 carry a modal in any case and not one yields a
+ * requirement row, because the sentence is never read.
+ *
+ * So both conditions, and the first is "this part of the document is a bibliography".
+ * The enclosing SECTION being typed `references` is one way to know that, and it is the
+ * way the brief names, but on its own it is not enough: RFC 820's reference list and RFC
+ * 1035's appendix of references both sit in sections the parser types `body`, because
+ * those documents are typeset and have no recognisable contents, so a section-kind test
+ * alone would have reclassified 132 GENUINE bibliography entries as prose. And prose is
+ * the expensive direction: the strict extractor reads it.
+ *
+ * So the first condition is structural as well as nominal. A block belongs to a citation
+ * list when the section it is in holds at least one OTHER block that also opens with a
+ * citation tag - which is what a printed reference list looks like, including the shape
+ * RFC 1035 uses where each entry is followed by a prose annotation block ("Obsolete. See
+ * RFC-952.") and so no two tagged blocks are ever adjacent. A lone tagged block in a
+ * section that has no other one is a sentence about a document, not the document: that
+ * is the shape of all twelve measured cases X3 is about, including RFC 2068's `[rule]
+ * Square brackets enclose optional elements` and RFC 1190's `[1.4] >>-> CONNECT B
+ * -------->+--+`, which are a notation legend and a state-machine diagram.
+ *
+ * Citation shape, the second condition, is a document identifier - an RFC, BCP, STD or
+ * Internet-Draft number, a DOI, an ISSN, a quoted title, or a four-digit year - somewhere
+ * in the block, because a tag on its own names nothing.
+ */
+/**
+ * The bibliographic record a citation entry is made of, as opposed to a sentence about
+ * the cited document.
+ *
+ * A tag on its own names nothing, and a document identifier is not enough either, because
+ * `[STD13]`, `[RFC8955]` and `[RFC1010]` are the same shape: a name and three digits with
+ * no separator. What tells a reference entry from a quotation is what FOLLOWS the tag.
+ * A reference entry is a record - an author (`Reynolds, J.`), a quoted title, an
+ * organisation, a line that ends in a publication year - and a quotation of another
+ * document in a body section is a sentence: `[STD13] views the DNS namespace as a node
+ * tree.`, `[RFC8955] indicates that the originator may refer to ...`, `[RFC6437] suggests
+ * deriving values using ...`, `[RFC2324] was an April 1 RFC that lampooned ...`. All four
+ * name an RFC and all four are prose, and a test that only looked for the document number
+ * would have called every one of them a bibliography.
+ */
+function looksLikeCitationEntry(chunk: readonly Line[]): boolean {
+  if (!CITATION_TAG.test(chunk[0]!.value)) return false;
+  const lines = chunk.map((line) => line.value);
+  const text = lines.join("\n");
+  // A quoted title, the commonest shape and the one RFC 2119 section 5 shows.
+  if (/"[^"]{8,}"/u.test(text)) return true;
+  // `Reynolds, J.` / `Petit-Huguenin, M.,` - a surname and an initial.
+  if (/\b[A-Z][A-Za-z'-]+,\s+[A-Z]\./u.test(text)) return true;
+  // An organisation in a record position: two or more capitalised words then a comma.
+  if (/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\s*,/u.test(text)) return true;
+  // A line that ends in a publication year, which is where a reference entry ends.
+  return lines.some((line) => /\b(?:19|20)\d{2}\)?\.?\s*$/u.test(line.trimEnd()));
+}
+
+function classifyBlock(
+  chunk: readonly Line[],
+  sectionKind: SectionKind,
+  inCitationList: boolean,
+  isTitle: boolean,
+): BlockKind {
   const first = chunk[0]!.value;
-  if (/^\s*\[\s*[A-Za-z0-9][A-Za-z0-9._-]*(?:\s*,\s*(?:Section|Appendix)[^\]]*)?\s*\]\s+/u.test(first)) {
+  if ((BIBLIOGRAPHY_SECTION_KINDS.has(sectionKind) || inCitationList) && looksLikeCitationEntry(chunk)) {
     return "reference_entry";
   }
+  if (isTitle) return "heading";
   if (/^\s*(?:[-*•]|\(?[0-9a-zA-Z]{1,4}[.)])\s+\S/u.test(first)) return "list_item";
   if (chunk.every((line) => /^\s*\|/.test(line.value) || line.value.trim() === "|")) return "table";
   const indents = chunk.map((line) => indentWidth(line.value));

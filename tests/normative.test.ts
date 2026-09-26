@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   analyzeNormative,
   analyzeNormativeCandidates,
+  analyzeDeclarativeSpecifications,
   classifyRequirementShape,
   detectKeywordUsage,
   splitSentences,
@@ -45,6 +46,98 @@ describe("RFC 2119 / 8174 extraction", () => {
       "R. Fielding wrote it.",
       "Done.",
     ]);
+  });
+
+  // A sentence can end inside a bracket or a quotation, and then the separator class
+  // sits behind the closing character, so the boundary never fired. The row that came
+  // out merged two statements, and the action-verb test reads the clause that follows
+  // the keyword: a merged row cannot be classified, because the clause it is handed
+  // carries the verb of the statement it swallowed. Both halves of the rule are
+  // asserted here, because a one-sided fix is not a fix: the boundary has to see
+  // through the closers and the veto has to see through them too.
+  const CLOSER_CASES: readonly { label: string; text: string; want: readonly string[] }[] = [
+    {
+      label: "SPLITS - RFC 7719 sec 2, a sentence that ends inside a bracket",
+      text: '(Note that this example might change in the future.) Note that the term "public suffix" is controversial in the DNS community for many reasons, and may be significantly changed in the future.',
+      want: [
+        "(Note that this example might change in the future.)",
+        'Note that the term "public suffix" is controversial in the DNS community for many reasons, and may be significantly changed in the future.',
+      ],
+    },
+    {
+      label: "SPLITS - the full stop is inside the bracket, before the closer",
+      text: "(See Section 2 for the details.) The next sentence follows here.",
+      want: ["(See Section 2 for the details.)", "The next sentence follows here."],
+    },
+    {
+      label: "SPLITS - a bracketed aside that ends the sentence",
+      text: "The response has three parts (a request line, a header, and a body.) The next sentence follows.",
+      want: ["The response has three parts (a request line, a header, and a body.)", "The next sentence follows."],
+    },
+    {
+      label: "SPLITS - a full stop inside a square bracket",
+      text: "The mode is octal (see [RFC 5321] for the list.) The next sentence follows.",
+      want: ["The mode is octal (see [RFC 5321] for the list.)", "The next sentence follows."],
+    },
+    {
+      label: "SPLITS - the full stop is inside the quotation",
+      text: 'He called it "unregistered." The next sentence follows.',
+      want: ['He called it "unregistered."', "The next sentence follows."],
+    },
+    {
+      label: "SPLITS - a full stop after a digit is a boundary",
+      text: "The limit is 512. The next sentence follows.",
+      want: ["The limit is 512.", "The next sentence follows."],
+    },
+    {
+      label: "SPLITS - a decimal number is not two sentence ends",
+      text: "The value is 1.5. Next sentence.",
+      want: ["The value is 1.5.", "Next sentence."],
+    },
+    {
+      label: "SPLITS - a capital letter inside a list is not an initial",
+      text: "Use one of the values (e.g. A, B). The next sentence follows.",
+      want: ["Use one of the values (e.g. A, B).", "The next sentence follows."],
+    },
+    {
+      label: "SPLITS - initials stay with the name they belong to",
+      text: "(A. B. Smith wrote it.) The next sentence follows.",
+      want: ["(A. B. Smith wrote it.)", "The next sentence follows."],
+    },
+    {
+      label: "DOES NOT SPLIT - abbreviations and a capital initial",
+      text: "See RFC 2119, e.g. MUST. Next one follows. R. Fielding wrote it. Done.",
+      want: ["See RFC 2119, e.g. MUST.", "Next one follows.", "R. Fielding wrote it.", "Done."],
+    },
+    {
+      label: "DOES NOT SPLIT - figure and section abbreviations",
+      text: "See Fig. 3 and Sec. 4.5 for the details.",
+      want: ["See Fig. 3 and Sec. 4.5 for the details."],
+    },
+    {
+      label: "DOES NOT SPLIT - two names joined by and",
+      text: "See J. Reynolds, and K. Postel, for the numbers.",
+      want: ["See J. Reynolds, and K. Postel, for the numbers."],
+    },
+    {
+      label: "DOES NOT SPLIT - an ellipsis is not a sentence end",
+      text: "The options are A, B, or C ... . The next sentence follows.",
+      want: ["The options are A, B, or C ... . The next sentence follows."],
+    },
+    {
+      label: "DOES NOT SPLIT - an ellipsis spaced out is not a sentence end either",
+      text: "The options are A, B, or C . . . The next sentence follows.",
+      want: ["The options are A, B, or C . . . The next sentence follows."],
+    },
+    {
+      label: "DOES NOT SPLIT - a sentence that wraps across a line break",
+      text: "A server that sends a 100 (Continue) response\n   must ultimately send a final status code.",
+      want: ["A server that sends a 100 (Continue) response\n   must ultimately send a final status code."],
+    },
+  ];
+
+  it.each(CLOSER_CASES)("$label", ({ text, want }) => {
+    expect(splitSentences(text).map((sentence) => sentence.text)).toEqual(want);
   });
 
   it("detects all keywords with correct strength and polarity", () => {
@@ -507,6 +600,173 @@ describe("non-strict normative candidates", () => {
     }
   });
 
+  // `shape` is the only field a caller can filter on to find the rows that can state
+  // an obligation, so a descriptive modal filed `demand` is a rule in a compliance
+  // contract that the RFC never wrote. In a hand-checked sample of 190 candidate rows,
+  // 35 of the 120 false positives were exactly that, and every one of them scanned as
+  // `demand` on the verb lexicon alone: the lexicon asks whether the clause holds a
+  // verb, and "should offer", "may transmit" and "should use" all do.
+  //
+  // The helper below computes the three arguments exactly as `analyzeNormativeCandidates`
+  // does - the clause the keyword governs, and where the keyword sits in the statement -
+  // because the subject and any predicate the sentence has already spent are both
+  // behind the keyword, and a clause on its own cannot show them.
+  const shapeOf = (sentence: string, keyword: string): string => {
+    const keywordIndex = sentence.toLowerCase().indexOf(keyword);
+    const governed = sentence
+      .slice(keywordIndex + keyword.length)
+      .split(";")[0]!
+      .trim();
+    return classifyRequirementShape(governed, keyword, { sentence, keywordIndex });
+  };
+
+  const SHAPE_SIDES: readonly {
+    label: string;
+    text: string;
+    keyword: string;
+    want: "demand" | "description" | "indeterminate";
+  }[] = [
+    {
+      label: "NOT an obligation - the modal is the predicate of a relative clause inside a reported cause",
+      text: "These shortcomings arise from lack of clarity about which DH group parameters TLS servers should offer and clients should accept.",
+      keyword: "should",
+      want: "description",
+    },
+    {
+      label: "NOT an obligation - the sentence reports a claim attributed to a citation",
+      text: "Without knowledge of the MTU for an LSP, edge LSRs may transmit packets along that LSP which are, according to [4], too big.",
+      keyword: "may",
+      want: "description",
+    },
+    {
+      label: "NOT an obligation - the modal governs a gerund, an activity rather than an actor",
+      text: "Deploying DNSSEC in such an environment may present some challenges, depending on the configuration and feature set in use.",
+      keyword: "may",
+      want: "description",
+    },
+    {
+      label: "NOT an obligation - the addressed party is the authors of specifications, not an implementor",
+      text: 'Future specifications and related documentation should use the general term "URI" rather than the more restrictive terms "URL" and "URN".',
+      keyword: "should",
+      want: "description",
+    },
+    {
+      label: "NOT an obligation - the modal evaluates the situation instead of specifying a value",
+      text: "In general this should not be a problem.",
+      keyword: "should",
+      want: "description",
+    },
+    {
+      label: "NOT an obligation - the row is two statements, and the verb answering it is the second one's",
+      // After the splitter fix this sentence is its own row and holds no keyword, so it
+      // never reaches the classifier. The shape is asserted on the merged row it used to
+      // be, because that is the only shape in which it was ever a false positive.
+      text: "A future specification should name the author. Unfortunately, he became ill and eventually passed away in May 2022 without being able to complete the document.",
+      keyword: "should",
+      want: "indeterminate",
+    },
+    {
+      label: "NOT an obligation - the keyword is a modifier inside a noun phrase",
+      text: "The recommended method for mail routing is the one below.",
+      keyword: "recommended",
+      want: "description",
+    },
+    {
+      label: "NOT an obligation - the modal is the predicate of a complement clause",
+      text: "The difficulty is that a server should be restarted more often than the timer allows.",
+      keyword: "should",
+      want: "description",
+    },
+    {
+      label: "NOT an obligation - the modal is inside a parenthesised attribution to another document",
+      text: "A resolver may answer from its cache, according to [RFC 2181], before the query expires.",
+      keyword: "may",
+      want: "description",
+    },
+    {
+      label: "IS an obligation - an explicit actor and a prohibited action",
+      text: "Routers SHOULD NOT place this option in a datagram that the router originates.",
+      keyword: "should not",
+      want: "demand",
+    },
+    {
+      label: "IS an obligation - an explicit actor and a base-form action verb",
+      text: "The server MUST ignore this value.",
+      keyword: "must",
+      want: "demand",
+    },
+    {
+      label: "IS an obligation - an actor, a base form and a relative clause after it",
+      text: "Implementations MUST have behavior that is indistinguishable from following the algorithms.",
+      keyword: "must",
+      want: "demand",
+    },
+    {
+      label: "IS an obligation - a permission stated with a copula",
+      text: "A server MAY be used to retrieve a zone by AXFR.",
+      keyword: "may",
+      want: "demand",
+    },
+    {
+      label: "IS an obligation - a permission stated with a plain action verb",
+      text: "Origin servers MAY send a Set-Cookie response header with any response.",
+      keyword: "may",
+      want: "demand",
+    },
+    {
+      label: "IS an obligation - the same courtesy frame, but the predicate specifies a value",
+      text: "In general this should be the default value for the field.",
+      keyword: "should",
+      want: "demand",
+    },
+    {
+      label: "IS an obligation - the same activity frame, but the subject is a noun",
+      text: "Such an environment may present some challenges.",
+      keyword: "may",
+      want: "demand",
+    },
+    {
+      label: "IS an obligation - the citation is the authority for the rule, not the source of a report",
+      text: "The TTL MUST be set according to [RFC 2181].",
+      keyword: "must",
+      want: "demand",
+    },
+    {
+      label: "IS an obligation - the subject's own relative clause spends its verb before the modal",
+      text: "A server that receives a 100 (Continue) response MUST ultimately send a final status code.",
+      keyword: "must",
+      want: "demand",
+    },
+  ];
+
+  it.each(SHAPE_SIDES)("$label", ({ text, keyword, want }) => {
+    expect(shapeOf(text, keyword)).toBe(want);
+  });
+
+  it("decides the shape of a candidate from the statement, not from the clause alone", () => {
+    // The wiring, end to end. Both rows are lower-case on purpose: a document that
+    // predates RFC 2119 states its rules that way, and an upper-case keyword in a prose
+    // block belongs to the strict extractor, which is what owns it.
+    const analysis = candidates(
+      [
+        "2.  Rules",
+        "",
+        "   The recommended method for mail routing is the one below.",
+        "",
+        "   Name servers and resolvers must compare labels in a case-insensitive",
+        "   manner.",
+        "",
+      ].join("\n"),
+    );
+    const shape = (fragment: string) => analysis.candidates.find((c) => c.exact_text.includes(fragment))?.shape;
+    expect(shape("recommended method")).toBe("description");
+    // The relative clause in the subject is not the clause the modal is in: "receive"
+    // is spent before it, and the modal is the predicate of the statement itself.
+    expect(shape("must compare labels")).toBe("demand");
+    expect(analysis.by_shape.demand).toBe(1);
+    expect(analysis.by_shape.description).toBe(1);
+  });
+
   it("bounds the candidate list and says so", () => {
     const parsed = parseRfcText({
       rfc: 9999,
@@ -557,6 +817,17 @@ describe("non-strict normative candidates", () => {
   it("excludes a bibliography entry and the authors' address, as the strict count does", () => {
     // A citation containing "should" is not a requirement-shaped statement, and
     // promising they are excluded while sweeping them in is worse than not promising.
+    //
+    // The citation is in a References section here, which is where RFC 9920 §5 puts it and
+    // where the exclusion applies. An earlier version of this fixture put the citation in a
+    // body section and asserted the same outcome, which could only hold while a block
+    // opening with a bracketed tag was typed `reference_entry` wherever it appeared - the
+    // classification that made 184 body paragraphs across 45 documents unreadable, RFC
+    // 4343's `[STD13]` quotation and RFC 9117's `[RFC8955]` paragraph among them. A tag at
+    // the start of a line is not evidence of a bibliography, so the assertion moved to
+    // where the rule actually applies. The body-section case is asserted separately below,
+    // with the outcome it now has, because a changed behaviour nobody asserted is a
+    // behaviour nobody is watching.
     const parsed = parseRfcText({
       rfc: 9999,
       snapshotId: SNAPSHOT,
@@ -565,6 +836,8 @@ describe("non-strict normative candidates", () => {
           "2.  Rules",
           "",
           "   A server must be deployed.",
+          "",
+          "3.  References",
           "",
           '   [RFC1010] J. Reynolds, and J. Postel, "Assigned Numbers", which should',
           "      be consulted before implementation.",
@@ -586,7 +859,64 @@ describe("non-strict normative candidates", () => {
     });
     expect(analysis.candidates.some((c) => /Reynolds/u.test(c.exact_text))).toBe(false);
     expect(analysis.candidates.some((c) => /IETF/u.test(c.exact_text))).toBe(false);
-    expect(analysis.warnings.some((w) => w.startsWith("reference_entry_blocks_skipped:"))).toBe(true);
+    // The exclusion is counted, under whichever key names it. A section of kind
+    // `references` or `authors` is skipped as a whole, so the count arrives as
+    // `candidate_sections_skipped:` rather than as a per-kind block bucket; pinning the
+    // key would assert an implementation detail and lose the promise the comment makes,
+    // which is that a filter nobody can see is indistinguishable from a filter that hides
+    // a miss.
+    expect(
+      analysis.warnings.some(
+        (w) =>
+          w.startsWith("reference_entry_blocks_skipped:") ||
+          w.startsWith("candidate_sections_skipped:") ||
+          w.startsWith("section:references_blocks_skipped:"),
+      ),
+    ).toBe(true);
+  });
+
+  it("reads a citation-shaped block in a body section as prose, so its text is reachable", () => {
+    // The counterpart of the test above, and the reason the exclusion is bounded rather
+    // than removed. RFC 4343 §4.1 and RFC 9117 §5 are quoted material opening with a
+    // bracketed tag at the same indent as the prose around it; both carry obligations that
+    // were in no channel at all. Reaching them as CANDIDATES is the point - they are
+    // somebody else's words, and a caller decides what to do with quoted material, which a
+    // silently dropped paragraph does not let them do.
+    const parsed = parseRfcText({
+      rfc: 9999,
+      snapshotId: SNAPSHOT,
+      raw: Buffer.from(
+        [
+          "2.  Rules",
+          "",
+          "   [STD13] views the DNS namespace as a node tree. To optimize output,",
+          "      indirect labels may be used to point to names elsewhere in the answer.",
+          "",
+          "   [RFC8955] indicates that a network should be designed so it has a",
+          "      congruent topology amongst unicast and Flow Specification routes.",
+          "",
+        ].join("\n"),
+        "utf8",
+      ),
+      parserVersion: "test",
+    });
+    const analysis = analyzeNormativeCandidates({
+      snapshotId: SNAPSHOT,
+      rfc: 9999,
+      sections: parsed.sections,
+      blocks: parsed.blocks,
+    });
+    const texts = analysis.candidates.map((c) => c.exact_text);
+    expect(texts.some((t) => /indirect labels may be used/u.test(t))).toBe(true);
+    expect(texts.some((t) => /should be designed so it has/u.test(t))).toBe(true);
+    // And it is not promoted: the strict pass does not own quoted material.
+    const strict = analyzeNormative({
+      snapshotId: SNAPSHOT,
+      rfc: 9999,
+      sections: parsed.sections,
+      blocks: parsed.blocks,
+    });
+    expect(strict.requirements.some((r) => /indirect labels may be used/u.test(r.exact_text))).toBe(false);
   });
 
   it("excludes the fixed texts the RFC Editor prints around every document", () => {
@@ -766,5 +1096,327 @@ describe("non-strict normative candidates", () => {
     expect(fragment).toBeDefined();
     expect(fragment!.continues_previous_block).toBe(true);
     expect(analysis.warnings.some((w) => w.startsWith("sentences_split_across_a_page_break:"))).toBe(true);
+  });
+});
+
+describe("declarative specifications (no RFC 2119 keyword at all)", () => {
+  // RFC 8174 section 2, which is RFC 2119 as corrected, says of the eleven words:
+  // "normative text does not require the use of these key words. They are used for
+  // clarity and consistency when that's what's wanted, but a lot of normative text does
+  // not use them and is still normative." On a 100-protocol golden set, 13 statements
+  // that bind an implementor without a modal were found by hand and none of them was
+  // reachable: `analyzeNormative` reads only sentences that carry a keyword, and the
+  // service hands `analyzeNormativeCandidates` only blocks that do.
+  const KEYWORD_FREE = [
+    "2.  Limits",
+    "",
+    "   The maximum total length of a command line including the command word and the",
+    "   <CRLF> is 512 octets.",
+    "",
+    "   This media type restricts the maximum size of the DNS message to 65535 bytes.",
+    "",
+    "   The 998 character limit is due to limitations in many implementations that send,",
+    "   receive, or store messages which cannot handle more than 998 characters on a line.",
+    "",
+  ].join("\n");
+
+  function parse(raw: string) {
+    const parsed = parseRfcText({
+      rfc: 5321,
+      snapshotId: SNAPSHOT,
+      raw: Buffer.from(raw, "utf8"),
+      parserVersion: "test",
+    });
+    return { snapshotId: SNAPSHOT, rfc: 5321, sections: parsed.sections, blocks: parsed.blocks };
+  }
+
+  function both(raw: string, declarativeLimit?: number) {
+    const args = parse(raw);
+    return {
+      strict: analyzeNormative(args),
+      candidates: analyzeNormativeCandidates({
+        ...args,
+        ...(declarativeLimit !== undefined ? { declarativeLimit } : {}),
+      }),
+    };
+  }
+
+  it("reaches a specification that states no modal at all", () => {
+    const { candidates } = both(KEYWORD_FREE);
+    const texts = candidates.declarative_specifications.map((row) => row.exact_text);
+    expect(texts.some((t) => /command line including the command word/u.test(t))).toBe(true);
+    expect(texts.some((t) => /maximum size of the DNS message to 65535 bytes/u.test(t))).toBe(true);
+    expect(texts.some((t) => /998 character limit/u.test(t))).toBe(true);
+    // The published test that decided each row is on the row, so a caller can see how
+    // much of the list each test decided instead of having to trust the whole of it.
+    expect(candidates.declarative_by_basis["numeric-bound"]).toBe(3);
+    for (const row of candidates.declarative_specifications) {
+      expect(row.citation_id).toMatch(/^cit_[0-9a-f]{24}$/u);
+      expect(row.span.char_end - row.span.char_start).toBe(row.exact_text.length);
+    }
+  });
+
+  it("carries no keyword, no case and no polarity, because the sentence has none", () => {
+    // A row with a keyword field would be counted by anything that filters on one, and
+    // the entire point of this list is that it is not a requirements list. RFC 8174
+    // section 3 gives a keyword-free statement no force, and nothing here may pretend
+    // otherwise.
+    const { candidates } = both(KEYWORD_FREE);
+    const row = candidates.declarative_specifications[0]!;
+    expect(Object.keys(row).sort()).toEqual([
+      "basis",
+      "block_id",
+      "char_start",
+      "citation_id",
+      "exact_text",
+      "id",
+      "rfc",
+      "section_id",
+      "snapshot_id",
+      "span",
+    ]);
+    for (const invented of ["keyword", "keyword_case", "polarity", "strength", "role", "shape", "reason"]) {
+      expect(row, invented).not.toHaveProperty(invented);
+    }
+  });
+
+  it("never reaches the requirement count, with or without include_provisional", () => {
+    // The whole point of RFC 8174 section 3 is that a number a caller trusts must not
+    // absorb rows that carry no keyword. `include_provisional` appends `candidates` to
+    // `requirements` under an explicit flag, so a declarative row that is not a
+    // candidate cannot be appended by it either.
+    const raw = [
+      "2.  Limits",
+      "",
+      "   The maximum total length of a command line is 512 octets.",
+      "",
+      "   A server MUST reject any longer line.",
+      "",
+    ].join("\n");
+    const { strict, candidates } = both(raw);
+    expect(strict.requirements).toHaveLength(1);
+    expect(strict.coverage.requirements_emitted).toBe(1);
+    expect(strict.requirements.some((r) => /512 octets/u.test(r.exact_text))).toBe(false);
+    expect(candidates.declarative_specifications.some((r) => /512 octets/u.test(r.exact_text))).toBe(true);
+    // The provisional surface is the candidate list, and the row is not in it.
+    expect(candidates.candidates.some((c) => /512 octets/u.test(c.exact_text))).toBe(false);
+  });
+
+  it("caps the list and says which cap stopped it", () => {
+    const { candidates } = both(KEYWORD_FREE, 2);
+    expect(candidates.declarative_specifications).toHaveLength(2);
+    expect(candidates.declarative_specifications_truncated).toBe(true);
+    expect(candidates.warnings).toContain("declarative_specifications_truncated_at_2");
+  });
+
+  it("excludes the publication artefacts the rule names, and counts them", () => {
+    const raw = [
+      "2.  Limits",
+      "",
+      "   Figure 1: a message that is 512 octets long.",
+      "",
+      "   See Section 3.1 for the 512 octet limit on a command line.",
+      "",
+      '   [RFC5321] J. Reynolds, and J. Postel, "Simple Mail Transfer Protocol", which',
+      "   limits a command line to 512 octets.",
+      "",
+      "   o  The limit is 512 octets for every command.",
+      "",
+      "   The limit is 512 octets for every command.",
+      "",
+    ].join("\n");
+    const { candidates } = both(raw);
+    expect(candidates.declarative_specifications.map((r) => r.exact_text)).toEqual([
+      "The limit is 512 octets for every command.",
+    ]);
+    // A filter nobody can see is indistinguishable from a filter that hides a miss, so
+    // every exclusion is counted and named.
+    const warnings = candidates.warnings.join(" ");
+    expect(warnings).toContain("declarative_caption_or_figure_label_excluded:1");
+    expect(warnings).toContain("declarative_cross_reference_excluded:1");
+    expect(warnings).toContain("declarative_list_item_excluded:1");
+  });
+
+  it("tells a document's own statement of its requirements from a keyword-free one", () => {
+    // A sentence that carries a keyword belongs to the strict and candidate channels
+    // and to neither of these, so the two lists can never both own it.
+    const raw = [
+      "2.  Limits",
+      "",
+      "   The maximum total length of a command line is 512 octets.",
+      "",
+      "   A server must reject any longer line.",
+      "",
+    ].join("\n");
+    const { candidates } = both(raw);
+    expect(candidates.candidates.map((c) => c.exact_text)).toEqual(["A server must reject any longer line."]);
+    expect(candidates.declarative_specifications.map((r) => r.exact_text)).toEqual([
+      "The maximum total length of a command line is 512 octets.",
+    ]);
+  });
+
+  it("answers the same question from the entry point the service has to call", () => {
+    // The service cannot use the key above: it hands `analyzeNormativeCandidates` the
+    // blocks `store.listBlocksWithKeywords` returned, and that query filters on
+    // `lower(text) LIKE '%must%'` and six more stems, so a paragraph whose only
+    // specification is "the maximum is 512 octets" never reaches the analysis at all.
+    // This is the function the service has to call with the snapshot's whole block set,
+    // and it is a second, independent reason the 13 statements were unreachable.
+    const standalone = analyzeDeclarativeSpecifications(parse(KEYWORD_FREE));
+    const { candidates } = both(KEYWORD_FREE);
+    expect(standalone.declarative_specifications.map((r) => r.exact_text)).toEqual(
+      candidates.declarative_specifications.map((r) => r.exact_text),
+    );
+    expect(standalone.declarative_by_basis).toEqual(candidates.declarative_by_basis);
+  });
+});
+
+/**
+ * A row that states the opposite of its own sentence is the worst output this extractor
+ * can produce: a contract built from it requires the behaviour the RFC forbids.
+ *
+ * Measured before the fix, at index_generation 1981: 16 requirement rows reported with
+ * `polarity: "positive"` and no flag. `req_76dcffb7c47de7e6` is "A registrar MUST not
+ * generate 6xx responses." - MUST, positive, confidence 0.9. RFC 1812 §3.3.2 has the same
+ * shape: "A router MUST not believe any ARP reply..."
+ *
+ * The input goes through `parseRfcText` rather than a hand-built block, so the sentence
+ * these assertions are about is the sentence the parser actually produced, wrapped and
+ * classified, instead of a fixture shaped to suit the assertion.
+ */
+describe("a keyword negated by a separately printed not", () => {
+  const row = (sentence: string) => {
+    const raw = [
+      "                                                  Router Requirements",
+      "                                                                     RFC 1812",
+      "",
+      "3.3.2.  Router Requirements",
+      "",
+      sentence,
+      "",
+    ].join("\n");
+    return analyze(raw).analysis.requirements[0];
+  };
+
+  it("reports the row as a prohibition, not as an obligation", () => {
+    const found = row(
+      "A router MUST not believe any ARP reply received on an interface\n   that is not configured for ARP.",
+    );
+    expect(found?.polarity).toBe("negative");
+    expect(found?.term).toBe("MUST NOT");
+  });
+
+  it("records that the RFC wrote the negation in the wrong case, so a strict caller can see the deviation", () => {
+    expect(row("A registrar MUST not generate 6xx responses.")?.flags).toContain("negation_case_not_upper");
+  });
+
+  it("still quotes the whole sentence, so the citation is of the author's own words", () => {
+    expect(row("A router MUST not believe any ARP reply.")?.exact_text).toContain(
+      "A router MUST not believe any ARP reply",
+    );
+  });
+
+  it("emits one row, not a positive row and a negative row", () => {
+    const raw = "3.3.2.  Router Requirements\n\nA registrar MUST not generate 6xx responses.\n";
+    expect(analyze(raw).analysis.requirements).toHaveLength(1);
+  });
+
+  it.each([
+    ["MUST not send a reply", "MUST NOT", "negative"],
+    ["SHOULD not be set to zero", "SHOULD NOT", "negative"],
+    ["MUST  not  send a reply", "MUST NOT", "negative"],
+  ])("folds the negation for %j", (sentence, term, polarity) => {
+    const found = row(sentence);
+    expect([found?.term, found?.polarity]).toEqual([term, polarity]);
+  });
+
+  it("folds the negation across the line break a hard-wrapped RFC puts in it", () => {
+    const found = row("A host MUST\n   not send a FIN in that state.");
+    expect([found?.term, found?.polarity]).toEqual(["MUST NOT", "negative"]);
+  });
+
+  it.each([
+    // The `not` opens the next clause, so it negates nothing about the keyword.
+    "The server MUST, not because it is optional, ignore the field.",
+    // No `not` near the keyword at all.
+    "A host MUST be able to accept a connection.",
+    // A `not` later in the sentence, well past the clause the keyword governs.
+    "A host MUST be able to accept a connection, and not every host will.",
+    // `note` is not `not`: a prefix match here would invert an obligation.
+    "An implementation MUST note that the value is advisory.",
+  ])("leaves the positive reading alone for %j", (sentence) => {
+    const found = row(sentence);
+    expect(found?.polarity).toBe("positive");
+    expect(found?.flags).not.toContain("negation_case_not_upper");
+  });
+
+  it("leaves an upper-case MUST NOT untouched, because the phrase already carries the polarity", () => {
+    const found = row("A host MUST NOT send a FIN in that state.");
+    expect([found?.term, found?.polarity]).toEqual(["MUST NOT", "negative"]);
+    expect(found?.flags).not.toContain("negation_case_not_upper");
+  });
+  it("leaves an upper-case MUST NOT untouched, because the phrase already carries the polarity", () => {
+    const found = row("A host MUST NOT send a FIN in that state.");
+    expect([found?.term, found?.polarity]).toEqual(["MUST NOT", "negative"]);
+    expect(found?.flags).not.toContain("negation_case_not_upper");
+  });
+
+  /**
+   * A keyword is quoted when the quotes enclose IT. It was a two-character window in each
+   * direction, so any quote mark near the keyword made the sentence a *definition* - and the
+   * candidate pass then deletes a definition because the strict pass already owns the
+   * keyword.
+   *
+   * Measured: RFC 1123 §5.2.16, `"domain" MUST NOT interpret…`, puts a `"` two characters
+   * before the keyword, so the sentence became a definition mention and appeared in NEITHER
+   * channel. RFC 3261 §19.1.1, `"phone" SHOULD be present`, is the same window compounded by
+   * the 500-row mention cap, so it is invisible and no counter moves.
+   */
+  describe("a quoted field name near a keyword does not make the keyword quoted", () => {
+    const body = (sentence: string) => analyze(["3.3.2.  Router Requirements", "", sentence, ""].join("\n")).analysis;
+
+    it.each([
+      'The "domain" MUST NOT interpret a name with a trailing dot.',
+      'The "phone" SHOULD be present in every request.',
+      'A "port" MUST be within the range the header declares.',
+      'The "type" MAY be omitted when the default applies.',
+    ])("keeps %j a requirement", (sentence) => {
+      const requirements = body(sentence).requirements;
+      expect(requirements).toHaveLength(1);
+      expect(requirements[0]!.flags).not.toContain("term_quoted");
+    });
+
+    it.each([
+      'The "MUST" keyword is defined in RFC 2119.',
+      "The 'MUST NOT' construct negates the requirement.",
+      'Section 3.1 uses "SHOULD" to mean a recommendation.',
+    ])("still treats %j as a mention about the language, not a requirement", (sentence) => {
+      const result = body(sentence);
+      expect(result.requirements).toHaveLength(0);
+      expect(result.mentions.some((mention) => mention.disposition === "definition")).toBe(true);
+    });
+
+    it("reports the quoted field name case through the strict channel, which is where it belongs", () => {
+      const requirements = body('The "domain" MUST NOT interpret a name with a trailing dot.').requirements;
+      expect(requirements[0]!.polarity).toBe("negative");
+      expect(requirements[0]!.exact_text).toContain('The "domain" MUST NOT interpret');
+    });
+  });
+
+  it("does not flag the upper-case phrase, which is a deviation by nothing", () => {
+    // Regression: the flag was pushed whenever a `not` followed the keyword, which marked
+    // 112 rows, and the great majority of them were the correctly matched upper-case
+    // `MUST NOT` - written correctly by the RFC, and not a deviation at all. A flag that
+    // fires on correct input is a flag nobody reads.
+    const found = row("It MUST NOT be used as a source address.");
+    expect([found?.term, found?.polarity]).toEqual(["MUST NOT", "negative"]);
+    expect(found?.flags ?? []).not.toContain("negation_case_not_upper");
+  });
+
+  it("does not flag a sentence whose `not` follows some other word", () => {
+    const found = row(
+      "A host that is forwarding the message but is not the destination\n   host may drop the message.",
+    );
+    expect(found?.flags ?? []).not.toContain("negation_case_not_upper");
   });
 });

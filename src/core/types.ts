@@ -4,6 +4,7 @@
  */
 
 import type { XmlDocumentOutline } from "../parse/rfcXml.js";
+import type { DiffRun } from "../analysis/diff.js";
 
 export const CONTRACT_VERSION = "ietf-rfc/1" as const;
 
@@ -210,14 +211,22 @@ export type NormativeStrength = "absolute" | "recommendation" | "optional";
 export type NormativePolarity = "positive" | "negative";
 
 /**
- * How an RFC 2119 keyword functions in the clause it governs, per the action-verb
- * test in RFC 2119 section 3 (restated by RFC 8174 section 3).
+ * How an RFC 2119 keyword functions in the clause it governs.
  *
- * The specification defines when a keyword has effect: rule 1 admits MUST/SHALL/
- * REQUIRED "only in a sentence that also contains an action verb", rule 2 requires
- * "an explicit action to be prohibited", rule 4 requires "some action to be
- * permissible". So the presence of an action verb is the spec's own criterion, not
- * a stylistic judgement about it.
+ * This is the action-verb test, and it is a CONVENTION, not a rule of the
+ * specification. A text search of RFC 2119 and of RFC 8174 for "action verb" returns
+ * nothing in either: RFC 2119 section 3 is the list of keyword definitions and RFC 8174
+ * section 3 is IANA Considerations. An earlier version of this file cited "RFC 2119
+ * section 3, rules 1, 2 and 4" and quoted them; the quotation was invented and the
+ * citation was wrong. What RFC 2119 does say is in section 6, on guidance in the use of
+ * the imperatives, and it addresses the author rather than the parser.
+ *
+ * The test itself is sound as a heuristic - a clause with no action verb cannot state an
+ * obligation, so the presence of one is the spec's own intent even though the spec does
+ * not say so. It is applied as a one-sided filter: a row that fails it is `description`,
+ * and a row that cannot be decided is `indeterminate`. `demand` is the only shape that
+ * can state an obligation, and reading that as "the tool says this is an obligation" is
+ * reading more than the classifier knows.
  */
 export type RequirementShape = "demand" | "description" | "list_introducer" | "indeterminate";
 
@@ -226,6 +235,12 @@ export const NORMATIVE_TERMS = Object.freeze({
   "SHALL NOT": { strength: "absolute", polarity: "negative" },
   "SHOULD NOT": { strength: "recommendation", polarity: "negative" },
   "NOT RECOMMENDED": { strength: "recommendation", polarity: "negative" },
+  // RFC 2119 §3.8 defines MAY NOT as the negative of MAY, and it is as normative a
+  // construct as MUST NOT. It was missing from this vocabulary, which meant a sentence
+  // carrying an upper-case `MAY NOT` matched the positive `MAY` and was reported as an
+  // opportunity where the RFC states a prohibition. One vocabulary: every negative form
+  // of a keyword is here, so a caller filtering `polarity: "negative"` finds all of them.
+  "MAY NOT": { strength: "optional", polarity: "negative" },
   MUST: { strength: "absolute", polarity: "positive" },
   SHALL: { strength: "absolute", polarity: "positive" },
   REQUIRED: { strength: "absolute", polarity: "positive" },
@@ -264,6 +279,25 @@ export interface NormativeMention {
   readonly disposition: MentionDisposition;
   readonly flags: readonly string[];
   readonly citation_id: string;
+  /**
+   * The re-derivation-stable companion to `citation_id`, absent on the in-memory object
+   * the extractor builds and always present on anything read back from the store.
+   *
+   * `citation_id` is a function of (snapshot, block, byte offset) — all three of which a
+   * parser bump replaces, so all three of which a citation recorded in a contract cannot
+   * outlive. This hashes what a re-parse does not change: the RFC number, the section
+   * NUMBER and the exact quoted text. A parser bump invalidated 94 of 100 pinned
+   * snapshots in a 100-protocol corpus, and every citation written against them came
+   * back `not_found` with nothing in the response to say what the text had been.
+   *
+   * The store computes it on write, not the extractor, because the section number is not
+   * on the row: it is on the section the block belongs to, and only the store sees both.
+   *
+   * Optional in the type only because the extractor's own object literal cannot be
+   * required to carry a field it does not know how to compute. Every value that leaves a
+   * tool carries it.
+   */
+  readonly stable_citation_id?: string;
 }
 
 export interface RequirementClause {
@@ -301,6 +335,10 @@ export interface Requirement extends NormativeMention {
   readonly clause: RequirementClause;
   readonly parse_status: "complete" | "partial" | "heuristic";
   readonly confidence: number;
+  // `stable_citation_id` is inherited from NormativeMention above rather than repeated
+  // here, and it matters most on this row: a requirement is what a compliance list is
+  // built from and what a contract quotes, so it is the row whose identifier most needs
+  // to still resolve after the next parser bump.
 }
 
 /**
@@ -360,7 +398,8 @@ export interface NormativeCandidate {
    */
   readonly role: "modal" | "non_modal" | "unknown";
   /**
-   * How the keyword functions in its clause, under the action-verb test of RFC 2119
+   * How the keyword functions in its clause, under the action-verb test - a convention
+   * rather than a rule of the specification; see the note below.
    * section 3 (restated by RFC 8174 section 3). `demand` is the only shape that can
    * state an obligation; `description` fails the specification's own test.
    */
@@ -378,6 +417,64 @@ export interface NormativeCandidate {
   /** Absolute character offset of the keyword, for stable ordering. */
   readonly char_start: number;
   readonly citation_id: string;
+  /**
+   * The re-derivation-stable companion to `citation_id`, filled in on the way out and
+   * never `""` for a candidate the server produced.
+   *
+   * Candidates are the rows a reader copies a sentence out of, and a lead list is exactly
+   * the kind of artefact that ends up quoted in a contract two years later. The
+   * snapshot-scoped id is useless to that reader after a parser bump; this one is not.
+   * Candidates are derived on demand rather than stored, which is why the field is
+   * optional in the type: the extractor's object literal does not compute it.
+   */
+  readonly stable_citation_id?: string;
+}
+
+/**
+ * Which mechanical test a keyword-free specification passed.
+ *
+ * The list is published so a caller can see how much of the list each test decided,
+ * and so a row can be read for what it is. It is not a claim of obligation: `basis`
+ * says the sentence stated a quantity or a value, nothing more.
+ */
+export type DeclarativeBasis = "numeric-bound" | "copula-definition" | "field-default";
+
+/**
+ * A specification stated without an RFC 2119 keyword anywhere in the sentence.
+ *
+ * RFC 8174 section 2, restating RFC 2119, says of these words: "normative text does
+ * not require the use of these key words. They are used for clarity and consistency
+ * when that's what's wanted, but a lot of normative text does not use them and is
+ * still normative." So a specification that binds an implementor without a modal is
+ * ordinary, and a keyword-only extractor cannot see it: on a 100-protocol golden set
+ * 13 such statements were found by hand and none of them was reachable by any
+ * analysis this server runs.
+ *
+ * There is deliberately no `keyword`, no `keyword_case` and no polarity here. A row
+ * that pretended to have one would be counted by anything that filters on a keyword,
+ * and the whole point of this list is that it is NOT a requirements list.
+ */
+export interface DeclarativeSpecification {
+  readonly id: string;
+  readonly snapshot_id: string;
+  readonly rfc: number;
+  readonly section_id: string;
+  readonly block_id: string;
+  /** The sentence, verbatim, exactly as a citation over it would verify. */
+  readonly exact_text: string;
+  /** Which test this sentence passed. Read it; it is not a strength. */
+  readonly basis: DeclarativeBasis;
+  /**
+   * The whole sentence, not a keyword inside it.
+   *
+   * A candidate row's span covers its keyword because that is the thing it is about.
+   * There is no keyword here, and a span four letters wide would verify nothing about
+   * what a caller would quote.
+   */
+  readonly span: Pick<Span, "byte_start" | "byte_end" | "char_start" | "char_end" | "line_start" | "line_end">;
+  /** Absolute character offset of the sentence, for stable ordering. */
+  readonly char_start: number;
+  readonly citation_id: string;
 }
 
 export interface NormativeCandidateAnalysis {
@@ -387,6 +484,20 @@ export interface NormativeCandidateAnalysis {
   readonly by_reason: Readonly<Record<string, number>>;
   readonly by_role: Readonly<Record<string, number>>;
   readonly by_shape: Readonly<Record<string, number>>;
+  /**
+   * Prose that states a specification with no RFC 2119 keyword in it at all.
+   *
+   * Reported beside the candidate list and never inside it: these rows are binding on
+   * an implementor in substance, and RFC 8174 section 3 gives them no keyword to be
+   * counted by, so nothing here may reach `coverage.total_requirements` or
+   * `requirements`, with or without `include_provisional`. The selection rule and its
+   * cap are documented where it is implemented.
+   */
+  readonly declarative_specifications: readonly DeclarativeSpecification[];
+  /** True when `declarative_specifications` stopped at its cap. */
+  readonly declarative_specifications_truncated: boolean;
+  /** How many rows each published test decided, so the list can be discounted. */
+  readonly declarative_by_basis: Readonly<Record<string, number>>;
   /** Blocks that could not be read as text at all; a coverage hole, not an absence. */
   readonly unreadable_blocks: number;
   readonly scanned_blocks: number;
@@ -562,7 +673,39 @@ export interface Citation {
   readonly observed_at: string;
 }
 
+/**
+ * What `verify_citation` could establish.
+ *
+ * The two identifier kinds answer different questions and the verdicts mean different
+ * things for each. A snapshot-scoped id (`cit_…`) is `verified` only against the exact
+ * derivation it was minted from. A re-derivation-stable id (`scit_…`) names a sentence
+ * in a section, so it resolves in more than one snapshot by design — and resolving it
+ * anywhere other than a snapshot that minted it is `stale`, not `verified`, because
+ * "this text is still in the document" and "this text is in the document you pinned" are
+ * different claims and a caller holding a contract line needs to know which one it got.
+ */
 export type CitationVerdict = "verified" | "stale" | "ambiguous" | "not_found" | "integrity_failure";
+
+/**
+ * Whether a count may be read as a document's whole content, as opposed to how much of it
+ * a pass could see.
+ *
+ * The distinction the enum exists for: `partial` says a known amount was not read, and
+ * `unknown` says the question was not asked of anything - the numbers that would answer it
+ * were never recorded, or were recorded by two different rules and do not reconcile. Both
+ * used to be reported as a successful response holding a number, which is how a
+ * specification that states its rules in a table came to certify itself clean.
+ */
+export type Completeness = "complete" | "partial" | "unknown";
+
+/** A `Completeness` with the measured facts it was derived from, and the reasons. */
+export interface CoverageVerdict {
+  readonly completeness: Completeness;
+  /** `key:value` pairs, every value a number or a name, in a fixed order. */
+  readonly basis: string;
+  /** Warning keys, each of which also appears in the response's `warnings`. */
+  readonly reasons: readonly string[];
+}
 
 export interface SourceAsset {
   readonly document_id: string;
@@ -662,6 +805,57 @@ export interface DiffChange {
   readonly notes: readonly string[];
 }
 
+/**
+ * What a diff actually compared, and whether that comparison is an answer.
+ *
+ * The failure this exists for: `diff(2178, 2328, mode: "requirements")` returned
+ * `changes: []`, `summary: {}`, `truncated: false`, `status: "ok"` and no warnings, because
+ * both documents have zero extracted requirements. An empty successful response is shaped
+ * exactly like a finding of "nothing changed", and `status: "ok"` is an assertion - so a
+ * routing engineer asking what the 1998 Internet Standard changed against the 1991 draft
+ * they implemented was told the answer was nothing. A diff between two empty extractions
+ * is not a clean diff; it is a question nobody ran.
+ *
+ * `verdict` says whether the comparison ran at all, and `clean` says whether its result may
+ * be read as the whole answer. They are separate because they fail separately: an empty
+ * side is `unanswered` whatever the coverage says, and a comparison that ran on two lossy
+ * sides is a real answer with a caveat, which downgrading to a failure would only bury.
+ */
+export interface DiffCoverage {
+  readonly mode: string;
+  readonly left: DiffCoverageSide;
+  readonly right: DiffCoverageSide;
+  /** Items each side contributed on this mode. Zero on either side makes the diff unanswered. */
+  readonly items: { readonly left: number; readonly right: number };
+  /**
+   * `unanswered` when a side contributed nothing to compare, or when the mode did not run
+   * the comparison it names. `differences` / `no_differences` when it did.
+   */
+  readonly verdict: "unanswered" | "differences" | "no_differences";
+  /** The machine-readable cause of an `unanswered` verdict. */
+  readonly reason:
+    | "both_sides_contributed"
+    | "left_contributed_nothing"
+    | "right_contributed_nothing"
+    | "neither_side_contributed"
+    | "mode_fell_back_to_structure"
+    | "texts_differ_but_no_line_hunk_was_produced";
+  /** True only when both sides are `complete` and both contributed. */
+  readonly clean: boolean;
+  /** What this mode does not cover, in words, for a caller who has to act on the answer. */
+  readonly note: string;
+}
+
+export interface DiffCoverageSide {
+  readonly document_id: string;
+  readonly snapshot_id: string;
+  /** Requirements, sections, references or lines, whichever the mode compares. */
+  readonly items: number;
+  readonly completeness: Completeness;
+  /** `key:value` pairs, the same grammar `requirements.coverage.completeness_basis` uses. */
+  readonly basis: string;
+}
+
 export interface DiffResult {
   readonly left: { readonly document_id: string; readonly snapshot_id: string };
   readonly right: { readonly document_id: string; readonly snapshot_id: string };
@@ -670,6 +864,24 @@ export interface DiffResult {
   readonly changes: readonly DiffChange[];
   readonly summary: Record<string, number>;
   readonly truncated: boolean;
+  /**
+   * What was compared and whether the empty answer is a finding. Optional only because
+   * `diffDocuments` in `src/analysis/diff.ts` builds a `DiffResult` and does not know about
+   * it; every response that leaves the service carries it.
+   */
+  readonly coverage?: DiffCoverage;
+  /**
+   * Whether the mode that was asked for is the mode that ran.
+   *
+   * `mode: "text"` over documents larger than the line-diff ceiling falls back to a
+   * structural diff, and before this field existed the reason was computed and then
+   * discarded into a local array with nowhere to go. A caller asking for a text diff and
+   * receiving a list of section renames had no way to tell that no line diff ran - the
+   * response said `status: "ok"`, and `diff(5246, 8446, "text")` was byte-identical to
+   * `mode: "structure"`. Measured: RFC 5246 is 5 828 lines, 8446 is 8 964, 2178 is 11 820,
+   * 2328 is 12 202, all over the 2 000-line ceiling.
+   */
+  readonly run?: DiffRun;
 }
 
 export interface IndexStatus {

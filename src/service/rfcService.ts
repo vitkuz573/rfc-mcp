@@ -1337,10 +1337,21 @@ export class RfcService {
         byShapeFiltered[candidate.shape] = (byShapeFiltered[candidate.shape] ?? 0) + 1;
         byRoleFiltered[candidate.role] = (byRoleFiltered[candidate.role] ?? 0) + 1;
       }
+      // A page break splits a sentence, and the second half is not a statement. It is
+      // reported in its own key rather than mixed into the list a caller reads, because
+      // "in this memo, and may be datagrams." is not something the RFC said and a
+      // compliance list must not contain it as though it had. Nothing is dropped: the
+      // text and the block it continues into are both named.
+      const whole = filtered.filter((candidate) => !candidate.continues_previous_block);
+      const fragments = filtered.filter((candidate) => candidate.continues_previous_block);
       const filterApplied = input.role !== undefined || input.shape !== undefined;
+      const withSection = (candidate: (typeof filtered)[number]) => ({
+        ...candidate,
+        section: sectionById.get(candidate.section_id) ?? null,
+      });
       data.non_strict_candidates = {
         total: analysis.candidates.length,
-        returned: filtered.length,
+        returned: whole.length,
         filters: {
           role: input.role ?? null,
           shape: input.shape ?? null,
@@ -1356,12 +1367,22 @@ export class RfcService {
         by_section: bySection,
         scanned_blocks: analysis.scanned_blocks,
         unreadable_blocks: analysis.unreadable_blocks,
+        sentence_fragments: fragments.length,
         ordering: "ranked: shape=demand first, then role=modal, then upper-case keywords, then document order",
-        candidates: filtered.map((candidate) => ({
-          ...candidate,
-          section: sectionById.get(candidate.section_id) ?? null,
-        })),
-        note: "Requirement-shaped statements the strict upper-case extractor rejected. Per RFC 8174 section 3 an uncapitalised keyword has no normative force, so these are NOT requirements; they are reported so a zero requirement count is not mistaken for the absence of normative language. keyword_case says which capitalisation was found; reason names the structural cause when capitalisation is not the only one. role says whether the keyword is in modal position. shape applies the action-verb test of RFC 2119 section 3: only a clause with an action verb can carry a requirement, so shape=description fails the specification's own criterion. role=unknown and shape=indeterminate are real answers, not passes — read them.",
+        candidates: whole.map(withSection),
+        // Present only when a page break split a sentence. Each entry is the second
+        // half of a statement whose first half is in an earlier block of the same
+        // section; read it together with that block or not at all.
+        ...(fragments.length > 0
+          ? {
+              fragments: fragments.map((candidate) => ({
+                ...withSection(candidate),
+                continues_from_block: candidate.block_id,
+                note: "Second half of a sentence split by a page break. The first half is in an earlier block of the same section.",
+              })),
+            }
+          : {}),
+        note: "Requirement-shaped statements the strict upper-case extractor rejected, one row per statement (all its keywords are in `keywords`). Per RFC 8174 section 3 an uncapitalised keyword has no normative force, so these are NOT requirements; they are reported so a zero requirement count is not mistaken for the absence of normative language. keyword_case says which capitalisation was found; reason names the structural cause when capitalisation is not the only one. role says whether the keyword is in modal position. shape applies the action-verb test of RFC 2119 section 3: only a clause with an action verb can carry a requirement, so shape=description fails the specification's own criterion. role=unknown and shape=indeterminate are real answers, not passes — read them. continues_previous_block means a page break split the sentence and this row is only its second half; the full statement spans the previous block. Bibliographies, the authors' address and the index are excluded, as they are for the strict count.",
       };
       warningsOut.push(...analysis.warnings.map((warning) => `candidates:${warning}`));
       if (analysis.candidates.length > 0) {
@@ -1373,7 +1394,7 @@ export class RfcService {
       // in the requirement list itself. They are appended under an explicit flag so a
       // count can never quietly absorb them.
       if (input.include_provisional === true) {
-        const provisional = filtered.map((candidate) => ({
+        const provisional = whole.map((candidate) => ({
           ...candidate,
           section: sectionById.get(candidate.section_id) ?? null,
           provisional: true as const,

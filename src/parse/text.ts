@@ -377,10 +377,16 @@ function isBlank(line: Line): boolean {
 /* -------------------------------------------------------------------------- */
 
 function extractToc(lines: readonly Line[], warnings: string[]): TocInfo {
-  const start = lines.find(
-    (line) => line.value.trim().toLowerCase() === "table of contents" && !/^\s/u.test(line.value),
-  );
+  // Matched on the trimmed value, so indentation does not matter. RFC 1035 writes its
+  // header as "                           Table of Contents" at column 28, and a
+  // column-0 requirement meant the whole contents was never recognised: its entries
+  // were indexed as body text, which put fragments like "Inverse queries (Optional)
+  // 40 6.4.1." into search results and candidate lists as though the RFC had said it.
+  // The absence is also reported, because an unrecognised contents is a parse gap and
+  // not a stylistic fact.
+  const start = lines.find((line) => line.value.trim().toLowerCase() === "table of contents");
   if (!start) {
+    warnings.push("table_of_contents_header_not_found");
     return {
       startLine: Number.POSITIVE_INFINITY,
       endLine: Number.POSITIVE_INFINITY,
@@ -447,8 +453,11 @@ function findHeadings(
   const out: Heading[] = [];
   let rejected = 0;
   for (const line of lines) {
-    if (/^\s/u.test(line.value) || line.value.trim() === "") continue;
+    if (line.value.trim() === "") continue;
     const trimmed = line.value.trim();
+    // An indented line is body text, except when its whole content is one of the
+    // fixed unnumbered titles: those are headings wherever they sit.
+    if (/^\s/u.test(line.value) && !UNNUMBERED_HEADING.test(trimmed)) continue;
 
     const appendix = APPENDIX_HEADING.exec(trimmed);
     if (appendix) {
@@ -478,7 +487,11 @@ function findHeadings(
 
     if (UNNUMBERED_HEADING.test(trimmed) && trimmed.length <= 60) {
       // Unnumbered sections are addressable by their title ("Abstract",
-      // "References", "Author's Address") so `read(section=…)` works for them.
+      // "References", "Author's Address") so `read(section=…)` works for them. The
+      // title is matched on the trimmed value, so indentation does not decide it:
+      // RFC 1035 writes its contents header at column 28, and a document whose
+      // contents could not be addressed could not be told apart from one that has
+      // none.
       out.push({ line, number: trimmed, title: trimmed, kind: classifyKind("", trimmed) });
     }
   }

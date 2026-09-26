@@ -213,6 +213,54 @@ describe("parseRfcText", () => {
     expect(result.blocks.every((block) => !block.text.includes("\f"))).toBe(true);
   });
 
+  it("recognises an indented table of contents header", () => {
+    // RFC 1035 writes "                           Table of Contents" at column 28. A
+    // column-0 requirement meant the contents was never recognised, so its entries
+    // were indexed as body text and fragments like "Inverse queries (Optional) 40
+    // 6.4.1." reached search results and candidate lists as though the RFC had said it.
+    const indentedToc = Buffer.from(
+      [
+        "1.  Intro",
+        "",
+        "                           Table of Contents",
+        "",
+        "   1.  Intro .................................................  1",
+        "   2.  Rules ................................................  2",
+        "",
+        "1.  Intro",
+        "",
+        "   The body.",
+        "",
+        "2.  Rules",
+        "",
+        "   The rules.",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    const result = parseRfcText({
+      rfc: 4244,
+      snapshotId: "snp_444444444444444444444444",
+      raw: indentedToc,
+      parserVersion: "test",
+    });
+    expect(result.warnings).not.toContain("table_of_contents_header_not_found");
+    // The entries are not body text, which is the part that reached search results and
+    // candidate lists as though the RFC had said it.
+    expect(result.blocks.some((b) => /\.{3,}/u.test(b.text))).toBe(false);
+    expect(result.blocks.every((b) => !/^\s*1\.\s+Intro\s+\.+/mu.test(b.text))).toBe(true);
+  });
+
+  it("reports a document whose contents header it could not find", () => {
+    const result = parseRfcText({
+      rfc: 4245,
+      snapshotId: "snp_555555555555555555555555",
+      raw: Buffer.from("1.  Intro\n\n   Body.\n", "utf8"),
+      parserVersion: "test",
+    });
+    expect(result.warnings).toContain("table_of_contents_header_not_found");
+  });
+
   it("keeps byte offsets aligned with a leading BOM", () => {
     // TextDecoder strips a BOM by default, which would shift every byte offset
     // by three and make exact citations unverifiable.

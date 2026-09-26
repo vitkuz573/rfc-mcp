@@ -50,7 +50,24 @@ const TERM_PATTERN = new RegExp(
 const QUOTED_TERM = new RegExp(`(["'\`]\\s*\\b(?:${Object.keys(NORMATIVE_TERMS).join("|")})\\s*["'\`])`, "iu");
 const META_DISCUSSION =
   /\b(?:not implementing|does not implement|implementing a|keywords? (?:for|in)|the specification says|the effects? on)\b/iu;
-const SENTENCE_BOUNDARY = /([.!?])([ \t]+)(?=[A-Z0-9"'(\[])/gu;
+/**
+ * Sentence boundary: terminal punctuation, then layout whitespace, then something
+ * that can open a sentence.
+ *
+ * The separator class must include newlines. RFC text is hard-wrapped at column 72,
+ * so a period at the end of a line very often ends a sentence, and a class of spaces
+ * and tabs only never reached it: twenty separate statements on twenty consecutive
+ * lines came back as one "sentence". That is not cosmetic. `exact_text` is what a
+ * caller reads and judges, and the action-verb test scans the clause it is given — a
+ * whole paragraph almost always contains a verb, so the paragraph was classified
+ * `demand` whatever it actually said. Excluding newlines inflated that bucket with
+ * exactly the entries that should not be in it.
+ *
+ * A line that does *not* end with terminal punctuation still continues into the next
+ * one, which is the ordinary case for a wrapped sentence, so the boundary lands in the
+ * right place without a parser.
+ */
+const SENTENCE_BOUNDARY = /([.!?])(?:[ \t]*\n)+[ \t]*(?=[A-Z0-9"'(\[])|([.!?])([ \t]+)(?=[A-Z0-9"'(\[])/gu;
 const ABBREVIATIONS = new Set([
   "e.g",
   "i.e",
@@ -728,11 +745,11 @@ export function analyzeNormative(input: {
  * each was skipped, is what makes a zero count interpretable.
  */
 export function analyzeNormativeCandidates(input: {
-  readonly snapshotId: string;
-  readonly rfc: number;
-  readonly sections: readonly Section[];
-  readonly blocks: readonly Block[];
-  readonly limit?: number;
+  snapshotId: string;
+  rfc: number;
+  sections: readonly Section[];
+  blocks: readonly Block[];
+  limit?: number;
 }): NormativeCandidateAnalysis {
   const sectionsById = new Map(input.sections.map((section) => [section.id, section]));
   const candidates: NormativeCandidate[] = [];
@@ -746,104 +763,165 @@ export function analyzeNormativeCandidates(input: {
   let scanned = 0;
   let unreadable = 0;
   let truncated = false;
+  let skippedSections = 0;
+  let skippedReferenceBlocks = 0;
+  let fragments = 0;
+  let previousEndedOpen = false;
 
   for (const block of input.blocks) {
     const section = sectionsById.get(block.section_id);
+    const sectionKind = section?.kind ?? "unknown";
+    // The candidate pass is a wider net than the strict one — it deliberately adds
+    // tables and preformatted text — but it must not be reading a different document.
+    // A bibliography entry ("[RFC-1010] J. Reynolds, and J. Postel, ...") contains
+    // the word "should" inside a citation and is not a requirement-shaped statement
+    // at all, and the authors' address section is not normative prose. Both are
+    // excluded here for the reason the strict extractor excludes them, and the count
+    // is reported rather than assumed.
+    if (SKIPPED_SECTION_KINDS.has(sectionKind)) {
+      skippedSections += 1;
+      continue;
+    }
+    if (block.kind === "reference_entry") {
+      skippedReferenceBlocks += 1;
+      continue;
+    }
     const sectionTitle = section?.title ?? "";
     const inDefinitionSection = DEFINITION_SECTIONS.test(sectionTitle.trim());
     const isProse = PROSE_BLOCK_KINDS.has(block.kind);
     scanned += 1;
     if (block.text.includes("\uFFFD")) unreadable += 1;
 
+    // A page break splits a sentence across two blocks, and the second half opens
+    // mid-clause. The text is verbatim and correct; it is simply not a whole
+    // statement, and saying so beats handing a caller "in this memo, and may be
+    // datagrams." as though the RFC had said that. The offset of the block's first
+    // non-space character is where an opening sentence starts, indentation aside.
+    const firstContent = block.text.length - block.text.trimStart().length;
+    const continuesPrevious = previousEndedOpen && /^\s*[a-z]/u.test(block.text);
+
     for (const sentence of splitSentences(block.text)) {
       if (candidates.length >= limit) {
         truncated = true;
         break;
       }
-      for (const match of sentence.text.matchAll(CANDIDATE_KEYWORD)) {
-        // A candidate is one keyword occurrence, not one sentence, so the cap has to
-        // be re-checked here too: a single long sentence would otherwise overshoot it.
-        if (candidates.length >= limit) {
-          truncated = true;
-          break;
-        }
-        const raw = match[0];
-        const keyword = raw.replace(/\s+/gu, " ").toLowerCase();
-        const keywordCase: NormativeCandidate["keyword_case"] =
-          raw === raw.toLowerCase()
-            ? "lower"
-            : raw === raw.toUpperCase()
-              ? "upper"
-              : raw === raw[0]!.toUpperCase() + raw.slice(1).toLowerCase()
-                ? "title"
-                : "upper";
-        const role = classifyCandidateRole(sentence.text, match.index ?? 0, keyword);
-        // The clause the keyword governs: from just after the keyword to the end of
-        // the sentence, or to a semicolon, which is where RFC prose starts a new
-        // independent clause.
-        const governed = sentence.text
-          .slice((match.index ?? 0) + raw.length)
-          .split(/;/u)[0]!
-          .trim();
-        const shape = classifyRequirementShape(governed, keyword);
-        const reason: NormativeCandidate["reason"] = !isProse
-          ? "non_prose_block"
-          : inDefinitionSection
-            ? "definition_section"
-            : null;
+      const keywordMatches = [...sentence.text.matchAll(CANDIDATE_KEYWORD)];
+      if (keywordMatches.length === 0) continue;
+      const reason: NormativeCandidate["reason"] = !isProse
+        ? "non_prose_block"
+        : inDefinitionSection
+          ? "definition_section"
+          : null;
+
+      // One row per statement, not per keyword occurrence. The action-verb test reads
+      // the clause that follows the keyword, so a sentence holding two keywords used
+      // to be emitted twice and could be filed under two different shapes at once.
+      const classified = keywordMatches
+        .map((match) => {
+          const raw = match[0];
+          const keyword = raw.replace(/\s+/gu, " ").toLowerCase();
+          const keywordCase: NormativeCandidate["keyword_case"] =
+            raw === raw.toLowerCase()
+              ? "lower"
+              : raw === raw.toUpperCase()
+                ? "upper"
+                : raw === raw[0]!.toUpperCase() + raw.slice(1).toLowerCase()
+                  ? "title"
+                  : "upper";
+          // The clause the keyword governs: from just after the keyword to the end of
+          // the sentence, or to a semicolon, which is where RFC prose starts a new
+          // independent clause.
+          const governed = sentence.text
+            .slice((match.index ?? 0) + raw.length)
+            .split(/;/u)[0]!
+            .trim();
+          return {
+            keyword: raw,
+            normalised: keyword,
+            keyword_case: keywordCase,
+            role: classifyCandidateRole(sentence.text, match.index ?? 0, keyword),
+            shape: classifyRequirementShape(governed, keyword),
+            char_start: block.char_start + sentence.start + (match.index ?? 0),
+            length: raw.length,
+          };
+        })
         // The strict extractor already owns every upper-case keyword in a prose block
         // outside a definition section; re-reporting it would be noise.
-        if (keywordCase === "upper" && reason === null) continue;
-        const charStart = block.char_start + sentence.start + (match.index ?? 0);
-        const charEnd = charStart + raw.length;
-        const id = `cnd_${citationId({
+        .filter((entry) => entry.keyword_case !== "upper" || reason !== null);
+      if (classified.length === 0) continue;
+
+      const lead = classified[0]!;
+      const charStart = lead.char_start;
+      const charEnd = charStart + lead.length;
+      const isFragment = continuesPrevious && sentence.start === firstContent;
+      candidates.push({
+        id: `cnd_${citationId({
           snapshotId: input.snapshotId,
           blockId: block.id,
           byteStart: charStart,
           quote: sentence.text,
-        }).slice(4, 20)}`;
-        candidates.push({
-          id,
-          snapshot_id: input.snapshotId,
-          rfc: input.rfc,
-          section_id: block.section_id,
-          block_id: block.id,
-          keyword: raw,
-          keyword_case: keywordCase,
+        }).slice(4, 20)}`,
+        snapshot_id: input.snapshotId,
+        rfc: input.rfc,
+        section_id: block.section_id,
+        block_id: block.id,
+        keywords: classified.map(({ keyword, keyword_case, role, shape, char_start, length }) => ({
+          keyword,
+          keyword_case,
           role,
           shape,
-          reason,
+          char_start,
+          length,
+        })),
+        keyword: lead.keyword,
+        keyword_case: lead.keyword_case,
+        role: lead.role,
+        shape: lead.shape,
+        reason,
+        continues_previous_block: isFragment,
+        char_start: charStart,
+        exact_text: sentence.text,
+        context: contextAround(sentence.text, keywordMatches[0]?.index ?? 0, lead.length, 160),
+        span: {
+          byte_start: byteOffsetFromChar(block, charStart),
+          byte_end: byteOffsetFromChar(block, charEnd),
           char_start: charStart,
-          exact_text: sentence.text,
-          context: contextAround(sentence.text, match.index ?? 0, raw.length, 160),
-          span: {
-            byte_start: byteOffsetFromChar(block, charStart),
-            byte_end: byteOffsetFromChar(block, charEnd),
-            char_start: charStart,
-            char_end: charEnd,
-            line_start: block.line_start,
-            line_end: block.line_end,
-          },
-          citation_id: citationId({
-            snapshotId: input.snapshotId,
-            blockId: block.id,
-            byteStart: charStart,
-            quote: sentence.text,
-          }),
-        });
-        byKeyword[keyword] = (byKeyword[keyword] ?? 0) + 1;
-        byCase[keywordCase] = (byCase[keywordCase] ?? 0) + 1;
-        byRole[role] = (byRole[role] ?? 0) + 1;
-        byShape[shape] = (byShape[shape] ?? 0) + 1;
-        if (reason !== null) byReason[reason] = (byReason[reason] ?? 0) + 1;
+          char_end: charEnd,
+          line_start: block.line_start,
+          line_end: block.line_end,
+        },
+        citation_id: citationId({
+          snapshotId: input.snapshotId,
+          blockId: block.id,
+          byteStart: charStart,
+          quote: sentence.text,
+        }),
+      });
+      if (isFragment) fragments += 1;
+      // The per-statement buckets count statements, which is what a caller filters on.
+      // The per-keyword buckets keep counting occurrences, under separate names.
+      byShape[lead.shape] = (byShape[lead.shape] ?? 0) + 1;
+      byRole[lead.role] = (byRole[lead.role] ?? 0) + 1;
+      byCase[lead.keyword_case] = (byCase[lead.keyword_case] ?? 0) + 1;
+      for (const entry of classified) {
+        byKeyword[entry.normalised] = (byKeyword[entry.normalised] ?? 0) + 1;
       }
+      if (reason !== null) byReason[reason] = (byReason[reason] ?? 0) + 1;
     }
+    previousEndedOpen = !/[.!?][")'\]”’]*\s*$/u.test(block.text.trimEnd());
     if (truncated) break;
   }
 
   if (truncated) warnings.push(`candidates_truncated_at_${limit}`);
   if (unreadable > 0) warnings.push(`blocks_with_replacement_characters:${unreadable}`);
   if (scanned === 0) warnings.push("no_blocks_scanned_for_candidates");
+  if (skippedSections > 0) warnings.push(`candidate_sections_skipped:${skippedSections}`);
+  if (skippedReferenceBlocks > 0) warnings.push(`reference_entry_blocks_skipped:${skippedReferenceBlocks}`);
+  if (fragments > 0) {
+    warnings.push(
+      `sentences_split_across_a_page_break:${fragments}:flagged_continues_previous_block_not_whole_statements`,
+    );
+  }
 
   return {
     candidates,
@@ -881,6 +959,19 @@ export function splitSentences(text: string): Sentence[] {
   }
   pushSentence(out, text, start, text.length);
   return out;
+}
+
+/**
+ * A sentence that ends a hard-wrapped line but continues in the next one.
+ *
+ * A wrapped sentence is one sentence and must quote as one, so the newline is kept
+ * inside it; a caller reading `exact_text` wants the whole statement, not the first
+ * 72 columns of it. This is the case the strict extractor also relies on: RFC prose
+ * states a requirement across several lines, and splitting there would quote half of
+ * it.
+ */
+export function continuesAcrossLineBreak(text: string): boolean {
+  return /[.!?]["')\]”’]?[ \t]*\n[ \t]*[a-z]/u.test(text);
 }
 
 function pushSentence(out: Sentence[], text: string, start: number, end: number): void {

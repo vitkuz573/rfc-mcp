@@ -9,6 +9,37 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- The sentence splitter never split at a hard line break. Its separator class was spaces and
+  tabs, so a period at the end of a line never ended a sentence: twenty separate statements on
+  twenty consecutive lines came back as one, and `exact_text` for a requirement or candidate
+  could be a whole hard-wrapped paragraph. That inflated the `demand` bucket directly — the
+  action-verb test scans the clause it is given, and a paragraph almost always contains a verb,
+  so a paragraph was classified `demand` whatever it said. A line that does not end with
+  terminal punctuation still continues into the next one, so wrapped sentences quote whole.
+- An indented "Table of Contents" was never recognised. `extractToc` required the header at
+  column 0, and RFC 1035 writes it at column 28, so the whole contents was indexed as body
+  text — which is where "Inverse queries (Optional) 40 6.4.1." came from, reaching search
+  results and candidate lists as though the RFC had said it. The absence is now reported as
+  `table_of_contents_header_not_found` rather than passing silently. The unnumbered titles
+  ("Abstract", "References", "Author's Address") are likewise matched on the trimmed line, so
+  an indented one is still a heading.
+- One row per statement, not per keyword occurrence. A sentence holding two keywords was
+  emitted twice, and because the action-verb test reads the clause after the keyword, the same
+  text could be filed under two different shapes at once — so filtering on `shape` could not
+  say which row described the real statement. 28 duplicated texts in RFC 1035, now 1 (a
+  sentence that genuinely appears in two sections). Every keyword keeps its own classification
+  in `keywords`.
+- The candidate pass no longer reads a different document than the strict one. It applies the
+  strict extractor's section-kind and block-kind skips, so a bibliography entry ("[RFC-1010] J.
+  Reynolds, ... which should be consulted") and the authors' address are excluded. The strict
+  count already excluded them, and `interpretation.caveat` promised the candidate list did too.
+  Counts are reported as `candidate_sections_skipped` and `reference_entry_blocks_skipped`.
+- A sentence a page break split in half is reported separately. A block is a contiguous byte
+  range, so a sentence running across a page break becomes two blocks and the second opens
+  mid-clause — "in this memo, and may be datagrams." The text is verbatim and correct; it is not
+  a whole statement, so it is flagged `continues_previous_block` and moved to a `fragments` key
+  instead of appearing in the list a caller reads as rules. Nothing is dropped.
+
 - The action-verb test of RFC 2119 section 3 is now applied to every non-strict candidate,
   as `shape`. The specification defines when a keyword has effect: rule 1 admits MUST "only in
   a sentence that also contains an action verb", rule 2 requires "an explicit action to be
@@ -62,7 +93,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Version 0.1.0 → 0.2.0. Three rounds of changes had shipped under an unchanged
   `server.version`, so there was no signal that snapshot ids had been retired and callers had to
   diff `parser_version` by hand to find out.
-- Parser `rfc-text-1.4.0` → `rfc-text-1.5.0`. See `snapshot_redirects` above: any historical pin
+- Parser `rfc-text-1.4.0` → `rfc-text-1.6.0`. See `snapshot_redirects` above: any historical pin
   is one hop from the current id.
 - The `read` and `search` tool descriptions state the `text` / `text_clean` distinction, the
   `include` / `source_map` matrix, and that a case-insensitive text hit is not a requirement.
@@ -173,7 +204,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Parser `rfc-text-1.2.0` → `rfc-text-1.5.0`, extractor `normative-2119-8174-1.4.0` →
+- Parser `rfc-text-1.2.0` → `rfc-text-1.6.0`, extractor `normative-2119-8174-1.4.0` →
   `normative-2119-8174-1.5.0`. Both are part of snapshot identity by design, so every
   `snp_<hash>` minted under the old versions is retired. `reanalyze --all` re-derives the
   corpus from stored bytes without re-fetching anything.

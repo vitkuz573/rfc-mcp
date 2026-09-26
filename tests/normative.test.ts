@@ -481,7 +481,17 @@ describe("non-strict normative candidates", () => {
       rfc: 9999,
       snapshotId: SNAPSHOT,
       raw: Buffer.from(
-        ["2.  Rules", "", ...Array.from({ length: 20 }, (_, i) => `   Item ${i} must be handled.`), ""].join("\n"),
+        [
+          "2.  Rules",
+          "",
+          ...Array.from({ length: 20 }, (_, _i) => {
+            const i = _i;
+            // Alternate the trailing punctuation so consecutive statements are not
+            // read as one sentence spanning the page-break-shaped gaps.
+            return `   Item ${i} must be handled${i % 2 === 0 ? "." : " and then some."}`;
+          }),
+          "",
+        ].join("\n"),
         "utf8",
       ),
       parserVersion: "test",
@@ -495,5 +505,118 @@ describe("non-strict normative candidates", () => {
     });
     expect(analysis.candidates).toHaveLength(5);
     expect(analysis.warnings).toContain("candidates_truncated_at_5");
+  });
+
+  it("splits sentences at a hard line break and not inside a wrapped one", () => {
+    // The separator class was spaces and tabs only, so a period at the end of a line
+    // never ended a sentence: twenty statements on twenty consecutive lines came back
+    // as one. That is not cosmetic — `exact_text` is what a caller reads, and the
+    // action-verb test scans the clause it is given, so a whole paragraph was always
+    // classified `demand` whatever it said.
+    const twenty = splitSentences(Array.from({ length: 20 }, (_, i) => `   Item ${i} must be handled.`).join("\n"));
+    expect(twenty).toHaveLength(20);
+    // A sentence that runs over a line break is still one sentence, and must quote as one.
+    const wrapped = splitSentences(
+      ["   Name servers and resolvers must compare labels in a case-insensitive", "   manner."].join("\n"),
+    );
+    expect(wrapped).toHaveLength(1);
+    expect(wrapped[0]?.text).toContain("case-insensitive");
+  });
+
+  it("excludes a bibliography entry and the authors' address, as the strict count does", () => {
+    // A citation containing "should" is not a requirement-shaped statement, and
+    // promising they are excluded while sweeping them in is worse than not promising.
+    const parsed = parseRfcText({
+      rfc: 9999,
+      snapshotId: SNAPSHOT,
+      raw: Buffer.from(
+        [
+          "2.  Rules",
+          "",
+          "   A server must be deployed.",
+          "",
+          '   [RFC1010] J. Reynolds, and J. Postel, "Assigned Numbers", which should',
+          "      be consulted before implementation.",
+          "",
+          "Author's Address",
+          "",
+          "   Implementors who may wish to comment should write to the IETF.",
+          "",
+        ].join("\n"),
+        "utf8",
+      ),
+      parserVersion: "test",
+    });
+    const analysis = analyzeNormativeCandidates({
+      snapshotId: SNAPSHOT,
+      rfc: 9999,
+      sections: parsed.sections,
+      blocks: parsed.blocks,
+    });
+    expect(analysis.candidates.some((c) => /Reynolds/u.test(c.exact_text))).toBe(false);
+    expect(analysis.candidates.some((c) => /IETF/u.test(c.exact_text))).toBe(false);
+    expect(analysis.warnings.some((w) => w.startsWith("reference_entry_blocks_skipped:"))).toBe(true);
+  });
+
+  it("emits one row per statement, not one per keyword", () => {
+    // "must ... must NOT" in one sentence used to produce two rows for the same text,
+    // filed under two different shapes, so filtering on shape could not say which row
+    // described the real statement.
+    const parsed = parseRfcText({
+      rfc: 9999,
+      snapshotId: SNAPSHOT,
+      raw: Buffer.from(
+        ["2.  Rules", "", "   A client must send the query and it must not be retransmitted more than twice.", ""].join(
+          "\n",
+        ),
+        "utf8",
+      ),
+      parserVersion: "test",
+    });
+    const analysis = analyzeNormativeCandidates({
+      snapshotId: SNAPSHOT,
+      rfc: 9999,
+      sections: parsed.sections,
+      blocks: parsed.blocks,
+    });
+    expect(analysis.candidates).toHaveLength(1);
+    expect(analysis.candidates[0]?.keywords).toHaveLength(2);
+    expect(analysis.candidates[0]?.keywords.map((k) => k.keyword)).toEqual(["must", "must not"]);
+    // Each keyword keeps its own verdict, and the statement carries the first.
+    expect(analysis.candidates[0]?.keywords[1]?.shape).toBe("demand");
+    expect(analysis.candidates[0]?.shape).toBe("demand");
+  });
+
+  it("flags a sentence that a page break split in half", () => {
+    const parsed = parseRfcText({
+      rfc: 9999,
+      snapshotId: SNAPSHOT,
+      raw: Buffer.from(
+        [
+          "2.  Rules",
+          "",
+          "   Queries are exchanged as datagrams, though some transports",
+          "",
+          "Mockapetris                                                    [Page 26]",
+          "",
+          "RFC 9999        Test Document and Specification         January 1988",
+          "",
+          "   in this memo, and may be datagrams.",
+          "",
+        ].join("\n"),
+        "utf8",
+      ),
+      parserVersion: "test",
+    });
+    const analysis = analyzeNormativeCandidates({
+      snapshotId: SNAPSHOT,
+      rfc: 9999,
+      sections: parsed.sections,
+      blocks: parsed.blocks,
+    });
+    const fragment = analysis.candidates.find((c) => /and may be datagrams/u.test(c.exact_text));
+    expect(fragment).toBeDefined();
+    expect(fragment!.continues_previous_block).toBe(true);
+    expect(analysis.warnings.some((w) => w.startsWith("sentences_split_across_a_page_break:"))).toBe(true);
   });
 });

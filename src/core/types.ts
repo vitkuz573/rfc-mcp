@@ -281,6 +281,33 @@ export interface NormativeCandidate {
   readonly rfc: number;
   readonly section_id: string;
   readonly block_id: string;
+  /**
+   * Every RFC 2119 keyword in the sentence, each with its own classification.
+   *
+   * A candidate is a *statement*, not a keyword occurrence. Emitting one row per
+   * occurrence listed the same sentence several times and, because the action-verb
+   * test reads the clause that follows the keyword, could file one sentence under two
+   * different shapes at once — a caller filtering on `shape` then had to decide which
+   * of two rows described the real statement. The keywords stay in the record, so
+   * collapsing loses nothing.
+   */
+  readonly keywords: readonly {
+    readonly keyword: string;
+    readonly keyword_case: "upper" | "title" | "lower";
+    readonly role: "modal" | "non_modal" | "unknown";
+    readonly shape: RequirementShape;
+    readonly char_start: number;
+    readonly length: number;
+  }[];
+  /**
+   * True when the sentence begins in an earlier block, because a page break split it.
+   *
+   * A block is a contiguous byte range, so a sentence running across a page break
+   * becomes two blocks and the second opens mid-clause — "in this memo, and may be
+   * datagrams." The text is not wrong; it is simply not a whole statement, and a
+   * caller must not be handed it as one.
+   */
+  readonly continues_previous_block: boolean;
   /** The keyword exactly as written, e.g. "Must", "must", "shall". */
   readonly keyword: string;
   /**

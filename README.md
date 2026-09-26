@@ -9,7 +9,7 @@
 [![node](https://img.shields.io/badge/node-%3E%3D24-5FA04E.svg)](https://nodejs.org)
 [![protocol](https://img.shields.io/badge/MCP-2026--07--28%20%2B%20legacy-8A2BE2.svg)](https://modelcontextprotocol.io)
 [![types](https://img.shields.io/badge/types-strict-informational.svg)](src)
-[![tests](https://img.shields.io/badge/tests-87%20passing-success.svg)](tests)
+[![tests](https://img.shields.io/badge/tests-89%20passing-success.svg)](tests)
 
 |                  |                                                                                                    |
 | ---------------- | -------------------------------------------------------------------------------------------------- |
@@ -300,7 +300,7 @@ rfc-mcp vacuum                      # purge stale search-index rows, compact the
 ```sh
 npm ci
 npm run typecheck     # tsc --noEmit, strict
-npm test              # 87 tests: parser, normative, XML, store, HTTP policy, service, live protocol
+npm test              # 89 tests: parser, normative, XML, store, HTTP policy, service, live protocol
 npm run build         # dist/
 npm run verify        # format check + typecheck + test + build
 ```

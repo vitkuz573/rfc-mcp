@@ -484,6 +484,57 @@ describe("RfcService end to end", () => {
     expect(top.references).toContain("RFC2119");
   });
 
+  it("stores the XML asset when with_xml is asked for an already cached document", async () => {
+    // Ingest without XML: the asset is not part of snapshot identity, so the document is
+    // already cached and the request is answered from the store.
+    const first = await service.resolve({ rfc: 9999 });
+    await expect(service.read({ snapshot_id: first.data.snapshot.id, target: "xml_outline" })).rejects.toThrow(
+      /NOT_CACHED|XML asset/u,
+    );
+
+    // Asking again with_xml must actually store it. Returning the cached snapshot without
+    // the asset made the NOT_CACHED message advice that could not be followed.
+    const second = await service.resolve({ rfc: 9999, with_xml: true });
+    expect(second.data.snapshot.id).toBe(first.data.snapshot.id);
+    expect(second.warnings).not.toContain("xml_unavailable:NOT_FOUND");
+    const read = await service.read({ snapshot_id: second.data.snapshot.id, target: "xml_outline" });
+    expect(read.status).toBe("ok");
+    expect(read.data.xml_outline?.number).toBe(9999);
+  });
+
+  it("distinguishes a missing XML asset from a document that has no RFCXML", async () => {
+    // The fixture document has an xml format, so the asset can be fetched on demand.
+    const withXml = await service.resolve({ rfc: 9999, with_xml: true });
+    const ok = await service.read({ snapshot_id: withXml.data.snapshot.id, target: "xml_outline" });
+    expect(ok.data.xml_outline?.number).toBe(9999);
+
+    // A document the RFC Editor publishes without RFCXML. Repeating "re-resolve with
+    // with_xml" here would be advice that can never succeed.
+    const noXmlDir = mkdtempSync(path.join(tmpdir(), "rfc-mcp-noxml-"));
+    process.env.RFC_MCP_DATA_DIR = noXmlDir;
+    const noXml = RfcService.create(loadConfig(), createLogger({ level: "silent" }), {
+      fetchImpl: makeFetch({
+        "https://www.rfc-editor.org/api/v1/rfc-common/9999.json": () => ({
+          body: JSON.stringify({ ...COMMON_METADATA, formats: [{ format: "txt" }, { format: "html" }] }),
+          etag: '"common-9999-noxml"',
+          type: "application/json",
+        }),
+      }),
+    });
+    const resolved = await noXml.resolve({ rfc: 9999, with_xml: true });
+    expect(resolved.warnings).not.toContain("xml_unavailable:NOT_FOUND");
+    let thrown: { code?: string; message?: string } | null = null;
+    try {
+      await noXml.read({ snapshot_id: resolved.data.snapshot.id, target: "xml_outline" });
+    } catch (error) {
+      thrown = error as { code?: string; message?: string };
+    }
+    expect(thrown?.code).toBe("NOT_FOUND");
+    expect(thrown?.message).toMatch(/no RFCXML/iu);
+    expect(thrown?.message).not.toMatch(/with_xml/u);
+    rmSync(noXmlDir, { recursive: true, force: true });
+  });
+
   it("restricts a text search to blocks citing a reference of one relation", async () => {
     await service.resolve({ rfc: 9999 });
 

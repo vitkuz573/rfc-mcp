@@ -9,6 +9,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `resolve` with `with_xml` now stores the RFCXML asset for a document that is already cached.
+  The flag was only honoured on the path that re-derives a document, so on an already-ingested
+  RFC it returned the cached snapshot without the asset and the following
+  `read(target: "xml_outline")` failed with `NOT_CACHED` — while telling the caller to
+  re-resolve with `with_xml`, advice that could not change anything. The asset is not part of
+  snapshot identity, so it is attached to the existing snapshot rather than minting a new one.
+- An `xml_outline` read on a document the RFC Editor publishes without RFCXML now fails with
+  `NOT_FOUND` and states that no such representation exists. It previously returned the same
+  `NOT_CACHED` as an unstored asset, which asked a caller to retry a request that could never
+  succeed. Across the corpus, 9 of the DNS-family documents are in this state: the editor
+  returns 404 for their `.xml`, and the catalog correctly lists no `xml` format for them.
+
 - Text search no longer fails with `INTERNAL` when a `section:` filter or `block_kinds` is
   combined with a query: the FTS5 subquery referenced the table by name while the outer query
   aliased it, which SQLite could not resolve.

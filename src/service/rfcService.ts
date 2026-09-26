@@ -330,7 +330,16 @@ export class RfcService {
     if (existing && options.refresh !== true) {
       const record = this.store.getCatalog(rfc);
       if (record) {
-        return { snapshot: existing, record, warnings: [], freshness: this.config.offline ? "offline" : "cached" };
+        const warnings: string[] = [];
+        // with_xml is a request for a stored asset, not only for a re-derivation. A cached
+        // snapshot returned without it would make the read fail with NOT_CACHED while
+        // telling the caller to re-resolve with with_xml — advice that changes nothing.
+        if (this.config.offline) {
+          if (options.withXml && record.formats.includes("xml")) warnings.push("xml_unavailable:offline");
+        } else {
+          await this.ensureXmlAsset(existing, record, options.signal, warnings);
+        }
+        return { snapshot: existing, record, warnings, freshness: this.config.offline ? "offline" : "cached" };
       }
     }
     if (this.config.offline) {
@@ -397,6 +406,9 @@ export class RfcService {
     ) {
       const snapshot = this.store.getSnapshot(snapshotId);
       if (snapshot) {
+        if (options.withXml && record.formats.includes("xml")) {
+          await this.ensureXmlAsset(snapshot, record, options.signal, warnings);
+        }
         return { snapshot, record, warnings, freshness: "cached" };
       }
     }
@@ -472,6 +484,27 @@ export class RfcService {
 
     const snapshot = this.store.getSnapshot(snapshotId)!;
     return { snapshot, record, warnings, freshness: "current" };
+  }
+
+  /**
+   * Stores the RFCXML asset for a snapshot that was ingested without it. The asset is not
+   * part of snapshot identity — it is a second representation of the same document — so it
+   * is attached to the existing snapshot instead of minting a new one.
+   */
+  private async ensureXmlAsset(
+    snapshot: Snapshot,
+    record: CatalogRecord,
+    signal: AbortSignal | undefined,
+    warnings: string[],
+  ): Promise<void> {
+    if (!record.formats.includes("xml")) return;
+    if (this.store.getAsset(snapshot.id, "xml")) return;
+    try {
+      const asset = await this.editor.fetchPublication(record.rfc, "xml", signal);
+      this.store.putAsset(snapshot.id, asset);
+    } catch (error) {
+      warnings.push(`xml_unavailable:${codeOf(error)}`);
+    }
   }
 
   private async anchor(
@@ -636,6 +669,15 @@ export class RfcService {
     if (target === "xml_outline") {
       const asset = this.store.getAsset(snapshot.id, "xml");
       if (!asset) {
+        // Two different states must not look alike. A document with no RFCXML
+        // representation cannot be fixed by asking again, and telling the caller to
+        // re-resolve with with_xml would send it into a loop that never terminates.
+        if (!record.formats.includes("xml")) {
+          throw new RfcMcpError("NOT_FOUND", `RFC ${record.rfc} has no RFCXML representation upstream`, {
+            details: { rfc: record.rfc, available_formats: record.formats, target: "xml_outline" },
+            retryable: false,
+          });
+        }
         throw new RfcMcpError("NOT_CACHED", "XML asset is not stored for this snapshot; re-resolve with with_xml", {
           details: { snapshot_id: snapshot.id },
           retryable: false,

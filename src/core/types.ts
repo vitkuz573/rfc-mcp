@@ -573,13 +573,17 @@ export interface ReadResult {
    */
   readonly xml_outline?: XmlDocumentOutline | null;
   /**
-   * The same text as `text` with page-furniture lines emptied, present only when the
-   * section has any. `text` stays a verbatim slice so its offsets keep denoting it;
-   * this is the rendering to copy from when the furniture is in the way. Line counts
-   * match, so the two are comparable line for line.
+   * The section's content with printing artefacts removed. This is what `text` holds.
+   *
+   * `text_verbatim` is the byte-exact slice that the section's char and byte span
+   * denote, and `text_clean` is an alias of `text` kept for callers written against
+   * 0.2.0. Line counts are equal in both, so they compare line for line.
    */
+  readonly text_verbatim?: string;
+  readonly text_sha256_verbatim?: string;
   readonly text_clean?: string;
   readonly page_furniture_lines?: readonly number[];
+  readonly text_fidelity?: string;
   readonly truncated: boolean;
   readonly byte_cursor: number | null;
 }

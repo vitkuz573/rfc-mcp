@@ -843,7 +843,31 @@ export class RfcService {
 
     const blocks = this.store.getBlocksForSection(snapshot.id, resolvedSection.id);
     const selectedBlocks = include.has("subsections") ? blocks : this.filterBlocksToSection(resolvedSection, blocks);
-    let text = input.format === "structured" ? null : resolvedSection.text;
+
+    // Two renderings, and which one is called `text` was decided against the hazard
+    // rather than in favour of it. `text` used to be the verbatim slice, so on a
+    // pre-1990 RFC it handed a caller the printed page's running head and a raw form
+    // feed — and the obvious field to copy from was the one carrying printing
+    // artefacts. Five review rounds reported it, and answering that it was by design
+    // never made the next read any safer.
+    //
+    // The verbatim slice is not dropped and its span still denotes it: it is
+    // `text_verbatim`, it is what `section` carries with its source map, and it is
+    // what a byte-anchored caller needs. Citations do not depend on any of this —
+    // `verify_citation` works on blocks, which have been furniture-free since
+    // rfc-text-1.3.0. So the safe rendering takes the plain name and the exact one
+    // takes the explicit one. `text_clean` is kept as an alias of `text` for callers
+    // written against 0.2.0.
+    const furnitureLines = resolvedSection.furniture_lines ?? [];
+    const verbatim = resolvedSection.text;
+    const rendered =
+      furnitureLines.length > 0 ? blankLines(verbatim, furnitureLines, resolvedSection.line_start) : verbatim;
+    if (furnitureLines.length > 0) {
+      warningsOut.push(
+        `section_text_had_page_furniture_removed_on_lines:${furnitureLines.join(",")}:text_verbatim_is_the_exact_slice`,
+      );
+    }
+    let text = input.format === "structured" ? null : rendered;
     let truncated = false;
     if (text && Buffer.byteLength(text, "utf8") > maxBytes) {
       const limited = truncateBytes(text, maxBytes);
@@ -853,16 +877,6 @@ export class RfcService {
     let returnedBlocks = selectedBlocks;
     if (input.format === "text") {
       returnedBlocks = [];
-    }
-
-    // `text` is a verbatim slice, and its char and byte span denote exactly the
-    // string reported next to them — that is what lets a caller locate what it read
-    // in the file. Page furniture therefore survives in it. Rather than break that
-    // invariant or leave the caller to guess which lines to distrust, the response
-    // carries the same text with those lines emptied, plus their numbers.
-    const furnitureLines = resolvedSection.furniture_lines ?? [];
-    if (furnitureLines.length > 0) {
-      warningsOut.push(`section_text_contains_page_furniture_on_lines:${furnitureLines.join(",")}:use_text_clean`);
     }
 
     const data: ReadResult = {
@@ -878,8 +892,15 @@ export class RfcService {
       text,
       ...(furnitureLines.length > 0 && text !== null
         ? {
-            text_clean: blankLines(text, furnitureLines, resolvedSection.line_start),
+            // The exact slice, for a caller anchoring to bytes. `text` is the same
+            // content with the printing artefacts removed; both are reported so a
+            // change in one is visible rather than silent.
+            text_verbatim: verbatim,
+            text_sha256_verbatim: resolvedSection.text_sha256,
+            text_clean: text,
             page_furniture_lines: furnitureLines,
+            text_fidelity:
+              "text has page furniture removed; text_verbatim is the byte-exact slice its char and byte span denote. Line counts are equal in both.",
           }
         : {}),
       outline: null,
@@ -2113,6 +2134,7 @@ export class RfcService {
         "A search result of 0 in text scope means the term is absent from the ingested documents, not from the RFC corpus. The coverage field states how much of the corpus was searched.",
         "An empty errata list is reported with the statuses that do have errata, so 'none of that status' and 'none at all' stay distinguishable.",
         "A read that lists blocks without source_map returns rows whose text is empty. Omit include entirely, or add source_map, to get the text.",
+        "read.text is the section's content with page furniture removed; text_verbatim is the byte-exact slice its span denotes. Copy from text, anchor to text_verbatim.",
         "A snapshot id pins one derivation under one parser and extractor version. After a version bump the id is retired; the error names the document and its current id rather than reporting an unknown snapshot.",
       ],
       limits: this.config.limits,

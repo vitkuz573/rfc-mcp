@@ -7,6 +7,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed (breaking)
+
+- `read` on a section: `text` is now the section's content with printing artefacts removed.
+  It was the byte-exact slice, so on a pre-1990 RFC the field a caller would naturally copy
+  from carried the printed page's running head, its running foot, and a raw form feed. The
+  exact slice is not dropped and its span still denotes it — it is `text_verbatim`, with
+  `text_sha256_verbatim`, the emptied line numbers in `page_furniture_lines`, equal line counts
+  in both, and `text_clean` kept as an alias of `text` for 0.2.0 callers. The `section` object
+  with a source map still carries the verbatim text. Citations are unaffected:
+  `verify_citation` works on blocks, which have carried no furniture since `rfc-text-1.3.0`.
+  This was reported in five consecutive review rounds and answered each time with an
+  explanation of why the old default was defensible; explaining it was never the fix.
+- `server.version` is coupled to the derivation versions and the coupling is enforced.
+  `contract-versions.json` records the triple, and `tests/contract.test.ts` fails when
+  `loadConfig()` disagrees with it — so a parser or extractor bump cannot ship under an
+  unchanged server version. The previous entry in this changelog claimed 0.2.0 fixed the
+  missing signal, and then the parser moved 1.5.0 -> 1.6.0 under that same 0.2.0, which is
+  exactly the failure the claim was supposed to prevent.
+
 ### Fixed
 
 - The sentence splitter never split at a hard line break. Its separator class was spaces and
@@ -90,9 +109,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Version 0.1.0 → 0.2.0. Three rounds of changes had shipped under an unchanged
+- Version 0.1.0 → 0.2.0 → 0.3.0. Three rounds of changes had shipped under an unchanged
   `server.version`, so there was no signal that snapshot ids had been retired and callers had to
-  diff `parser_version` by hand to find out.
+  diff `parser_version` by hand to find out. See the breaking-changes entry above for why the
+  bump alone was not the fix.
 - Parser `rfc-text-1.4.0` → `rfc-text-1.6.0`. See `snapshot_redirects` above: any historical pin
   is one hop from the current id.
 - The `read` and `search` tool descriptions state the `text` / `text_clean` distinction, the
@@ -115,6 +135,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `ensure_top_catalog_hits` closes the discovery loop.
 - Errata remain an overlay and are never applied to publication text. Applying them would make
   a citation unverifiable against the published file, which is the file a reader checks against.
+- Anaphora across a block boundary is not a parser defect. RFC 2181 §5.5 reads "Information
+  sections, as required.  However it should not be repeated in the same, or any other, section" —
+  a whole sentence with an anaphoric subject, returned as one candidate and correctly not flagged
+  as a fragment. Deciding what "it" refers to needs the preceding sentence, which is a reading and
+  not a parse. `verify_citation` names the block, and the preceding block of the same section is
+  one call away.
 
 ### Fixed (earlier in this release)
 

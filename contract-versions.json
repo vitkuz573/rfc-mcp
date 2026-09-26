@@ -1,0 +1,15 @@
+{
+  "$comment": [
+    "The version triple that defines a corpus derivation. A snapshot id is a hash of",
+    "the document, its bytes and the last two values, so changing either retires every",
+    "snapshot id. The package version is the signal a client reads to know that",
+    "happened, which is only true if it moves with them.",
+    "",
+    "tests/contract.test.ts fails when loadConfig() disagrees with this file, so a",
+    "parser or extractor bump cannot ship under an unchanged server version. That",
+    "coupling was promised once and not kept; this makes it enforced instead."
+  ],
+  "server": "0.3.0",
+  "parser": "rfc-text-1.6.0",
+  "extractor": "normative-2119-8174-1.5.0"
+}

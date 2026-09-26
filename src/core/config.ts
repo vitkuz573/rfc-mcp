@@ -162,7 +162,9 @@ export function parseRfcNumber(value: string | number): number {
     }
     return value;
   }
-  const text = value.trim().replace(/^rfc/i, "");
+  // Trimmed again after the prefix is removed: "rfc 9110" is a spelling a caller
+  // types, and the space between the prefix and the digits is not a reason to fail.
+  const text = value.trim().replace(/^rfc/i, "").trim();
   if (!/^[1-9]\d{0,4}$/.test(text)) {
     throw new Error(`Invalid RFC identifier: ${JSON.stringify(value)}`);
   }

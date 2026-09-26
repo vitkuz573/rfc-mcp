@@ -635,6 +635,51 @@ describe("RfcService end to end", () => {
     expect(read.data.text).toContain("MUST emit the X-Trace header");
   });
 
+  it("hands out the section content free of printing artefacts, and the exact slice beside it", async () => {
+    // `text` used to be the verbatim slice, so on a pre-1990 RFC the field a caller
+    // would copy from carried the printed page's running head and a raw form feed.
+    // Five review rounds reported that. The safe rendering now takes the plain name
+    // and the byte-exact one takes the explicit name; nothing is dropped.
+    // The furniture has to be *inside* the section, between two content lines: a
+    // section's span starts at its first content line, so furniture before it is
+    // already outside the verbatim slice.
+    const printed = RFC_TEXT.replace(
+      "   An implementation MUST emit the X-Trace header.",
+      "   An implementation MUST emit the X-Trace header.\n\nMockapetris                                                    [Page 1]\n\f\nRFC 9999        Example Document                            January 2026\n",
+    );
+    const printedService = RfcService.create(config, createLogger({ level: "silent" }), {
+      store: service.storeRef,
+      fetchImpl: makeFetch({
+        "https://www.rfc-editor.org/rfc/rfc9999.txt": () => ({
+          body: printed,
+          etag: '"printed-9999"',
+          type: "text/plain",
+        }),
+      }),
+    });
+    const resolved = await printedService.resolve({ rfc: 9999, refresh: true });
+    const read = (
+      await printedService.read({
+        snapshot_id: resolved.data.snapshot.id,
+        section: "2",
+        include: ["text", "source_map"],
+      })
+    ).data;
+    expect(read.page_furniture_lines?.length ?? 0).toBeGreaterThan(0);
+    expect(read.text).not.toMatch(/\[Page \d+\]/u);
+    expect(read.text).not.toContain("\f");
+    expect(read.text).toContain("MUST emit the X-Trace header");
+    // The exact slice is still there, and it still carries the artefacts.
+    expect(read.text_verbatim).toMatch(/\[Page \d+\]/u);
+    expect(read.text_sha256_verbatim).toMatch(/^[0-9a-f]{64}$/u);
+    // Equal line counts, so the two compare line for line.
+    expect(read.text?.split("\n")).toHaveLength(read.text_verbatim?.split("\n").length ?? -1);
+    // 0.2.0 callers reading text_clean still get the same string.
+    expect(read.text_clean).toBe(read.text);
+    // And the section object with a source map keeps the verbatim text.
+    expect(read.section?.text).toBe(read.text_verbatim);
+  });
+
   it("diffs two snapshots on the requirements axis", async () => {
     const left = await service.resolve({ rfc: 9999 });
     const rightService = RfcService.create(config, createLogger({ level: "silent" }), {

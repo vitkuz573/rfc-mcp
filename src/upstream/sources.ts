@@ -14,6 +14,7 @@
  */
 
 import { RfcMcpError } from "../core/errors.js";
+import { canonicalErrataStatus } from "../core/types.js";
 import type {
   Author,
   CatalogRecord,
@@ -480,7 +481,7 @@ function normalizeErratum(rfc: number, item: Record<string, unknown>): Erratum {
   return {
     errata_id: id,
     rfc,
-    status: (asString(item.errata_status_code) ?? asString(item.status) ?? "unknown").toLowerCase(),
+    status: canonicalErrataStatus(asString(item.errata_status_code) ?? asString(item.status)),
     type: asString(item.errata_type_code) ?? asString(item.type),
     section: asString(item.section),
     original_text: asString(item.orig_text) ?? asString(item.original_text),

@@ -178,6 +178,8 @@ export interface Snapshot {
   readonly block_count: number;
   readonly requirement_count: number;
   readonly reference_count: number;
+  /** Blocks the normative extractor reads; the denominator behind a requirement count. */
+  readonly prose_block_count: number;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -243,6 +245,60 @@ export interface Requirement extends NormativeMention {
   readonly clause: RequirementClause;
   readonly parse_status: "complete" | "partial" | "heuristic";
   readonly confidence: number;
+}
+
+/**
+ * A requirement-shaped statement the strict extractor deliberately did not promote:
+ * a keyword in lower or title case, or a normative sentence inside a table, figure
+ * or field definition.
+ *
+ * RFC 8174 §3 gives "MUST" no effect unless it is capitalised, so these are not
+ * requirements. They are reported because their absence is not evidence either: a
+ * caller asking "what must a server do" needs to see that RFC 1035 says "Must be
+ * zero" in a header-field table even though the count of requirements is 0.
+ */
+export interface NormativeCandidate {
+  readonly id: string;
+  readonly snapshot_id: string;
+  readonly rfc: number;
+  readonly section_id: string;
+  readonly block_id: string;
+  /** The keyword exactly as written, e.g. "Must", "must", "shall". */
+  readonly keyword: string;
+  /**
+   * The capitalisation the strict extractor requires and this candidate lacks.
+   * RFC 8174 section 3 gives an uncapitalised keyword no normative force.
+   */
+  readonly keyword_case: "upper" | "title" | "lower";
+  /**
+   * Whether the keyword is in modal position. `unknown` means the shape is not one
+   * the classifier claims to know, and is the honest default: a caller must be able
+   * to see how much of the list was decided and discount the rest.
+   */
+  readonly role: "modal" | "non_modal" | "unknown";
+  /**
+   * Why the strict extractor left it out, when capitalisation was not the reason:
+   * the block is not prose, or the section defines the requirement language. A
+   * candidate can be both uncapitalised and non-prose; `reason` names the
+   * structural one, because that is what a reader has to act on.
+   */
+  readonly reason: "non_prose_block" | "definition_section" | null;
+  readonly exact_text: string;
+  readonly context: string;
+  readonly span: Pick<Span, "byte_start" | "byte_end" | "char_start" | "char_end" | "line_start" | "line_end">;
+  readonly citation_id: string;
+}
+
+export interface NormativeCandidateAnalysis {
+  readonly candidates: readonly NormativeCandidate[];
+  readonly by_keyword: Readonly<Record<string, number>>;
+  readonly by_case: Readonly<Record<string, number>>;
+  readonly by_reason: Readonly<Record<string, number>>;
+  readonly by_role: Readonly<Record<string, number>>;
+  /** Blocks that could not be read as text at all; a coverage hole, not an absence. */
+  readonly unreadable_blocks: number;
+  readonly scanned_blocks: number;
+  readonly warnings: readonly string[];
 }
 
 /* -------------------------------------------------------------------------- */
@@ -333,7 +389,7 @@ export interface GraphResult {
 export interface Erratum {
   readonly errata_id: string;
   readonly rfc: number;
-  readonly status: string;
+  readonly status: ErrataStatus;
   readonly type: string | null;
   readonly section: string | null;
   readonly original_text: string | null;
@@ -342,6 +398,51 @@ export interface Erratum {
   readonly submitted_at: string | null;
   readonly updated_at: string | null;
   readonly url: string;
+}
+
+/**
+ * Erratum status, canonicalized to the same snake_case vocabulary the `errata`
+ * input schema accepts.
+ *
+ * The RFC Editor ships `errata_status_code` as display text
+ * ("Held for Document Update"), so a corpus written without normalization stores a
+ * value no schema enum can name. A `status=held_for_document_update` filter then
+ * matches nothing and reports an empty list, which is indistinguishable from "this
+ * RFC has no errata of that status". `canonicalErrataStatus` is the single place
+ * that decides which spelling is canonical; `errataStatusFilter` resolves a caller's
+ * value against it so both spellings keep working.
+ */
+export type ErrataStatus = "verified" | "reported" | "rejected" | "held_for_document_update" | "unknown";
+
+export const ERRATA_STATUSES: readonly ErrataStatus[] = Object.freeze([
+  "verified",
+  "reported",
+  "rejected",
+  "held_for_document_update",
+  "unknown",
+]);
+
+/** Lower case, spaces and hyphens collapsed to underscores. */
+export function canonicalErrataStatus(value: string | null | undefined): ErrataStatus {
+  const slug = (value ?? "")
+    .toLowerCase()
+    .replace(/[\s-]+/gu, "_")
+    .trim();
+  return (ERRATA_STATUSES as readonly string[]).includes(slug) ? (slug as ErrataStatus) : "unknown";
+}
+
+/**
+ * Resolve a requested status to a SQL match expression over `errata.status`, or
+ * `null` for "every status".
+ *
+ * Legacy rows hold display text, current rows hold the slug, so the predicate has
+ * to accept both. `any` is the explicit spelling of "no filter"; it must never
+ * reach SQL as the literal string "any".
+ */
+export function errataStatusFilter(value: string | null | undefined): { clause: string; parameter: string } | null {
+  if (value === null || value === undefined || value === "" || value.toLowerCase() === "any") return null;
+  const slug = canonicalErrataStatus(value);
+  return { clause: "lower(replace(replace(status, ' ', '_'), '-', '_')) = ?", parameter: slug };
 }
 
 export interface HistoryEntry {

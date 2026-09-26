@@ -10,7 +10,7 @@
  *  - FTS5 tables are derived and can always be rebuilt from `blocks`.
  */
 
-export const SCHEMA_VERSION = "2";
+export const SCHEMA_VERSION = "4";
 
 /**
  * Schema migrations, applied in order to any existing corpus on open.
@@ -28,9 +28,49 @@ export interface SchemaMigration {
   readonly columns?: readonly (readonly [string, string, string])[];
   /** Indexes to create; `IF NOT EXISTS` is added by the runner. */
   readonly indexes?: readonly string[];
+  /**
+   * Idempotent statements that derive values for rows an earlier version wrote.
+   *
+   * A new column added to an existing table defaults to its declared default, which
+   * for a derived count means zero — a value that reads as "nothing was scanned"
+   * when the truth is "this was never counted". Every statement here must be safe
+   * to run repeatedly and must only touch rows the new column cannot already hold.
+   */
+  readonly backfills?: readonly string[];
 }
 
 export const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
+  {
+    version: 4,
+    name: "snapshot_redirects",
+    // A snapshot id is a hash of (document, bytes, metadata, parser, extractor), so
+    // bumping a rule version retires every id at once. Without a record of where an
+    // id went, a caller holding a pin from the previous version gets a bare
+    // NOT_FOUND and no way to learn which document it was or what replaced it.
+  },
+  {
+    version: 3,
+    name: "snapshot_prose_block_count",
+    columns: [["snapshots", "prose_block_count", "INTEGER NOT NULL DEFAULT 0"]],
+    // Snapshots ingested before this column existed all carry the declared default
+    // of 0, which reads as "no prose block was scanned" instead of "never counted".
+    // Recompute it from the stored blocks, which are the authority either way, and
+    // leave a genuine zero alone by only touching rows that still hold 0.
+    backfills: [
+      `UPDATE snapshots
+          SET prose_block_count = (
+            SELECT COUNT(*) FROM blocks b
+             WHERE b.snapshot_id = snapshots.id
+               AND b.kind IN ('paragraph', 'list_item', 'unknown')
+               AND COALESCE((
+                 SELECT s.kind FROM sections s
+                  WHERE s.snapshot_id = b.snapshot_id AND s.id = b.section_id
+               ), 'unknown') NOT IN ('authors', 'index', 'references')
+          )
+        WHERE prose_block_count = 0
+          AND EXISTS (SELECT 1 FROM blocks b WHERE b.snapshot_id = snapshots.id)`,
+    ],
+  },
   {
     version: 2,
     name: "reference_external_identity",
@@ -112,7 +152,11 @@ CREATE TABLE IF NOT EXISTS snapshots (
   section_count     INTEGER NOT NULL DEFAULT 0,
   block_count       INTEGER NOT NULL DEFAULT 0,
   requirement_count INTEGER NOT NULL DEFAULT 0,
-  reference_count   INTEGER NOT NULL DEFAULT 0
+  reference_count   INTEGER NOT NULL DEFAULT 0,
+  -- Blocks the normative extractor actually read. Without this a caller cannot tell
+  -- "scanned 4 blocks, found nothing" from "scanned 900, found nothing", and the
+  -- two support opposite conclusions about whether a document states any norms.
+  prose_block_count INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS snapshots_content
@@ -304,6 +348,19 @@ CREATE TABLE IF NOT EXISTS relations (
 );
 
 CREATE INDEX IF NOT EXISTS relations_by_target ON relations (target_rfc, direction);
+
+-- Where a retired snapshot id went. A rule-version bump re-derives every document
+-- under a new id; without this the old id is simply gone, and a caller holding a
+-- pin is told only that it is unknown, not which document it referred to or what
+-- now stands in for it.
+CREATE TABLE IF NOT EXISTS snapshot_redirects (
+  old_id     TEXT PRIMARY KEY,
+  new_id     TEXT NOT NULL,
+  rfc        INTEGER NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS snapshot_redirects_by_rfc ON snapshot_redirects (rfc);
 
 CREATE TABLE IF NOT EXISTS errata (
   rfc           INTEGER NOT NULL,

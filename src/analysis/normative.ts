@@ -13,7 +13,14 @@
  *     silently: a missing actor yields `partial`, not a fabricated one.
  */
 
-import type { Block, NormativeMention, Requirement, Section } from "../core/types.js";
+import type {
+  Block,
+  NormativeCandidate,
+  NormativeCandidateAnalysis,
+  NormativeMention,
+  Requirement,
+  Section,
+} from "../core/types.js";
 import { NORMATIVE_TERMS, type NormativePolarity, type NormativeStrength, type NormativeTerm } from "../core/types.js";
 import { citationId, quoteHash } from "./citation.js";
 
@@ -64,9 +71,89 @@ const ABBREVIATIONS = new Set([
   "ltd",
 ]);
 
-const PROSE_BLOCK_KINDS = new Set(["paragraph", "list_item", "unknown"]);
-const SKIPPED_SECTION_KINDS = new Set(["authors", "index", "references"]);
 const DEFINITION_SECTIONS = /^(?:normative|informative references|keywords? for use|.*requirement levels?)$/iu;
+
+/** Block kinds the extractor reads. Mirrors `PROSE_BLOCK_KINDS` for the store. */
+export const PROSE_BLOCK_KINDS: ReadonlySet<string> = new Set(["paragraph", "list_item", "unknown"]);
+/** Section kinds the extractor skips outright. */
+export const SKIPPED_SECTION_KINDS: ReadonlySet<string> = new Set(["authors", "index", "references"]);
+
+/**
+ * RFC 2119 keywords in any capitalisation, longest phrase first.
+ *
+ * Used only to find what the strict upper-case extractor did *not* promote. A hit
+ * here is reported as a candidate with the reason it was skipped, never as a
+ * requirement: RFC 8174 §3 makes "must" a plain English word.
+ */
+const CANDIDATE_KEYWORD = new RegExp(
+  `\\b(${Object.keys(NORMATIVE_TERMS)
+    .sort((a, b) => b.length - a.length)
+    .map((term) => term.replace(/ /gu, "\\s+"))
+    .join("|")})\\b`,
+  "giu",
+);
+const MAX_CANDIDATES = 500;
+
+/**
+ * Constructions in which an RFC 2119 word is an ordinary English word, not a modal.
+ *
+ * A candidate list is a lead list, not a contract, and the difference matters: a
+ * caller who treats "194 candidates" as "194 obligations" will implement the wrong
+ * thing. Two of the eleven keywords are also everyday vocabulary in exactly the
+ * shape RFC prose uses, and the shapes below are the reliable cases:
+ *
+ *   "the recommended method for mail routing"   recommended as a participle
+ *   "an optional part of the DNS"               optional as an adjective
+ *   "many may ask"                               may as a plural noun
+ *
+ * The patterns are anchored to a determiner, a possessive or a quantifier
+ * immediately before the keyword, which is what separates these from a real modal
+ * ("a server may omit", "servers must retry"). They are deliberately one-sided: a
+ * candidate that is not matched here is still reported, marked `role: "unknown"`.
+ * Guessing "this must is a noun" without a parser would trade one silent error for
+ * another, which is the failure mode this whole pass exists to remove.
+ */
+const NON_MODAL: readonly { readonly keyword: string; readonly pattern: RegExp }[] = [
+  // Participles and adjectives: a determiner or possessive governs the keyword.
+  { keyword: "recommended", pattern: /\b(?:the|a|an|this|that|these|those|its|their|our|your|most|best|widely)\s+$/iu },
+  { keyword: "optional", pattern: /\b(?:the|a|an|this|that|these|those|its|their|our|your|as\s+an?)\s+$/iu },
+  { keyword: "required", pattern: /\b(?:the|a|an|this|that|these|those|its|their|our|your|as\s+an?)\s+$/iu },
+  // Plural noun: "many may ask", "few may object", "some may prefer".
+  { keyword: "may", pattern: /\b(?:many|few|some|most|all|one|two|three)\s+$/iu },
+];
+
+/**
+ * Classify a candidate keyword occurrence as modal or not, without a parser.
+ *
+ * Returns `null` when the shape is not one this heuristic claims to know. A `null`
+ * is reported as `unknown`, never folded into either bucket, so the caller can see
+ * how much of the list was actually decided and discount the rest accordingly.
+ */
+export function classifyCandidateRole(
+  sentence: string,
+  index: number,
+  keyword: string,
+): "modal" | "non_modal" | "unknown" {
+  const before = sentence.slice(Math.max(0, index - 40), index);
+  for (const rule of NON_MODAL) {
+    if (keyword !== rule.keyword) continue;
+    // Positive evidence only. Not matching the noise pattern is not proof of
+    // modality, so the decision falls through to the structural test below rather
+    // than being forced into this rule's verdict.
+    if (rule.pattern.test(before)) return "non_modal";
+  }
+  // A modal verb stands in a finite clause: something precedes it and something
+  // follows it. A keyword with no clause after it inside the sentence is a noun
+  // reading, not a rule. Leading punctuation is dropped first, so a sentence-final
+  // "may." is not mistaken for a verb phrase.
+  const after = sentence
+    .slice(index + keyword.length)
+    .replace(/^[\s,;:.]+/u, "")
+    .trim();
+  if (after === "") return "non_modal";
+  if (before.trim() === "") return "unknown";
+  return "modal";
+}
 
 export function analyzeNormative(input: {
   readonly snapshotId: string;
@@ -169,7 +256,14 @@ export function analyzeNormative(input: {
 
         if (disposition === "requirement") {
           const requirementFlagsPending: string[] = [];
+          const beforeKeyword = sentence.text.slice(0, match.index ?? 0);
           const clause = parseClause(sentence.text, match.index ?? 0, match[0].length);
+          // A list marker is an artefact of the publication format, not part of the
+          // requirement. It is stripped from the clause and reported here, so the
+          // cleanup is visible instead of silently changing what the actor says.
+          if (LIST_MARKER.test(beforeKeyword)) {
+            requirementFlagsPending.push("list_marker_stripped_from_clause");
+          }
           if (/\bexcept that\b/iu.test(sentence.text.slice(0, (match.index ?? 0) + 200))) {
             requirementFlagsPending.push("exception_before_keyword");
           }
@@ -207,6 +301,137 @@ export function analyzeNormative(input: {
       mentions_found: mentions.length,
       requirements_emitted: requirements.length,
     },
+    warnings,
+  };
+}
+
+/**
+ * Requirement-shaped statements the strict extractor left out.
+ *
+ * The strict reading is correct and stays authoritative: RFC 8174 §3 gives an
+ * uncapitalised keyword no normative force, so promoting these would be wrong.
+ * The problem this solves is the opposite one. A count of 0 requirements cannot
+ * distinguish "this RFC states no requirements" from "this RFC states its
+ * requirements in a form the extractor does not recognise" — RFC 1035 writes
+ * "Z  Reserved for future use.  Must be zero in all queries and responses." in a
+ * field-definition block, and RFC 4033 uses a lower-case "must" throughout. Both
+ * are binding on an implementer. Reporting them as candidates, with the reason
+ * each was skipped, is what makes a zero count interpretable.
+ */
+export function analyzeNormativeCandidates(input: {
+  readonly snapshotId: string;
+  readonly rfc: number;
+  readonly sections: readonly Section[];
+  readonly blocks: readonly Block[];
+  readonly limit?: number;
+}): NormativeCandidateAnalysis {
+  const sectionsById = new Map(input.sections.map((section) => [section.id, section]));
+  const candidates: NormativeCandidate[] = [];
+  const byKeyword: Record<string, number> = {};
+  const byCase: Record<string, number> = {};
+  const byReason: Record<string, number> = {};
+  const byRole: Record<string, number> = {};
+  const warnings: string[] = [];
+  const limit = input.limit ?? MAX_CANDIDATES;
+  let scanned = 0;
+  let unreadable = 0;
+  let truncated = false;
+
+  for (const block of input.blocks) {
+    const section = sectionsById.get(block.section_id);
+    const sectionTitle = section?.title ?? "";
+    const inDefinitionSection = DEFINITION_SECTIONS.test(sectionTitle.trim());
+    const isProse = PROSE_BLOCK_KINDS.has(block.kind);
+    scanned += 1;
+    if (block.text.includes("\uFFFD")) unreadable += 1;
+
+    for (const sentence of splitSentences(block.text)) {
+      if (candidates.length >= limit) {
+        truncated = true;
+        break;
+      }
+      for (const match of sentence.text.matchAll(CANDIDATE_KEYWORD)) {
+        // A candidate is one keyword occurrence, not one sentence, so the cap has to
+        // be re-checked here too: a single long sentence would otherwise overshoot it.
+        if (candidates.length >= limit) {
+          truncated = true;
+          break;
+        }
+        const raw = match[0];
+        const keyword = raw.replace(/\s+/gu, " ").toLowerCase();
+        const keywordCase: NormativeCandidate["keyword_case"] =
+          raw === raw.toLowerCase()
+            ? "lower"
+            : raw === raw.toUpperCase()
+              ? "upper"
+              : raw === raw[0]!.toUpperCase() + raw.slice(1).toLowerCase()
+                ? "title"
+                : "upper";
+        const role = classifyCandidateRole(sentence.text, match.index ?? 0, keyword);
+        const reason: NormativeCandidate["reason"] = !isProse
+          ? "non_prose_block"
+          : inDefinitionSection
+            ? "definition_section"
+            : null;
+        // The strict extractor already owns every upper-case keyword in a prose block
+        // outside a definition section; re-reporting it would be noise.
+        if (keywordCase === "upper" && reason === null) continue;
+        const charStart = block.char_start + sentence.start + (match.index ?? 0);
+        const charEnd = charStart + raw.length;
+        const id = `cnd_${citationId({
+          snapshotId: input.snapshotId,
+          blockId: block.id,
+          byteStart: charStart,
+          quote: sentence.text,
+        }).slice(4, 20)}`;
+        candidates.push({
+          id,
+          snapshot_id: input.snapshotId,
+          rfc: input.rfc,
+          section_id: block.section_id,
+          block_id: block.id,
+          keyword: raw,
+          keyword_case: keywordCase,
+          role,
+          reason,
+          exact_text: sentence.text,
+          context: contextAround(sentence.text, match.index ?? 0, raw.length, 160),
+          span: {
+            byte_start: byteOffsetFromChar(block, charStart),
+            byte_end: byteOffsetFromChar(block, charEnd),
+            char_start: charStart,
+            char_end: charEnd,
+            line_start: block.line_start,
+            line_end: block.line_end,
+          },
+          citation_id: citationId({
+            snapshotId: input.snapshotId,
+            blockId: block.id,
+            byteStart: charStart,
+            quote: sentence.text,
+          }),
+        });
+        byKeyword[keyword] = (byKeyword[keyword] ?? 0) + 1;
+        byCase[keywordCase] = (byCase[keywordCase] ?? 0) + 1;
+        byRole[role] = (byRole[role] ?? 0) + 1;
+        if (reason !== null) byReason[reason] = (byReason[reason] ?? 0) + 1;
+      }
+    }
+    if (truncated) break;
+  }
+
+  if (truncated) warnings.push(`candidates_truncated_at_${limit}`);
+  if (unreadable > 0) warnings.push(`blocks_with_replacement_characters:${unreadable}`);
+  if (scanned === 0) warnings.push("no_blocks_scanned_for_candidates");
+
+  return {
+    candidates,
+    by_keyword: byKeyword,
+    by_case: byCase,
+    by_reason: byReason,
+    by_role: byRole,
+    unreadable_blocks: unreadable,
+    scanned_blocks: scanned,
     warnings,
   };
 }
@@ -285,12 +510,24 @@ const CONDITION_PATTERN =
   /^(?:if|when|whenever|where|while|unless|except(?:\s+for)?|after|before|in\s+case\s+of|for)\b/iu;
 const PRE_KEYWORD_EXCEPTION = /\b(?:except that|except|unless other than|unless|other than)\b/giu;
 
+/**
+ * RFC 2822 list markers, and the indentation that follows one.
+ *
+ * A block's text is the verbatim publication line, so a list item arrives as
+ * `o  The RRSIG RR ...` with the marker still attached. Left in place, the marker
+ * becomes part of the actor ("o  The RRSIG RR and the RRset"), which is not a
+ * sentence the RFC ever says and not a phrase an implementer can act on. The
+ * marker is stripped from the parsed clause only; `exact_text` and the stored
+ * offsets still point at the original bytes, so nothing becomes unverifiable.
+ */
+const LIST_MARKER = /^(?:[-*+•‣·o]|\d{1,3}[.)]|[a-zA-Z][.)])\s+/u;
+
 function parseClause(text: string, termIndex: number, termLength: number): Requirement["clause"] {
   const before = text.slice(0, termIndex);
   const after = text.slice(termIndex + termLength);
 
   let condition: string | null = null;
-  let remainder = before.trimEnd();
+  let remainder = stripListMarker(before.trimEnd());
   const conditionMatch = CONDITION_PATTERN.exec(remainder);
   if (conditionMatch) {
     const rest = remainder.slice(conditionMatch[0].length);
@@ -315,29 +552,45 @@ function parseClause(text: string, termIndex: number, termLength: number): Requi
   }
 
   const actorMatch = /(?:^|[.;:!?]\s+|,\s+|\s+)([A-Za-z0-9][\w .()'/-]{0,80}?)\s*$/u.exec(actorSource);
-  const actor = actorMatch?.[1]?.trim() ?? null;
+  const actor = cleanClauseText(actorMatch?.[1]) ?? null;
   if (preException && condition === null) condition = preException;
 
   let action = after.trim() || null;
   let exception: string | null = null;
   const exceptionMatch = /\s+((?:except|unless|other than|but not|aside from)\b.*)$/iu.exec(after);
   if (exceptionMatch && exceptionMatch.index !== undefined) {
-    exception = exceptionMatch[1]!.trim();
+    exception = cleanClauseText(exceptionMatch[1]!);
     action = after.slice(0, exceptionMatch.index).trim() || null;
   }
   if (action) {
-    action =
-      action
-        .replace(/\s+/gu, " ")
-        .replace(/[;:,]$/u, "")
-        .trim() || null;
+    action = cleanClauseText(action.replace(/[;:,]$/u, ""));
   }
   return {
-    actor: actor && actor.length > 0 ? actor : null,
+    actor,
     condition,
     action,
     exception,
   };
+}
+
+/** Remove a leading list marker, if the text still carries one. */
+function stripListMarker(text: string): string {
+  const stripped = text.replace(LIST_MARKER, "").trimStart();
+  return stripped.length > 0 ? stripped : text.trimStart();
+}
+
+/**
+ * Collapse the layout whitespace of a publication line into single spaces.
+ *
+ * RFC text is hard-wrapped at column 72 and list items are indented, so a clause
+ * lifted verbatim out of a block arrives as "o  The RRSIG RR and the RRset" or
+ * "A server\n  that sends a 100 (Continue) response". Neither is quotable as the
+ * requirement it states.
+ */
+function cleanClauseText(value: string | undefined): string | null {
+  if (value === undefined) return null;
+  const cleaned = stripListMarker(value.replace(/\s+/gu, " ").trim());
+  return cleaned.length > 0 ? cleaned : null;
 }
 
 function indexOfClauseSeparator(text: string): number {

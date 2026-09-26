@@ -23,6 +23,8 @@ import type {
   Snapshot,
   Span,
 } from "../core/types.js";
+import { canonicalErrataStatus, errataStatusFilter } from "../core/types.js";
+import { PROSE_BLOCK_KINDS, SKIPPED_SECTION_KINDS } from "../analysis/normative.js";
 import { contentHash, isoNow, sha256Hex, shortHash } from "../core/util.js";
 import { SCHEMA_MIGRATIONS, SCHEMA_SQL, SCHEMA_VERSION } from "./schema.js";
 import type { HttpCacheEntry } from "../upstream/http.js";
@@ -116,6 +118,9 @@ export class CorpusStore {
         changed = true;
       }
       for (const index of migration.indexes ?? []) this.db.exec(index);
+      // Backfills are re-run on every open, not only on the first, so a corpus
+      // written by a build that skipped a step is repaired on the next start.
+      for (const statement of migration.backfills ?? []) this.db.exec(statement);
       if (changed) this.setMeta("schema_migration_version", String(migration.version));
     }
   }
@@ -347,6 +352,29 @@ export class CorpusStore {
     return rows.map(rowToCatalog);
   }
 
+  /** RFC numbers with a stored snapshot, ascending. The input to a corpus-wide re-analysis. */
+  listIngestedRfcs(): number[] {
+    return (
+      this.stmt("SELECT DISTINCT rfc FROM snapshots WHERE format = 'txt' ORDER BY rfc").all() as unknown as {
+        rfc: number;
+      }[]
+    ).map((row) => row.rfc);
+  }
+
+  /**
+   * Where a retired snapshot id went, or null if it was never issued.
+   *
+   * A rule-version bump changes every snapshot id at once. A caller that pinned one
+   * before the bump is holding a valid, verifiable citation against bytes that are
+   * still on disk, and the useful answer is "that is RFC N, now derived as M", not a
+   * bare "unknown snapshot".
+   */
+  getSnapshotRedirect(oldId: string): { new_id: string; rfc: number } | null {
+    const row = this.stmt("SELECT new_id, rfc FROM snapshot_redirects WHERE old_id = ?").get(oldId) as
+      { new_id: string; rfc: number } | undefined;
+    return row ?? null;
+  }
+
   countCatalog(): number {
     const row = this.stmt("SELECT COUNT(*) AS n FROM catalog").get() as { n: number };
     return row.n;
@@ -469,12 +497,24 @@ export class CorpusStore {
       // snapshot id also removes rows leaked by earlier generations under an id that
       // the new snapshot reproduces, which would otherwise double every hit.
       this.stmt("DELETE FROM blocks_fts WHERE rfc = ?").run(bundle.snapshot.rfc);
+      // Record where the ids being retired went, before they are gone. Same
+      // transaction as the delete, so a crash cannot leave a redirect to nothing.
+      const retired = this.stmt("SELECT id FROM snapshots WHERE rfc = ? AND id != ?").all(
+        bundle.snapshot.rfc,
+        bundle.snapshot.id,
+      ) as unknown as { id: string }[];
+      for (const row of retired) {
+        this.stmt(
+          `INSERT INTO snapshot_redirects (old_id, new_id, rfc, created_at) VALUES (?, ?, ?, ?)
+             ON CONFLICT(old_id) DO UPDATE SET new_id = excluded.new_id, created_at = excluded.created_at`,
+        ).run(row.id, bundle.snapshot.id, bundle.snapshot.rfc, isoNow());
+      }
       this.stmt("DELETE FROM snapshots WHERE rfc = ?").run(bundle.snapshot.rfc);
       this.stmt(
         `INSERT INTO snapshots (id, rfc, format, raw_sha256, bytes, raw, retrieved_at, source_url, etag, last_modified,
            parser_version, extractor_version, quality, warnings_json, metadata_hash, section_count, block_count,
-           requirement_count, reference_count)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           requirement_count, reference_count, prose_block_count)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).run(
         bundle.snapshot.id,
         bundle.snapshot.rfc,
@@ -495,6 +535,7 @@ export class CorpusStore {
         bundle.blocks.length,
         bundle.requirements.length,
         bundle.references.length,
+        countProseBlocks(bundle.blocks, bundle.sections),
       );
 
       for (const section of bundle.sections) {
@@ -1045,6 +1086,30 @@ export class CorpusStore {
     ).map((row) => rowToMention(row, snapshotId));
   }
 
+  /**
+   * Blocks whose text contains an RFC 2119 keyword in any case.
+   *
+   * `requirements` is the strict, upper-case-only reading of RFC 8174. A zero there
+   * is ambiguous on its own: RFC 1035 writes "Z  Reserved for future use.  Must be
+   * zero", and RFC 4033 writes a lower-case "must" throughout. Both are normative
+   * to an implementer and neither is a requirement by the letter of the spec. The
+   * candidates have to be reachable, or a caller can only conclude "no norms" from
+   * a number that means "no upper-case norms".
+   */
+  listBlocksWithKeywords(snapshotId: string, limit = 5000): Block[] {
+    return (
+      this.stmt(
+        `SELECT * FROM blocks
+          WHERE snapshot_id = ?
+            AND (lower(text) LIKE '%must%' OR lower(text) LIKE '%shall%' OR lower(text) LIKE '%should%'
+                 OR lower(text) LIKE '%may%' OR lower(text) LIKE '%required%' OR lower(text) LIKE '%recommend%'
+                 OR lower(text) LIKE '%optional%')
+          ORDER BY ordinal
+          LIMIT ?`,
+      ).all(snapshotId, limit) as unknown as BlockRow[]
+    ).map(rowToBlock);
+  }
+
   getReferences(
     snapshotId: string,
     filter: { relation?: string; resolution?: string; label?: string; limit: number; offset: number },
@@ -1300,9 +1365,10 @@ export class CorpusStore {
   getErrata(rfc: number, status: string | null, limit: number, offset: number): { rows: Erratum[]; total: number } {
     const conditions = ["rfc = ?"];
     const params: (string | number)[] = [rfc];
-    if (status) {
-      conditions.push("status = ?");
-      params.push(status);
+    const filter = errataStatusFilter(status);
+    if (filter) {
+      conditions.push(filter.clause);
+      params.push(filter.parameter);
     }
     const where = `WHERE ${conditions.join(" AND ")}`;
     const total = (this.stmt(`SELECT COUNT(*) AS n FROM errata ${where}`).get(...params) as { n: number }).n;
@@ -1316,6 +1382,27 @@ export class CorpusStore {
 
   hasErrata(rfc: number): boolean {
     return (this.stmt("SELECT COUNT(*) AS n FROM errata WHERE rfc = ?").get(rfc) as { n: number }).n > 0;
+  }
+
+  /**
+   * Errata counts per canonical status, computed over every stored row.
+   *
+   * Two facts are impossible to learn from a filtered result set: which statuses
+   * exist at all, and whether an empty answer means "none of that status" or
+   * "none at all". `errata` reports this map next to every filtered answer so an
+   * empty list is never ambiguous.
+   */
+  countErrataByStatus(rfc: number): Record<string, number> {
+    const rows = this.stmt(
+      `SELECT lower(replace(replace(status, ' ', '_'), '-', '_')) AS status, COUNT(*) AS n
+         FROM errata WHERE rfc = ? GROUP BY status`,
+    ).all(rfc) as unknown as { status: string; n: number }[];
+    const counts: Record<string, number> = {};
+    for (const row of rows) {
+      const status = canonicalErrataStatus(row.status);
+      counts[status] = (counts[status] ?? 0) + row.n;
+    }
+    return counts;
   }
 
   replaceHistory(rfc: number, entries: readonly HistoryEntry[]): void {
@@ -1508,6 +1595,25 @@ interface SnapshotRow {
   block_count: number;
   requirement_count: number;
   reference_count: number;
+  prose_block_count: number;
+}
+
+/**
+ * Blocks the normative extractor reads, under the same rules it applies.
+ *
+ * Kept as a stored count so `requirements` can state how much of a document was
+ * examined. Recomputing it per call would mean loading every block of every
+ * snapshot on each query, and the value is a property of the immutable snapshot.
+ */
+function countProseBlocks(blocks: readonly Block[], sections: readonly Section[]): number {
+  const kinds = new Map(sections.map((section) => [section.id, section.kind]));
+  let count = 0;
+  for (const block of blocks) {
+    if (!PROSE_BLOCK_KINDS.has(block.kind)) continue;
+    if (SKIPPED_SECTION_KINDS.has(kinds.get(block.section_id) ?? "unknown")) continue;
+    count += 1;
+  }
+  return count;
 }
 
 function rowToSnapshot(row: SnapshotRow): Snapshot {
@@ -1530,6 +1636,7 @@ function rowToSnapshot(row: SnapshotRow): Snapshot {
     block_count: row.block_count,
     requirement_count: row.requirement_count,
     reference_count: row.reference_count,
+    prose_block_count: row.prose_block_count,
   };
 }
 
@@ -1783,7 +1890,7 @@ function rowToErratum(row: ErrataRow): Erratum {
   return {
     errata_id: row.errata_id,
     rfc: row.rfc,
-    status: row.status,
+    status: canonicalErrataStatus(row.status),
     type: row.type,
     section: row.section,
     original_text: row.original_text,

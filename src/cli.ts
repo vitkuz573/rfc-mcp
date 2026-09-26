@@ -41,6 +41,7 @@ Commands
   verify <citation-id>             Verify a citation against stored bytes.
   diff <left-rfc> <right-rfc> [--mode M]
   reanalyze <rfc> [<rfc> ...]      Re-derive analysis from stored bytes (offline).
+  reanalyze --all                  Re-derive every ingested document (use after a version bump).
   reindex                          Rebuild FTS5 indexes from stored blocks.
   vacuum                           Compact the SQLite database.
   help                             This text.
@@ -146,6 +147,11 @@ function parseFlags(argv: readonly string[]): { positionals: string[]; flags: Fl
       case "--section":
         flags.section = next ?? null;
         i += 1;
+        break;
+      case "--all":
+        // Not a global flag: only `reanalyze --all` means anything, and it is
+        // dispatched as a positional so the command can reject it elsewhere.
+        positionals.push(arg);
         break;
       default:
         if (arg.startsWith("-")) throw new Error(`Unknown option: ${arg}`);
@@ -440,18 +446,42 @@ async function main(): Promise<number> {
     }
 
     case "reanalyze": {
-      const numbers = positionals.map((value) => Number.parseInt(value.replace(/^rfc/iu, ""), 10));
-      if (numbers.length === 0 || numbers.some((value) => !Number.isInteger(value))) {
-        throw new Error("reanalyze expects RFC numbers, e.g. `rfc-mcp reanalyze 9110`");
+      // `reanalyze --all` is the counterpart of a parser or extractor version bump:
+      // the whole corpus has to be re-derived from stored bytes, and enumerating
+      // every ingested RFC by hand is the step most likely to be forgotten.
+      const all = positionals.includes("--all") || positionals[0] === "all";
+      const rest = positionals.filter((value) => value !== "--all" && value !== "all");
+      const numbers = rest.map((value) => Number.parseInt(value.replace(/^rfc/iu, ""), 10));
+      if (!all && (numbers.length === 0 || numbers.some((value) => !Number.isInteger(value)))) {
+        throw new Error("reanalyze expects RFC numbers or --all, e.g. `rfc-mcp reanalyze 9110`");
+      }
+      if (all && numbers.length > 0) {
+        throw new Error("reanalyze takes either --all or RFC numbers, not both");
       }
       const results = await withService(flags, async (service) => {
         const out: unknown[] = [];
-        for (const rfc of numbers) out.push(await service.reanalyze(rfc));
+        if (all) {
+          const ingested = service.storeRef.listIngestedRfcs();
+          for (const rfc of ingested) out.push(await service.reanalyze(rfc));
+        } else {
+          for (const rfc of numbers) out.push(await service.reanalyze(rfc));
+        }
         return out;
       });
       emit(flags, results, () => {
+        let changed = 0;
         for (const item of results as { rfc: number; from: string; to: string; changed: boolean }[]) {
-          process.stdout.write(`rfc${item.rfc}: ${item.changed ? `${item.from} -> ${item.to}` : "unchanged"}\n`);
+          if (item.changed) changed += 1;
+          if (!flags.json) {
+            process.stdout.write(`rfc${item.rfc}: ${item.changed ? `${item.from} -> ${item.to}` : "unchanged"}\n`);
+          }
+        }
+        if (flags.json) {
+          process.stdout.write(
+            `${JSON.stringify({ reanalyzed: results.length, changed, unchanged: results.length - changed })}\n`,
+          );
+        } else {
+          process.stdout.write(`${changed} of ${results.length} documents re-derived\n`);
         }
       });
       return 0;

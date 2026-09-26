@@ -82,16 +82,28 @@ export const ReadInputSchema: z.ZodType<ReadInput> = z.strictObject({
   max_output_bytes: z
     .number()
     .int()
-    .min(1024)
+    .min(64)
     .max(4 * 1024 * 1024)
-    .optional(),
+    .optional()
+    .describe("Byte budget for the response body (min 64). Use raw_slice + offset_bytes for large documents."),
   offset_bytes: z.number().int().min(0).optional().describe("Only for target=raw_slice"),
   refresh: z.boolean().optional(),
 });
 
 export const SearchInputSchema: z.ZodType<SearchInput> = z.strictObject({
-  query: z.string().min(2).max(2000),
+  query: z
+    .string()
+    .min(2)
+    .max(2000)
+    .describe(
+      "Free text and quoted phrases, ANDed. Upper-case OR / AND / NOT are boolean operators; lower-case or/and/not are literal words.",
+    ),
   scope: z.enum(["auto", "catalog", "text"]).optional().describe("auto (default) prefers catalog hits, then text"),
+  ensure_rfcs: z
+    .array(z.number().int().min(1).max(99_999))
+    .max(20)
+    .optional()
+    .describe("Ingest these RFCs before searching; text search only covers ingested documents"),
   ...PageShape,
   context_chars: z.number().int().min(40).max(2000).optional(),
   block_kinds: z.array(z.string()).optional().describe("Restrict text search to block kinds, e.g. ['paragraph']"),
@@ -104,6 +116,13 @@ export const RequirementsInputSchema: z.ZodType<RequirementsInput> = z.strictObj
   keyword: z.string().max(64).optional().describe("Substring filter over the requirement text"),
   ...PageShape,
   include_mentions: z.boolean().optional().describe("Include non-requirement mentions (default true)"),
+  include_candidates: z
+    .boolean()
+    .optional()
+    .describe(
+      "Include requirement-shaped statements the strict upper-case extractor rejected, e.g. 'Must be zero' (default true). Read these before concluding a document states no requirements.",
+    ),
+  max_candidates: z.number().int().min(1).max(2000).optional().describe("Cap on non-strict candidates (default 500)"),
   refresh: z.boolean().optional(),
 });
 
@@ -138,7 +157,10 @@ export const DiffInputSchema: z.ZodType<DiffInput> = z.strictObject({
 
 export const ErrataInputSchema: z.ZodType<ErrataInput> = z.strictObject({
   ...AnchorShape,
-  status: z.enum(["verified", "reported", "rejected", "held_for_document_update", "any"]).optional(),
+  status: z
+    .enum(["verified", "reported", "rejected", "held_for_document_update", "any"])
+    .optional()
+    .describe("Erratum status, or 'any' for every status (the default). The response reports available_statuses."),
   ...PageShape,
   refresh: z.boolean().optional(),
 });

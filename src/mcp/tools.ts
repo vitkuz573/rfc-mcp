@@ -182,7 +182,7 @@ export function registerTools(server: McpServer, service: RfcService): void {
     {
       title: "Search the RFC catalog and ingested corpus",
       description:
-        'Bounded search over catalog metadata (title, abstract, keywords, authors, status, stream) and, when documents are ingested, over section text. Grammar: free text, "exact phrase", and filters rfc:9110 section:7.4 keyword:MUST status:std stream:IETF author:Fielding relation:normative. Never exposes raw query syntax to the engine. Every text hit carries a citation_id that rfc_verify_citation accepts directly. A filter that the chosen scope cannot honour is reported in warnings, never dropped silently.',
+        'Bounded search over catalog metadata (title, abstract, keywords, authors, status, stream) and, when documents are ingested, over section text. Grammar: free text, "exact phrase", filters rfc:9110 section:7.4 keyword:MUST status:std stream:IETF author:Fielding relation:normative, and the upper-case boolean operators OR, AND and NOT (lower-case or/and/not are ordinary words). Never exposes raw query syntax to the engine. Every text hit carries a citation_id that rfc_verify_citation accepts directly. Text search covers only ingested documents, so the response reports corpus.coverage and a zero-hit result from a partial corpus is flagged; pass ensure_rfcs to ingest specific documents first. A filter that the chosen scope cannot honour is reported in warnings, never dropped silently.',
       inputSchema: SearchInputSchema,
       outputSchema: EnvelopeSchema,
       annotations: ANNOTATIONS,
@@ -195,7 +195,7 @@ export function registerTools(server: McpServer, service: RfcService): void {
     {
       title: "Extract RFC 2119/8174 requirements",
       description:
-        "List normative statements (MUST/MUST NOT/SHOULD/SHOULD NOT/MAY/REQUIRED/OPTIONAL, upper case per RFC 8174) with the exact quoted sentence, section, clause split (condition/actor/action/exception), parse status, confidence and a verifiable citation id. Code, tables, figures, references and quoted definitions are excluded by design and reported as mentions.",
+        'List normative statements (MUST/MUST NOT/SHOULD/SHOULD NOT/MAY/REQUIRED/OPTIONAL, upper case per RFC 8174) with the exact quoted sentence, section, clause split (condition/actor/action/exception), parse status, confidence and a verifiable citation id. Code, tables, figures, references and quoted definitions are excluded by design and reported as mentions. Because the strict reading is upper-case only, a count of 0 is not evidence that a document states no requirements: non_strict_candidates lists the requirement-shaped statements that were rejected (RFC 1035\'s "Must be zero" in a field table, RFC 4033\'s lower-case "must"), each with keyword_case, the structural reason, and role (modal / non_modal / unknown) so vocabulary false positives such as "the recommended method" can be filtered out. Treat role=unknown as unresolved, not as a rule. coverage reports how many prose blocks were scanned. Candidates are NOT requirements and are never counted as such.',
       inputSchema: RequirementsInputSchema,
       outputSchema: EnvelopeSchema,
       annotations: ANNOTATIONS,
@@ -247,7 +247,7 @@ export function registerTools(server: McpServer, service: RfcService): void {
     {
       title: "Errata overlay for an RFC",
       description:
-        "Verified, reported, rejected and held-for-document-update errata with section, original and corrected text. Errata are NOT incorporated into the published TXT/PDF/XML; this is an overlay, never a patch applied to the snapshot.",
+        "Verified, reported, rejected and held-for-document-update errata with section, original and corrected text. Errata are NOT incorporated into the published TXT/PDF/XML; this is an overlay, never a patch applied to the snapshot. Omit status, or pass 'any', for every status. A status filter reports available_statuses and total_unfiltered alongside the rows, and a filter that matches nothing names the statuses that do have errata, so an empty list is never ambiguous.",
       inputSchema: ErrataInputSchema,
       outputSchema: EnvelopeSchema,
       annotations: ANNOTATIONS,

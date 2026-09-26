@@ -57,7 +57,39 @@ const APPENDIX_HEADING = /^Appendix\s+([A-Z](?:\.\d+)*)\.?\s*(\S.*)?$/u;
 const UNNUMBERED_HEADING =
   /^(Abstract|Status of (?:This|These) Memo|Copyright Notice|Notice of TBD|Errata|Acknowledg(?:e)?ments?|Authors?'?s? Address(?:es)?|Contributors|Index|References|Normative References|Informative References|Change Log|Intellectual Property|Full Copyright Statement|Preface)$/iu;
 
-const PAGE_FURNITURE = [/^\[Page\s+\d+\]$/u, /^\[RFC\d+[^\]]*\]$/iu, /^\[Email\]$/iu, /^\[Note\]$/iu, /^\*Note\*$/u];
+/**
+ * Lines that carry no content and exist only because the document was printed.
+ *
+ * Two shapes occur in the corpus, from two publication eras. Modern RFCs mark the
+ * break explicitly with a form feed or a bare `[Page 26]`. RFCs published before the
+ * RFC Editor regenerated them in the current plain-text format carry a running head
+ * and a running foot instead:
+ *
+ *     Mockapetris                                     [Page 26]
+ *     RFC 1035        Domain Implementation and Specification   November 1987
+ *
+ * The anchored patterns match only the first shape, so on an old RFC the header
+ * field table came back interleaved with its own page furniture. That is not
+ * cosmetic: this text is what a caller quotes, and a quote of the RFC 1035 message
+ * format that reads `Mockapetris [Page 26]` in the middle of it cannot be checked
+ * against the specification by hand.
+ *
+ * Every pattern is deliberately narrow. A line that merely mentions a page number,
+ * or cites `RFC 1035`, is body text and must survive. The running foot is pinned by
+ * requiring a month and a four-digit year as the final two fields, the one shape no
+ * protocol sentence has.
+ */
+const PAGE_FURNITURE: readonly RegExp[] = [
+  /^\[Page\s+\d+\]$/u,
+  /^\[RFC\d+[^\]]*\]$/iu,
+  /^\[Email\]$/u,
+  /^\[Note\]$/u,
+  /^\*Note\*$/u,
+  // Running head: a running author or title, padded, closed by the page marker.
+  /^.{0,72}\[\s*Page\s+\d+\s*\]$/u,
+  // Running foot: `RFC <n>`, the document title, then the publication month and year.
+  /^RFC\s+\d{1,5}\s{2,}\S.*\s{2,}(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}\s*$/u,
+];
 
 const KEYWORD_LEAD =
   /^(?:MUST NOT|SHALL NOT|SHOULD NOT|NOT RECOMMENDED|MUST|SHALL|REQUIRED|SHOULD|RECOMMENDED|MAY|OPTIONAL)\b[\s,]/u;
@@ -81,6 +113,11 @@ export function parseRfcText(input: ParseInput): ParsedDocument {
   if (!text.endsWith("\n")) warnings.push("source_has_no_trailing_newline");
 
   const lines = splitLines(text);
+  // Counted, not just dropped: a document whose blocks are full of running heads is
+  // a parse that needs looking at, and a silent cleanup would hide the difference
+  // between "this RFC has page markers" and "this parser is dropping content".
+  const furnitureLines = lines.filter((line) => isPageFurniture(line)).length;
+  if (furnitureLines > 0) warnings.push(`page_furniture_lines_dropped:${furnitureLines}`);
   const toc = extractToc(lines, warnings);
   const { headings, rejected } = findHeadings(lines, toc.numbers);
   rejectedColumnOneItems = rejected;

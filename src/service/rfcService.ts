@@ -32,10 +32,11 @@ import {
   type Section,
   type Snapshot,
 } from "../core/types.js";
+import { canonicalErrataStatus, type ErrataStatus } from "../core/types.js";
 import { citationId, quoteHash } from "../analysis/citation.js";
 import { diffDocuments, type DiffMode, type DiffSide } from "../analysis/diff.js";
 import { analyzeReferences, buildGraph } from "../analysis/references.js";
-import { analyzeNormative } from "../analysis/normative.js";
+import { analyzeNormative, analyzeNormativeCandidates, splitSentences } from "../analysis/normative.js";
 import { parseRfcXmlOutline } from "../parse/rfcXml.js";
 import { parseRfcText } from "../parse/text.js";
 import { CorpusStore, catalogHash, type DocumentBundle } from "../store/database.js";
@@ -100,6 +101,11 @@ export interface ReadInput extends Anchor {
 export interface SearchInput {
   readonly query: string;
   readonly scope?: "auto" | "catalog" | "text";
+  /**
+   * Documents to ingest before the search runs, so a text search is not silently
+   * limited to whatever happens to be cached.
+   */
+  readonly ensure_rfcs?: number[];
   readonly max_results?: number;
   readonly cursor?: string;
   readonly context_chars?: number;
@@ -110,6 +116,12 @@ export interface RequirementsInput extends Anchor {
   readonly scope?: string;
   readonly term?: string;
   readonly keyword?: string;
+  /**
+   * Include requirement-shaped statements the strict upper-case extractor rejected.
+   * Default true: without them a count of 0 cannot be told apart from a parser gap.
+   */
+  readonly include_candidates?: boolean;
+  readonly max_candidates?: number;
   readonly max_results?: number;
   readonly cursor?: string;
   readonly include_mentions?: boolean;
@@ -520,6 +532,26 @@ export class RfcService {
     if (input.snapshot_id) {
       const snapshot = this.store.getSnapshot(input.snapshot_id);
       if (!snapshot) {
+        // A pin retired by a rule-version bump is not an unknown id: the caller named
+        // a real derivation of a real document. Saying which document, and what now
+        // stands in for it, is the difference between a recoverable mistake and a
+        // dead end that sends the caller back to guessing.
+        const redirect = this.store.getSnapshotRedirect(input.snapshot_id);
+        if (redirect) {
+          throw new RfcMcpError(
+            "NOT_FOUND",
+            `Snapshot ${input.snapshot_id} was superseded: it is RFC ${redirect.rfc}, now derived as ${redirect.new_id}. Re-pin against the current id; the document bytes are unchanged unless raw_sha256 differs.`,
+            {
+              details: {
+                snapshot_id: input.snapshot_id,
+                superseded_by: redirect.new_id,
+                rfc: redirect.rfc,
+                reason: "rule_version_changed",
+              },
+              retryable: false,
+            },
+          );
+        }
         throw new RfcMcpError("NOT_FOUND", `Unknown snapshot: ${input.snapshot_id}`, {
           details: { snapshot_id: input.snapshot_id },
           retryable: false,
@@ -611,13 +643,12 @@ export class RfcService {
       };
     }
     if (include.has("errata_summary")) {
+      // Counted in SQL over the whole set, not over one page: a by_status map built
+      // from a bounded page silently reads as "this is all of them".
       const errata = this.store.getErrata(record.rfc, null, 200, 0);
       data.errata_summary = {
         total: errata.total,
-        by_status: errata.rows.reduce<Record<string, number>>((acc, item) => {
-          acc[item.status] = (acc[item.status] ?? 0) + 1;
-          return acc;
-        }, {}),
+        by_status: this.store.countErrataByStatus(record.rfc),
         fetched: this.store.hasErrata(record.rfc),
       };
     }
@@ -638,10 +669,21 @@ export class RfcService {
       refresh: input.refresh,
       signal: context.signal,
     });
-    const maxBytes = clamp(input.max_output_bytes ?? this.config.limits.maxOutputBytes, 1024, 4 * 1024 * 1024);
+    // The floor is a byte budget, not a page size: 64 bytes is a legitimate budget
+    // for "give me the first line", and a 1 KiB minimum would reject a question the
+    // server can answer exactly. Truncation is always reported, so a small budget
+    // narrows the answer instead of failing it.
+    const maxBytes = clamp(input.max_output_bytes ?? this.config.limits.maxOutputBytes, 64, 4 * 1024 * 1024);
     const include = new Set(input.include ?? ["text", "blocks", "source_map"]);
     const warningsOut = [...warnings];
     if (!pinned) warningsOut.push("snapshot_not_explicitly_pinned");
+    // Asking for `blocks` and getting rows whose `text` is empty is a successful
+    // response that answers a different question. `source_map` is what carries the
+    // text, so an explicit list without it has to say so rather than look identical
+    // to a section that genuinely has no text.
+    if (input.include !== undefined && include.has("blocks") && !include.has("source_map")) {
+      warningsOut.push("block_text_suppressed_add_source_map_to_include_or_omit_include_entirely");
+    }
 
     const target = input.target ?? "section";
     if (target === "outline") {
@@ -821,9 +863,13 @@ export class RfcService {
     input: SearchInput,
     context: RequestContext = {},
   ): Promise<
-    Envelope<{ scope: string; hits: SearchHit[]; total: number; corpus: { generation: number; documents: number } }>
+    Envelope<{
+      scope: string;
+      hits: SearchHit[];
+      total: number;
+      corpus: { generation: number; documents: number; catalog_documents: number; coverage: string };
+    }>
   > {
-    void context;
     const limit = clamp(
       input.max_results ?? this.config.limits.maxSearchResults,
       1,
@@ -831,7 +877,24 @@ export class RfcService {
     );
     const query = parseQuery(input.query, { maxChars: this.config.limits.maxQueryChars });
     const match = buildFtsMatch(query);
-    const warnings: string[] = [];
+    const warnings: string[] = [...query.notes];
+
+    // A text search can only see documents that are ingested. Resolving them here
+    // turns "search the corpus" into an operation with a stated scope instead of one
+    // whose scope is whatever a previous session happened to download.
+    const ensured: number[] = [];
+    if (input.ensure_rfcs && input.ensure_rfcs.length > 0) {
+      for (const rfc of [...new Set(input.ensure_rfcs)].slice(0, 20)) {
+        try {
+          const resolved = await this.ensureSnapshot(rfc, { signal: context.signal });
+          ensured.push(resolved.snapshot.rfc);
+          warnings.push(...resolved.warnings.map((warning) => `ensure_rfc${rfc}:${warning}`));
+        } catch (error) {
+          warnings.push(`ensure_rfc${rfc}_failed:${codeOf(error)}`);
+        }
+      }
+    }
+
     const generation = this.store.getGeneration();
     const binding = `${generation}|${input.scope ?? "auto"}|${stable(input.query)}|${limit}`;
     const offset = input.cursor ? decodeCursor(input.cursor, this.cursorSecret, binding).o : 0;
@@ -843,6 +906,8 @@ export class RfcService {
     }
 
     const contextChars = clamp(input.context_chars ?? this.config.limits.maxContextChars, 40, 2000);
+    const catalogDocuments = this.store.countCatalog();
+    const ingestedDocuments = this.store.status().snapshots;
     if (scope === "catalog") {
       const result = this.store.searchCatalog({
         match,
@@ -872,7 +937,17 @@ export class RfcService {
       const unsupported = unsupportedCatalogFilters(query);
       if (unsupported.length > 0) warnings.push(`filters_not_applied_to_catalog:${unsupported.join(",")}`);
       return this.envelope(
-        { scope, hits, total: result.total, corpus: { generation, documents: this.store.countCatalog() } },
+        {
+          scope,
+          hits,
+          total: result.total,
+          corpus: {
+            generation,
+            documents: catalogDocuments,
+            catalog_documents: catalogDocuments,
+            coverage: "catalog_titles_and_abstracts",
+          },
+        },
         { warnings, nextCursor, appliedLimits: { max_results: limit } },
       );
     }
@@ -942,15 +1017,34 @@ export class RfcService {
     if (textUnsupported.length > 0) {
       warnings.push(`filters_not_applied_to_text:${textUnsupported.join(",")}`);
     }
-    if (this.store.countCatalog() > 0 && this.store.status().snapshots === 0) {
+    if (catalogDocuments > 0 && ingestedDocuments === 0) {
       warnings.push("corpus_has_no_ingested_documents_run_sync_rfc");
+    }
+    // Zero hits from a partially ingested corpus is the most misleading answer this
+    // server can give: the document that holds the term may simply not be loaded.
+    // `no_text_match` is only a statement about the corpus when the corpus is whole.
+    if (total === 0 && ingestedDocuments < catalogDocuments) {
+      warnings.push(
+        `text_search_covers_ingested_documents_only:ingested=${ingestedDocuments},catalog=${catalogDocuments},resolve_the_rfc_first_or_pass_ensure_rfcs`,
+      );
     }
     const nextCursor =
       offset + hits.length < total
         ? encodeCursor({ o: offset + hits.length, g: generation, b: binding }, this.cursorSecret)
         : null;
     return this.envelope(
-      { scope, hits, total, corpus: { generation, documents: this.store.status().snapshots } },
+      {
+        scope,
+        hits,
+        total,
+        corpus: {
+          generation,
+          documents: ingestedDocuments,
+          catalog_documents: catalogDocuments,
+          coverage: `ingested_text_only:${ingestedDocuments}/${catalogDocuments}`,
+        },
+        ...(ensured.length > 0 ? { ensured_rfcs: ensured } : {}),
+      },
       { warnings, nextCursor, appliedLimits: { max_results: limit, context_chars: contextChars } },
     );
   }
@@ -968,7 +1062,12 @@ export class RfcService {
     generation: number,
     binding: string,
     warnings: string[],
-  ): Envelope<{ scope: string; hits: SearchHit[]; total: number; corpus: { generation: number; documents: number } }> {
+  ): Envelope<{
+    scope: string;
+    hits: SearchHit[];
+    total: number;
+    corpus: { generation: number; documents: number; catalog_documents: number; coverage: string };
+  }> {
     if (input.scope === "text") warnings.push("catalog_facets_only_scope_relaxed_to_catalog");
     const result = this.store.searchCatalog({
       match: null,
@@ -993,8 +1092,19 @@ export class RfcService {
       offset + hits.length < result.total
         ? encodeCursor({ o: offset + hits.length, g: generation, b: binding }, this.cursorSecret)
         : null;
+    const catalogDocuments = this.store.countCatalog();
     return this.envelope(
-      { scope: "catalog", hits, total: result.total, corpus: { generation, documents: this.store.countCatalog() } },
+      {
+        scope: "catalog",
+        hits,
+        total: result.total,
+        corpus: {
+          generation,
+          documents: catalogDocuments,
+          catalog_documents: catalogDocuments,
+          coverage: "catalog_titles_and_abstracts",
+        },
+      },
       { warnings, nextCursor, appliedLimits: { max_results: limit } },
     );
   }
@@ -1081,6 +1191,9 @@ export class RfcService {
         )
       : requirements;
 
+    const warningsOut = [...warnings];
+    if (!pinned) warningsOut.push("snapshot_not_explicitly_pinned");
+
     const data: Record<string, unknown> = {
       document: record,
       snapshot_id: snapshot.id,
@@ -1092,22 +1205,69 @@ export class RfcService {
         term_filter: input.term ?? null,
         keyword_filter: input.keyword ?? null,
         blocks_scanned: snapshot.block_count,
+        prose_blocks_scanned: snapshot.prose_block_count,
       },
       interpretation: {
         normative_terms: "RFC 2119 / RFC 8174, upper case only",
         caveat:
-          "A missing requirement is not proof of absence: only prose blocks are scanned, and code, tables, figures and reference sections are excluded by design.",
+          "A missing requirement is not proof of absence: only prose blocks are scanned, and code, tables, figures and reference sections are excluded by design. Read non_strict_candidates before concluding that a document states no requirements.",
       },
     };
     if (input.include_mentions !== false) {
       data.mentions = this.store.getMentions(snapshot.id, 500);
     }
+
+    // A zero requirement count is only a statement about absence once the reader can
+    // see what was rejected. The candidate pass runs over the stored blocks, so it
+    // needs no re-ingest and stays correct for every snapshot in the corpus.
+    if (input.include_candidates !== false) {
+      const sections = this.store.getSections(snapshot.id);
+      // A candidate list that ignored `scope` would answer a different question
+      // than the requirement list beside it, and the two are read together.
+      const scopeSections = input.scope
+        ? sections.filter((section) => section.number === input.scope || section.number.startsWith(`${input.scope}.`))
+        : sections;
+      const scopeIds = new Set(scopeSections.map((section) => section.id));
+      const analysis = analyzeNormativeCandidates({
+        snapshotId: snapshot.id,
+        rfc: record.rfc,
+        sections: scopeSections,
+        blocks: this.store.listBlocksWithKeywords(snapshot.id).filter((block) => scopeIds.has(block.section_id)),
+        ...(input.max_candidates !== undefined ? { limit: input.max_candidates } : {}),
+      });
+      const sectionById = new Map(sections.map((section) => [section.id, section.number]));
+      const bySection: Record<string, number> = {};
+      for (const candidate of analysis.candidates) {
+        const key = sectionById.get(candidate.section_id) ?? candidate.section_id;
+        bySection[key] = (bySection[key] ?? 0) + 1;
+      }
+      data.non_strict_candidates = {
+        total: analysis.candidates.length,
+        by_keyword: analysis.by_keyword,
+        by_keyword_case: analysis.by_case,
+        by_reason: analysis.by_reason,
+        by_role: analysis.by_role,
+        by_section: bySection,
+        scanned_blocks: analysis.scanned_blocks,
+        unreadable_blocks: analysis.unreadable_blocks,
+        candidates: analysis.candidates.map((candidate) => ({
+          ...candidate,
+          section: sectionById.get(candidate.section_id) ?? null,
+        })),
+        note: "Requirement-shaped statements the strict upper-case extractor rejected. Per RFC 8174 section 3 an uncapitalised keyword has no normative force, so these are NOT requirements; they are reported so a zero requirement count is not mistaken for the absence of normative language. keyword_case says which capitalisation was found; reason names the structural cause when capitalisation is not the only one. role says whether the keyword is in modal position: filter on role=modal, but treat role=unknown as unresolved rather than as a rule, because the classifier is a shape heuristic and not a parser.",
+      };
+      warningsOut.push(...analysis.warnings.map((warning) => `candidates:${warning}`));
+      if (analysis.candidates.length > 0) {
+        warningsOut.push(
+          `zero_or_few_requirements_but_${analysis.candidates.length}_non_strict_candidates:read_non_strict_candidates`,
+        );
+      }
+    }
+
     const nextCursor =
       offset + rows.length < total
         ? encodeCursor({ o: offset + rows.length, g: generation, b: binding }, this.cursorSecret)
         : null;
-    const warningsOut = [...warnings];
-    if (!pinned) warningsOut.push("snapshot_not_explicitly_pinned");
     return this.envelope(data, {
       snapshot,
       warnings: warningsOut,
@@ -1322,7 +1482,16 @@ export class RfcService {
   async errata(
     input: ErrataInput,
     context: RequestContext = {},
-  ): Promise<Envelope<{ errata: Erratum[]; total: number; note: string }>> {
+  ): Promise<
+    Envelope<{
+      errata: Erratum[];
+      total: number;
+      total_unfiltered: number;
+      status_filter: ErrataStatus | "any" | null;
+      available_statuses: Record<string, number>;
+      note: string;
+    }>
+  > {
     const { snapshot, record, warnings, freshness } = await this.anchor(input, {
       refresh: input.refresh,
       signal: context.signal,
@@ -1342,9 +1511,30 @@ export class RfcService {
       this.config.limits.maxRelationPageSize,
     );
     const generation = this.store.getGeneration();
-    const binding = `${generation}|errata|${record.rfc}|${input.status ?? ""}|${limit}`;
+    // `any` and an absent filter are the same question, so they must produce the
+    // same cursor: a caller paging with `any` and then without it stays on one
+    // result set instead of silently restarting.
+    const requested = input.status ?? null;
+    const effective = requested !== null && requested.toLowerCase() === "any" ? null : requested;
+    const binding = `${generation}|errata|${record.rfc}|${effective ?? ""}|${limit}`;
     const offset = input.cursor ? decodeCursor(input.cursor, this.cursorSecret, binding).o : 0;
-    const result = this.store.getErrata(record.rfc, input.status ?? null, limit, offset);
+    const result = this.store.getErrata(record.rfc, effective, limit, offset);
+    const available = this.store.countErrataByStatus(record.rfc);
+    const totalUnfiltered = Object.values(available).reduce((sum, value) => sum + value, 0);
+
+    // An empty filtered answer is only interpretable next to what does exist. Without
+    // this, `status=held_for_document_update` returning zero is indistinguishable from
+    // an RFC that has no errata at all.
+    if (result.total === 0 && totalUnfiltered > 0) {
+      warnings.push(
+        effective === null
+          ? "errata_empty"
+          : `no_errata_with_status:${effective}:available=${Object.entries(available)
+              .filter(([, count]) => count > 0)
+              .map(([status]) => status)
+              .join(",")}`,
+      );
+    }
     const nextCursor =
       offset + result.rows.length < result.total
         ? encodeCursor({ o: offset + result.rows.length, g: generation, b: binding }, this.cursorSecret)
@@ -1353,6 +1543,10 @@ export class RfcService {
       {
         errata: result.rows,
         total: result.total,
+        total_unfiltered: totalUnfiltered,
+        status_filter: (effective === null ? (requested === null ? null : "any") : canonicalErrataStatus(effective)) as
+          ErrataStatus | "any" | null,
+        available_statuses: available,
         note: "Errata are not incorporated into the TXT, PDF or XML publication versions of an RFC; this list is an overlay, never a patch.",
       },
       { snapshot, warnings, freshness, nextCursor, appliedLimits: { max_results: limit } },
@@ -1464,11 +1658,17 @@ export class RfcService {
   /* ---------------------------------------------------------------------- */
 
   /**
-   * Resolves a text-search citation id back to its block. Search citations are not
-   * stored rows, so the id is recomputed with the same identity function over the
-   * document's blocks; the scan is bounded by the number of blocks in one snapshot.
+   * Resolves a derived citation id back to the block that produced it. Search hits
+   * and non-strict candidates are computed on demand rather than stored, so the id
+   * is recomputed with the same identity function over the document's blocks; the
+   * scan is bounded by the number of blocks in one snapshot.
+   *
+   * Both shapes are reconstructed because both are handed out with a citation id:
+   * a search hit cites a whole block, a candidate cites one sentence at a keyword
+   * offset. A candidate that could not be verified would break the server's one
+   * standing promise about derived facts.
    */
-  private findBlockBySearchCitation(
+  private findBlockByDerivedCitation(
     snapshotId: string,
     citation: string,
   ): { id: string; section_id: string; char_start: number; text: string; kind: string } | null {
@@ -1482,6 +1682,21 @@ export class RfcService {
         }) === citation
       ) {
         return block;
+      }
+      for (const sentence of splitSentences(block.text)) {
+        for (const match of sentence.text.matchAll(/\S+/gu)) {
+          const charStart = block.char_start + sentence.start + match.index;
+          if (
+            citationId({
+              snapshotId,
+              blockId: block.id,
+              byteStart: charStart,
+              quote: sentence.text,
+            }) === citation
+          ) {
+            return { ...block, char_start: charStart, text: sentence.text };
+          }
+        }
       }
     }
     return null;
@@ -1541,7 +1756,7 @@ export class RfcService {
     );
     let resolvedFromBlock = false;
     if (matches.length === 0 && input.citation_id) {
-      const block = this.findBlockBySearchCitation(snapshot.id, input.citation_id);
+      const block = this.findBlockByDerivedCitation(snapshot.id, input.citation_id);
       if (block) {
         matches = [
           {
@@ -1575,7 +1790,7 @@ export class RfcService {
       } else {
         if (resolvedFromBlock) {
           notes.push(
-            `citation resolved to stored block ${block.id} (${block.kind}); no requirement or mention record carries this id`,
+            `citation recomputed from block ${block.id} (${block.kind}); no stored requirement or mention record carries this id`,
           );
         }
         const slice = raw.subarray(block.byte_start, block.byte_end).toString("utf8");
@@ -1718,8 +1933,26 @@ export class RfcService {
         free_text: true,
         quoted_phrase: true,
         filters: ["rfc:", "section:", "keyword:", "status:", "stream:", "author:", "relation:", "term:"],
+        boolean_operators: {
+          operators: ["OR", "AND", "NOT"],
+          case_sensitive: true,
+          note: "Upper case only. Lower-case or/and/not are ordinary words and are matched as text, because they occur inside RFC prose.",
+          not_example: '"TSIG" OR "SIG(0)" NOT "TOFU"',
+        },
+        coverage: {
+          catalog: "Every catalog entry: title, abstract, keywords, authors, status, stream.",
+          text: "Only ingested documents. A zero-hit result from a partially ingested corpus is flagged in warnings; pass ensure_rfcs to ingest specific documents first.",
+        },
         unsupported: ["raw SQL", "shell", "unbounded regex", "embedding search"],
       },
+      reading_rules: [
+        "A requirement count of 0 means no UPPER-CASE RFC 2119 keyword was found, not that a document states no requirements. Read requirements.non_strict_candidates before drawing that conclusion.",
+        "non_strict_candidates is a lead list, not a contract. Filter on role=modal; role=unknown means the shape was not decidable without a parser and must be read, not assumed.",
+        "A search result of 0 in text scope means the term is absent from the ingested documents, not from the RFC corpus. The coverage field states how much of the corpus was searched.",
+        "An empty errata list is reported with the statuses that do have errata, so 'none of that status' and 'none at all' stay distinguishable.",
+        "A read that lists blocks without source_map returns rows whose text is empty. Omit include entirely, or add source_map, to get the text.",
+        "A snapshot id pins one derivation under one parser and extractor version. After a version bump the id is retired; the error names the document and its current id rather than reporting an unknown snapshot.",
+      ],
       limits: this.config.limits,
       sources: [
         { name: "RFC Editor", hosts: ["www.rfc-editor.org"], role: "canonical metadata and publication files" },

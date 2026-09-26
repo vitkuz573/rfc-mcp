@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { analyzeNormative, splitSentences } from "../src/analysis/normative.js";
+import { analyzeNormative, analyzeNormativeCandidates, splitSentences } from "../src/analysis/normative.js";
 import { parseRfcText } from "../src/parse/text.js";
 import type { Block, Section } from "../src/core/types.js";
 
@@ -146,10 +146,220 @@ describe("RFC 2119 / 8174 extraction", () => {
     expect(first.analysis.requirements[0]?.citation_id).toMatch(/^cit_[0-9a-f]{24}$/u);
   });
 
+  it("drops a running head and a running foot as page furniture", () => {
+    // RFC 1035 predates the plain-text format the RFC Editor now generates, so its
+    // page breaks are a running head and a running foot rather than a bare marker.
+    // Left in, they become a paragraph block of their own and split the field table.
+    const raw = [
+      "4.1.1.  Header Fields",
+      "",
+      "                                    1  1  1  1  1  1",
+      "       +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+",
+      "",
+      "Mockapetris                                                    [Page 26]",
+      "",
+      "RFC 1035        Domain Implementation and Specification    November 1987",
+      "",
+      "   Z               Reserved for future use.  Must be zero in all queries.",
+      "",
+    ].join("\n");
+    const { blocks } = analyze(raw);
+    const withFurniture = blocks.filter((block) => /\[Page \d+\]|Domain Implementation/u.test(block.text));
+    expect(withFurniture).toHaveLength(0);
+    const field = blocks.find((block) => /Reserved for future use/u.test(block.text));
+    // The block body stays a verbatim slice, indentation included, so its byte span
+    // and its text remain the same range of the source.
+    expect(field?.text).toBe("   Z               Reserved for future use.  Must be zero in all queries.");
+  });
+
+  it("keeps a body line that merely mentions a page number", () => {
+    // The furniture patterns have to be narrow: dropping real text is worse than
+    // leaving furniture in.
+    const { blocks } = analyze(
+      [
+        "2.  Rules",
+        "",
+        "   See the discussion on page 26 of the original memo for",
+        "   the full table of limits.",
+        "",
+      ].join("\n"),
+    );
+    expect(blocks.some((block) => /on page 26 of the original memo/u.test(block.text))).toBe(true);
+  });
+
   it("reports coverage instead of pretending completeness", () => {
     const { analysis } = analyze("2.  Rules\n\n   An implementation MUST emit the header.\n");
     expect(analysis.coverage.blocks_scanned).toBeGreaterThan(0);
     expect(analysis.coverage.mentions_found).toBe(1);
     expect(analysis.coverage.requirements_emitted).toBe(1);
+  });
+
+  it("keeps a list marker out of the actor", () => {
+    // RFC 6455-style list items reach the extractor with the marker still attached.
+    // "o  Message fragments" is not a sentence the RFC says and not something an
+    // implementer can act on.
+    const { analysis } = analyze(
+      [
+        "2.  Rules",
+        "",
+        "   o  Message fragments MUST be delivered in order.",
+        "",
+        "   o  A sender MAY create fragments.",
+        "",
+      ].join("\n"),
+    );
+    expect(analysis.requirements).toHaveLength(2);
+    for (const requirement of analysis.requirements) {
+      expect(requirement.clause.actor).not.toMatch(/^o\b/u);
+      expect(requirement.flags).toContain("list_marker_stripped_from_clause");
+    }
+    expect(analysis.requirements[0]?.clause.actor).toBe("Message fragments");
+    expect(analysis.requirements[1]?.clause.actor).toBe("A sender");
+  });
+
+  it("collapses the hard-wrapped layout of a clause without changing its meaning", () => {
+    const { analysis } = analyze(
+      [
+        "2.  Rules",
+        "",
+        "   A server that sends a 100 (Continue) response",
+        "   MUST ultimately send a final status code.",
+        "",
+      ].join("\n"),
+    );
+    expect(analysis.requirements[0]?.clause.actor).toBe("A server that sends a 100 (Continue) response");
+    expect(analysis.requirements[0]?.clause.action).toBe("ultimately send a final status code.");
+  });
+});
+
+describe("non-strict normative candidates", () => {
+  function candidates(raw: string): ReturnType<typeof analyzeNormativeCandidates> {
+    const parsed = parseRfcText({
+      rfc: 9999,
+      snapshotId: SNAPSHOT,
+      raw: Buffer.from(raw, "utf8"),
+      parserVersion: "test",
+    });
+    return analyzeNormativeCandidates({
+      snapshotId: SNAPSHOT,
+      rfc: 9999,
+      sections: parsed.sections,
+      blocks: parsed.blocks,
+    });
+  }
+
+  it("surfaces a title-case requirement the strict reading cannot promote", () => {
+    // The RFC 1035 §4.1.1 header field table: binding on an implementer, but written
+    // "Must", which RFC 8174 §3 gives no normative force.
+    const analysis = candidates(
+      [
+        "4.1.1.  Header Fields",
+        "",
+        "   Z               Reserved for future use.  Must be zero in all",
+        "                       queries and responses.",
+        "",
+      ].join("\n"),
+    );
+    expect(analysis.candidates).toHaveLength(1);
+    expect(analysis.candidates[0]?.keyword).toBe("Must");
+    expect(analysis.candidates[0]?.keyword_case).toBe("title");
+    expect(analysis.by_case.title).toBe(1);
+  });
+
+  it("surfaces a lower-case requirement with the reason it was skipped", () => {
+    const analysis = candidates("2.  Rules\n\n   A name server must compare labels case-insensitively.\n");
+    expect(analysis.candidates).toHaveLength(1);
+    expect(analysis.candidates[0]?.keyword_case).toBe("lower");
+    // Capitalisation is the only reason here, so there is no structural cause.
+    expect(analysis.candidates[0]?.reason).toBeNull();
+    expect(analysis.by_keyword.must).toBe(1);
+  });
+
+  it("does not re-report what the strict extractor already owns", () => {
+    const analysis = candidates("2.  Rules\n\n   An implementation MUST emit the header.\n");
+    expect(analysis.candidates).toHaveLength(0);
+  });
+
+  it("reports candidates from blocks the strict extractor skips", () => {
+    const analysis = candidates(
+      ["2.  Rules", "", "   Example:", "", "      the resolver must set the AD bit", "", "   Done.", ""].join("\n"),
+    );
+    const nonProse = analysis.candidates.filter((candidate) => candidate.reason === "non_prose_block");
+    expect(nonProse.length).toBeGreaterThan(0);
+    // Both facts are reported: the block kind is the actionable one, the case the
+    // one RFC 8174 speaks to.
+    expect(nonProse[0]?.keyword_case).toBe("lower");
+    expect(analysis.by_reason.non_prose_block).toBe(nonProse.length);
+  });
+
+  it("gives every candidate a verifiable citation id", () => {
+    const analysis = candidates("2.  Rules\n\n   A name server must compare labels.\n");
+    expect(analysis.candidates[0]?.citation_id).toMatch(/^cit_[0-9a-f]{24}$/u);
+  });
+
+  it("separates a modal keyword from an ordinary English one", () => {
+    // The noise that makes a lead list unusable: "recommended" and "optional" are
+    // also participles and adjectives, and "may" is also a plural noun.
+    const analysis = candidates(
+      [
+        "2.  Rules",
+        "",
+        "   Name servers and resolvers must compare labels in a case-insensitive manner.",
+        "",
+        "   Mail is delivered using the recommended method for mail routing.",
+        "",
+        "   Recursive query support is an optional part of the DNS.",
+        "",
+        "   Many may object to this restriction.",
+        "",
+      ].join("\n"),
+    );
+    const byText = (fragment: string) => analysis.candidates.find((c) => c.exact_text.includes(fragment));
+    expect(byText("must compare labels")?.role).toBe("modal");
+    expect(byText("recommended method")?.role).toBe("non_modal");
+    expect(byText("optional part")?.role).toBe("non_modal");
+    expect(byText("Many may object")?.role).toBe("non_modal");
+    expect(analysis.by_role.modal).toBe(1);
+    expect(analysis.by_role.non_modal).toBe(3);
+  });
+
+  it("falls through to the structural test when the noise pattern does not match", () => {
+    // `may` after a subject and before a verb is a modal, even though it is one of
+    // the keywords a noun reading would also produce.
+    const analysis = candidates("2.  Rules\n\n   A server may omit the 100 (Continue) response.\n");
+    expect(analysis.candidates[0]?.role).toBe("modal");
+  });
+
+  it("does not call a sentence-final keyword a modal rule", () => {
+    // Nothing follows the keyword, so there is no verb phrase for a modal to govern.
+    const analysis = candidates("2.  Rules\n\n   The requirement applies to any implementation that may.\n");
+    const candidate = analysis.candidates.find((c) => c.keyword === "may");
+    expect(candidate?.role).toBe("non_modal");
+  });
+
+  it("never lets a role judgement change the requirement count", () => {
+    const { analysis } = analyze("2.  Rules\n\n   Mail uses the recommended method for routing.\n");
+    expect(analysis.requirements).toHaveLength(0);
+  });
+
+  it("bounds the candidate list and says so", () => {
+    const parsed = parseRfcText({
+      rfc: 9999,
+      snapshotId: SNAPSHOT,
+      raw: Buffer.from(
+        ["2.  Rules", "", ...Array.from({ length: 20 }, (_, i) => `   Item ${i} must be handled.`), ""].join("\n"),
+        "utf8",
+      ),
+      parserVersion: "test",
+    });
+    const analysis = analyzeNormativeCandidates({
+      snapshotId: SNAPSHOT,
+      rfc: 9999,
+      sections: parsed.sections,
+      blocks: parsed.blocks,
+      limit: 5,
+    });
+    expect(analysis.candidates).toHaveLength(5);
+    expect(analysis.warnings).toContain("candidates_truncated_at_5");
   });
 });

@@ -156,6 +156,31 @@ Disposition of a keyword occurrence:
 Hard rules: only upper case counts (RFC 8174 §3); the longest phrase wins; mixed case is never
 normative; a missing actor yields `partial` with `actor_not_explicit`, never an invented actor.
 
+The keyword set is the one RFC 2119 §3 and RFC 8174 §3 define — the 11 terms
+(`MUST`, `MUST NOT`, `REQUIRED`, `SHALL`, `SHALL NOT`, `SHOULD`, `SHOULD NOT`, `RECOMMENDED`,
+`NOT RECOMMENDED`, `MAY`, `OPTIONAL`). `OPTIONAL` is in the set because RFC 2119 §3.3 defines it;
+its disposition follows the same table as every other keyword, so a document that writes it
+inside a table or a list of keywords yields no requirement for it, exactly as for `MUST`.
+
+### The two representations do not agree, and should not
+
+`read` can return the same document from its plain text or from its RFCXML. The two renderings
+contain different prose, so the keyword sets derived from them differ, and the difference is not
+a defect to be reconciled:
+
+- the XML outline's `normative_terms` has no notion of the "Key words for use in RFCs" boilerplate
+  or of non-prose blocks, so it reports terms taken from those places that the text extractor
+  correctly discards as a `definition` or `ignored`;
+- the text extractor discards them, so those terms are absent from `requirements`;
+- the XML is sometimes the more complete rendering and sometimes the less complete one. Across
+  the HTTP and DNS families, each of the fourteen documents checked differed by one or two terms,
+  in both directions.
+
+`requirements` is the authoritative statement. Every item in it carries a `citation_id` that
+verifies against the stored publication bytes; `xml_outline` is a structural view of a second
+representation and its term list is descriptive, not a requirement list. When the two disagree,
+trust the text and the citation.
+
 ## 7. References
 
 ```jsonc

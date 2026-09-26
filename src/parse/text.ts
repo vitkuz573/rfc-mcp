@@ -96,6 +96,14 @@ const PAGE_FURNITURE: readonly RegExp[] = [
   /^.{0,72}\[\s*Page\s+\d+\s*\]$/u,
   // Running foot: `RFC <n>`, the document title, then the publication month and year.
   /^RFC\s+\d{1,5}\s{2,}\S.*\s{2,}(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}\s*$/u,
+  // The 1973-1984 typeset format puts the date alone on one line and closes the page
+  // with the title and the RFC number, with no month and year to anchor the pattern
+  // above. RFC 768 and RFC 792 print `28 Aug 1980` and `User Datagram Protocol ...
+  // RFC 768`; neither was claimed, so the date survived into a caller's copy and - the
+  // part that is not cosmetic - `28 August 1980` in the front matter was then read as
+  // a section numbered 28.
+  /^\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{4}$/u,
+  /^[A-Z][^\n]{0,60}?\s{2,}RFC\s+\d{1,5}\s*$/u,
 ];
 
 const KEYWORD_LEAD =
@@ -126,8 +134,13 @@ export function parseRfcText(input: ParseInput): ParsedDocument {
   const furnitureLines = lines.filter((line) => isPageFurniture(line)).length;
   if (furnitureLines > 0) warnings.push(`page_furniture_lines_dropped:${furnitureLines}`);
   const toc = extractToc(lines, warnings);
-  const { headings, rejected } = findHeadings(lines, toc.numbers);
+  const { headings, rejected, underlined, indentedSubsections } = findHeadings(lines, toc);
   rejectedColumnOneItems = rejected;
+  // Counted, like the furniture: a document whose titles are found only because they
+  // are underlined or indented is a parse whose reach depends on how the RFC was
+  // typeset, and a silent improvement would make that dependence invisible.
+  if (underlined > 0) warnings.push(`underlined_headings_recognised:${underlined}`);
+  if (indentedSubsections > 0) warnings.push(`indented_subsection_headings_recognised:${indentedSubsections}`);
   if (headings.length === 0) warnings.push("no_section_headings_detected");
   // The old warning counted column-0 numbered lines that were not used as headings
   // and reported it as a rejection, which reads as data loss. It is not: those lines
@@ -372,6 +385,90 @@ function isBlank(line: Line): boolean {
   return line.value.trim() === "";
 }
 
+/**
+ * The next line that carries content: blanks, form feeds and running heads are skipped
+ * so an underline or an indent is judged against the line a reader would see next.
+ */
+function nextContentLine(lines: readonly Line[], line: Line): Line | null {
+  for (let i = line.number; i < lines.length; i += 1) {
+    const candidate = lines[i]!;
+    if (isBlank(candidate) || isPageFurniture(candidate)) continue;
+    return candidate;
+  }
+  return null;
+}
+
+const UNDERLINE = /^([-=*~+])\1{2,}$/u;
+
+/**
+ * A heading underlined with a rule of dashes or equals signs.
+ *
+ * RFCs from 1973 to the mid-1980s were typeset rather than generated, and their
+ * section titles carry no number and no fixed name - RFC 768 titles its sections
+ * "Introduction", "Format", "Fields" - so a fixed-title list cannot find them. The
+ * result was not a missing convenience: the whole body of those documents became one
+ * undifferentiated section, `read(section=...)` could not address any of it, and every
+ * statement in RFC 768 was reported under "Front Matter".
+ *
+ * The shape is unambiguous in practice: a short title line whose only neighbour is a
+ * run of one repeated punctuation character. A figure or a table that happens to be
+ * underlined does not have a title line above the rule, and the rule is required to be
+ * at least three characters and most of the title's width, which is what a typeset
+ * underline looks like and what a stray dash row does not.
+ */
+function isUnderlinedHeading(lines: readonly Line[], line: Line): boolean {
+  const title = line.value.trim();
+  if (title.length === 0 || title.length > MAX_HEADING_CHARS) return false;
+  if (!/\p{L}/u.test(title)) return false;
+  if (/[.,;]\s*$/u.test(title)) return false;
+  const next = nextContentLine(lines, line);
+  if (!next) return false;
+  const rule = next.value.trim();
+  if (!UNDERLINE.test(rule)) return false;
+  return rule.length >= 3 && rule.length * 5 >= title.length * 3;
+}
+
+/**
+ * An indented numbered line that is a subsection heading, not a paragraph.
+ *
+ * The 1989 host-requirements RFCs and their contemporaries set body text at an indent
+ * of eleven columns and set their subsection titles by indenting them, three columns
+ * per level:
+ *
+ *      3.3  SPECIFIC ISSUES
+ *           3.3.1  Routing Outbound Datagrams
+ *                  3.3.1.1  Local/Remote Decision
+ *
+ * `findHeadings` treated every indented line as body text, so RFC 1122's outline was
+ * five entries long - 1 through 5 - and the seven hundred statements under those
+ * headings were unreachable: not unreadable, unreachable, because no query returns a
+ * section the outline does not name.
+ *
+ * Two conditions keep this from turning a paragraph into a heading, and both are
+ * properties of the typeset page rather than of any document's subject:
+ *
+ *   - the number must be at least two components deep, because a level-1 title in
+ *     these documents sits at column 0 and is already found there; a paragraph that
+ *     opens "1983 must ..." must not become a section, and a bare integer cannot pass;
+ *   - the line below must be indented FURTHER than the candidate. Under a real
+ *     subsection title the body steps in; inside a paragraph the next line continues
+ *     at the same indent or returns to one.
+ */
+function isIndentedSubsectionHeading(lines: readonly Line[], line: Line, knownTopLevel: ReadonlySet<string>): boolean {
+  const trimmed = line.value.trim();
+  const numbered = NUMBERED_HEADING.exec(trimmed);
+  if (!numbered) return false;
+  const number = numbered[1]!;
+  if (!number.includes(".")) return false;
+  if (!knownTopLevel.has(number.split(".")[0]!)) return false;
+  if (!isHeadingLike(numbered[2]!)) return false;
+  const indent = line.value.length - line.value.trimStart().length;
+  const next = nextContentLine(lines, line);
+  if (!next) return false;
+  const nextIndent = next.value.length - next.value.trimStart().length;
+  return nextIndent > indent;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Table of contents                                                           */
 /* -------------------------------------------------------------------------- */
@@ -448,16 +545,42 @@ function isHeadingLike(rest: string): boolean {
 
 function findHeadings(
   lines: readonly Line[],
-  tocNumbers: ReadonlySet<string>,
-): { headings: Heading[]; rejected: number } {
+  toc: TocInfo,
+): { headings: Heading[]; rejected: number; underlined: number; indentedSubsections: number } {
   const out: Heading[] = [];
   let rejected = 0;
+  let underlined = 0;
+  let indentedSubsections = 0;
+  const inToc = (line: Line) => line.number > toc.startLine && line.number <= toc.endLine;
+  // A number is only a heading if its first component is a heading this document
+  // already has, or the contents promises it. Collected first because it is what
+  // separates an indented subsection title from a paragraph that opens with a number.
+  const knownTopLevel = new Set<string>();
+  for (const line of lines) {
+    if (isBlank(line) || isPageFurniture(line)) continue;
+    if (/^\s/u.test(line.value)) continue;
+    const numbered = NUMBERED_HEADING.exec(line.value.trim());
+    if (numbered && (toc.numbers.has(numbered[1]!) || isHeadingLike(numbered[2]!))) {
+      knownTopLevel.add(numbered[1]!);
+    }
+  }
+
   for (const line of lines) {
     if (line.value.trim() === "") continue;
     const trimmed = line.value.trim();
     // An indented line is body text, except when its whole content is one of the
-    // fixed unnumbered titles: those are headings wherever they sit.
-    if (/^\s/u.test(line.value) && !UNNUMBERED_HEADING.test(trimmed)) continue;
+    // fixed unnumbered titles, when it is a subsection title of a typeset page, or
+    // when it is underlined. Each of those is a heading wherever it sits - except
+    // inside the contents, where an entry is a promise about a heading, not one.
+    const indentedSubsection = !inToc(line) && isIndentedSubsectionHeading(lines, line, knownTopLevel);
+    if (
+      /^\s/u.test(line.value) &&
+      !UNNUMBERED_HEADING.test(trimmed) &&
+      !indentedSubsection &&
+      !isUnderlinedHeading(lines, line)
+    ) {
+      continue;
+    }
 
     const appendix = APPENDIX_HEADING.exec(trimmed);
     if (appendix) {
@@ -476,12 +599,19 @@ function findHeadings(
     if (numbered) {
       const number = numbered[1]!;
       const rest = numbered[2]!;
-      if (tocNumbers.has(number) || isHeadingLike(rest)) {
+      if (toc.numbers.has(number) || isHeadingLike(rest)) {
         const title = rest.trim();
+        if (indentedSubsection) indentedSubsections += 1;
         out.push({ line, number, title, kind: classifyKind(number, title) });
       } else {
         rejected += 1;
       }
+      continue;
+    }
+
+    if (isUnderlinedHeading(lines, line)) {
+      underlined += 1;
+      out.push({ line, number: trimmed, title: trimmed, kind: classifyKind("", trimmed) });
       continue;
     }
 
@@ -495,7 +625,7 @@ function findHeadings(
       out.push({ line, number: trimmed, title: trimmed, kind: classifyKind("", trimmed) });
     }
   }
-  return { headings: out, rejected };
+  return { headings: out, rejected, underlined, indentedSubsections };
 }
 
 function classifyKind(number: string, title: string): SectionKind {
@@ -618,6 +748,46 @@ function groupBlocks(lines: readonly Line[]): BlockGroup[] {
   return groups;
 }
 
+/**
+ * Does this chunk contain sentences, or is it aligned/notation?
+ *
+ * The distinction that matters is compositional, not visual. RFCs from 1973 to the
+ * mid-1990s were typeset, and they indent their BODY TEXT: RFC 1122 sets every
+ * paragraph at twelve columns and RFC 1123 at three. A test that reads indentation as
+ * "not prose" therefore classified the entire body of those documents as
+ * preformatted, and the strict extractor - which reads prose blocks - reported 17
+ * requirements for RFC 1122 while its own candidate list held 255 upper-case
+ * modal-and-demand statements from the same text. Those are not provisional
+ * statements: they are the requirements of the document, counted as if absent.
+ *
+ * A paragraph is prose whatever column it starts in. What actually marks notation is
+ * the absence of sentences: no terminal punctuation, a low share of word-like tokens,
+ * internal column alignment, or box-drawing. Every RFC from 1973 onward is separated
+ * on that basis, and none of it depends on the document's subject.
+ */
+function looksLikeProse(chunk: readonly Line[]): boolean {
+  const text = chunk
+    .map((line) => line.value.trim())
+    .filter((value) => value !== "")
+    .join(" ");
+  if (text === "") return false;
+  // Internal column alignment is the one signal strong enough to override a sentence
+  // ending: a two-column layout in RFC 822 headers is notation even when each cell
+  // ends in a full stop.
+  const aligned = chunk.filter((line) => / {3,}\S/u.test(line.value.trim())).length;
+  if (aligned / chunk.length > 0.6) return false;
+  if (/[+|]{2,}|[┌┐└┘├┤─│]/u.test(text)) return false;
+  // Sentences, or the fragments a list item ends on. A chunk with neither is a table
+  // row, a header field block, or pseudo-code.
+  if (!/[.!?](?:\s|$)/u.test(text) && !(/^[A-Z]/u.test(text) && /:\s*$/.test(chunk[chunk.length - 1]!.value.trim()))) {
+    return false;
+  }
+  const words = text.split(/\s+/u).filter((w) => w !== "");
+  if (words.length === 0) return false;
+  const wordish = words.filter((w) => /^[A-Za-z][A-Za-z'-]*[.,;:)]?$/u.test(w)).length;
+  return wordish / words.length >= 0.5;
+}
+
 function classifyBlock(chunk: readonly Line[]): BlockKind {
   const first = chunk[0]!.value;
   if (/^\s*\[\s*[A-Za-z0-9][A-Za-z0-9._-]*(?:\s*,\s*(?:Section|Appendix)[^\]]*)?\s*\]\s+/u.test(first)) {
@@ -628,8 +798,10 @@ function classifyBlock(chunk: readonly Line[]): BlockKind {
   const indents = chunk.map((line) => indentWidth(line.value));
   const minIndent = Math.min(...indents);
   if (minIndent >= 6) {
-    const tableLike = chunk.every((line) => /\|/.test(line.value) || / {2,}\S/u.test(line.value.trim()));
-    return tableLike ? "table" : "preformatted";
+    if (chunk.every((line) => /\|/.test(line.value) || / {2,}\S/u.test(line.value.trim()))) return "table";
+    // Indented, yes; prose, only if it is made of sentences. The old test answered
+    // the first question with the second.
+    return looksLikeProse(chunk) ? "paragraph" : "preformatted";
   }
   return "paragraph";
 }

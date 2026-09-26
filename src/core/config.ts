@@ -35,6 +35,17 @@ export interface AppConfig {
 
 export interface Limits {
   readonly maxSearchResults: number;
+  /**
+   * Page ceiling for `requirements` and `references`.
+   *
+   * It used to be `maxSearchResults`, which is a search-page limit: a compliance list
+   * is not a search result page, and reusing the number meant `max_results: 200` -
+   * the maximum the input schema advertises - was silently clamped to 20. RFC 3261
+   * holds 876 requirements, so reading the whole list cost 44 calls where 5 suffice,
+   * and nothing in the response said the caller's number had been discarded. A limit
+   * that silently overrides an explicit argument is a wrong answer, not a small one.
+   */
+  readonly maxPageSize: number;
   readonly maxOutputBytes: number;
   /**
    * Not a truncation limit. Quotes are never cut, because a quote that no longer
@@ -58,6 +69,7 @@ export interface Limits {
 
 export const DEFAULT_LIMITS: Limits = Object.freeze({
   maxSearchResults: 20,
+  maxPageSize: 200,
   maxOutputBytes: 16 * 1024,
   maxQuoteChars: 1_200,
   maxContextChars: 240,
@@ -128,8 +140,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     metadataCacheTtlMs: intEnv("RFC_MCP_METADATA_TTL_MS", 6 * 60 * 60 * 1000, 0, 7 * 24 * 60 * 60 * 1000),
     negativeCacheTtlMs: intEnv("RFC_MCP_NEGATIVE_TTL_MS", 60 * 60 * 1000, 0, 7 * 24 * 60 * 60 * 1000),
     limits: DEFAULT_LIMITS,
-    parserVersion: "rfc-text-1.6.0",
-    extractorVersion: "normative-2119-8174-1.5.0",
+    parserVersion: "rfc-text-1.7.0",
+    extractorVersion: "normative-2119-8174-1.6.0",
   };
 }
 

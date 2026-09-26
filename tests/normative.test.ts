@@ -558,6 +558,123 @@ describe("non-strict normative candidates", () => {
     expect(analysis.warnings.some((w) => w.startsWith("reference_entry_blocks_skipped:"))).toBe(true);
   });
 
+  it("excludes the fixed texts the RFC Editor prints around every document", () => {
+    // In a 190-item hand-checked sample of a candidate list, these two sentences were
+    // 46 rows - a quarter of the list a reader of a pre-2119 document depends on.
+    // Neither says anything about the protocol: one is a pointer to the RFC Editor's
+    // info page, the other a BCP-13 licence notice about redistributing the document.
+    // The exclusion is counted, because a filter nobody can see is indistinguishable
+    // from a filter that hides a miss.
+    const parsed = parseRfcText({
+      rfc: 9110,
+      snapshotId: SNAPSHOT,
+      raw: Buffer.from(
+        [
+          "1.  Intro",
+          "",
+          "   A sender must not generate an element the grammar forbids.",
+          "",
+          "   Information about the current status of this document, any errata, and how",
+          "   to provide feedback on it may be obtained at http://www.rfc-editor.org/info/rfc9110.",
+          "",
+          "   Code Components extracted from this document must include Simplified BSD",
+          "   License text as described in Section 4.e of the Trust Legal Provisions.",
+          "",
+        ].join("\n"),
+        "utf8",
+      ),
+      parserVersion: "test",
+    });
+    const analysis = analyzeNormativeCandidates({
+      snapshotId: SNAPSHOT,
+      rfc: 9110,
+      sections: parsed.sections,
+      blocks: parsed.blocks,
+    });
+    const texts = analysis.candidates.map((c) => c.exact_text);
+    expect(texts.some((t) => /current status of this document/u.test(t))).toBe(false);
+    expect(texts.some((t) => /Code Components extracted/u.test(t))).toBe(false);
+    // The obligation in the same document survives, so the filter is not a section-wide
+    // skip dressed up as a sentence filter.
+    expect(texts.some((t) => /grammar forbids/u.test(t))).toBe(true);
+    expect(analysis.warnings.some((w) => w.startsWith("boilerplate_statements_excluded:2"))).toBe(true);
+  });
+
+  it("reads an indented paragraph as prose, and notation as notation", () => {
+    // The single largest recall defect the bench found. `classifyBlock` called every
+    // chunk with a six-column indent preformatted, and RFCs from 1973 to the mid-1990s
+    // indent their BODY TEXT: RFC 1122 sets every paragraph at column 12. RFC 1122 then
+    // reported 17 requirements while its own candidate list held 255 upper-case
+    // modal-and-demand statements from the same text. A paragraph is prose whatever
+    // column it starts in; what marks notation is the absence of sentences.
+    const parsed = parseRfcText({
+      rfc: 1122,
+      snapshotId: SNAPSHOT,
+      raw: Buffer.from(
+        [
+          "3.  INTERNET LAYER",
+          "",
+          "   3.3  SPECIFIC ISSUES",
+          "",
+          "            A host MUST silently discard a datagram addressed to a UDP",
+          "            port for which there is no pending LISTEN call.",
+          "",
+          "                RECV_ICMP(BufPTR ) -> result, src, dst, len, opt",
+          "",
+          "                o Destination Unreachable",
+          "",
+        ].join("\n"),
+        "utf8",
+      ),
+      parserVersion: "test",
+    });
+    const prose = parsed.blocks.filter((b) => /silently discard/u.test(b.text));
+    expect(prose).toHaveLength(1);
+    expect(prose[0]!.kind).toBe("paragraph");
+    const notation = parsed.blocks.filter((b) => /RECV_ICMP/u.test(b.text));
+    expect(notation).toHaveLength(1);
+    expect(notation[0]!.kind).toBe("preformatted");
+    // And the sentence in the paragraph is now reachable by the strict extractor, which
+    // is the whole point: it was `non_prose_block` in the candidate list before.
+    const analysis = analyzeNormative({
+      snapshotId: SNAPSHOT,
+      rfc: 1122,
+      sections: parsed.sections,
+      blocks: parsed.blocks,
+    });
+    expect(analysis.requirements.some((r) => /silently discard/u.test(r.exact_text))).toBe(true);
+  });
+
+  it("emits one requirement per statement, and keeps every keyword on it", () => {
+    // The candidate list was fixed to one row per statement in an earlier round; the
+    // strict list was not, so a sentence with three keywords came back three times and
+    // `coverage.total_requirements` - a number callers build a contract on - counted one
+    // sentence as three requirements. 1 411 of 11 640 strict rows corpus-wide were a
+    // repeat of a sentence already in the same list.
+    const { analysis } = analyze(
+      [
+        "2.  Rules",
+        "",
+        "   EMTU_R MUST be greater than or equal to 576, SHOULD be either configurable or",
+        "   indefinite, and SHOULD be greater than or equal to the MTU of the connection.",
+        "",
+      ].join("\n"),
+    );
+    const rows = analysis.requirements.filter((r) => /EMTU_R/u.test(r.exact_text));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.exact_text).toContain("indefinite");
+    // Nothing is lost: the other two keywords are on the row with their own polarity and
+    // offsets, so "does this statement contain a SHOULD" is still answerable.
+    expect(rows[0]!.keywords.map((k) => k.term)).toEqual(["MUST", "SHOULD", "SHOULD"]);
+    expect(rows[0]!.term).toBe("MUST");
+    expect(rows[0]!.flags).toContain("keywords_collapsed_to_one_row");
+    // The span is the statement, not four letters of it: a citation over this row has to
+    // verify what a caller would quote from it.
+    expect(rows[0]!.span.char_end - rows[0]!.span.char_start).toBeGreaterThan(80);
+    // Mentions stay per occurrence - that is what a mention is.
+    expect(analysis.mentions.filter((m) => /EMTU_R/u.test(m.exact_text))).toHaveLength(3);
+  });
+
   it("emits one row per statement, not one per keyword", () => {
     // "must ... must NOT" in one sentence used to produce two rows for the same text,
     // filed under two different shapes, so filtering on shape could not say which row

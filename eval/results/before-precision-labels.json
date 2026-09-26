@@ -1,0 +1,909 @@
+{
+ "$comment": [
+  "Hand labels for eval/results/before-precision-sample.json, items P001-P200, judged",
+  "against eval/PRECISION-RUBRIC.md. The whole list is `kind: requirement`: the first",
+  "version of the sampler drained the requirement list before touching the candidate",
+  "list, so this file measures precision on requirements only. The candidate list has",
+  "its own sample, eval/results/before-precision-labels-candidates.json.",
+  "",
+  "Judged on the text, not on the metadata the tool attached to it. Six of the false",
+  "positives are the specification describing its own keywords, five are a list",
+  "introducer or a flattened table row, and thirty-one are sentences that are true and",
+  "about the protocol rather than binding on an implementer. None of them is a parsing",
+  "error; they are the precision cost of a syntactic test."
+ ],
+ "measured": 200,
+ "true_positives": 159,
+ "false_positives": 41,
+ "precision_pct": 79.5,
+ "by_reason": {
+  "definition_of_keywords": 6,
+  "list_introducer": 4,
+  "structural": 4,
+  "not_an_obligation": 27
+ },
+ "labels": [
+  {
+   "sample_id": "P001",
+   "label": true
+  },
+  {
+   "sample_id": "P002",
+   "label": false,
+   "reason": "not_an_obligation",
+   "note": "a statement about conformance, not about an implementation"
+  },
+  {
+   "sample_id": "P003",
+   "label": false,
+   "reason": "not_an_obligation"
+  },
+  {
+   "sample_id": "P004",
+   "label": true
+  },
+  {
+   "sample_id": "P005",
+   "label": true
+  },
+  {
+   "sample_id": "P006",
+   "label": false,
+   "reason": "definition_of_keywords",
+   "note": "RFC 2119's own glossary row for MUST"
+  },
+  {
+   "sample_id": "P007",
+   "label": true
+  },
+  {
+   "sample_id": "P008",
+   "label": false,
+   "reason": "list_introducer",
+   "note": "the MUST is real but the item ends ':' and the text it refers to is not in the item"
+  },
+  {
+   "sample_id": "P009",
+   "label": false,
+   "reason": "not_an_obligation"
+  },
+  {
+   "sample_id": "P010",
+   "label": true
+  },
+  {
+   "sample_id": "P011",
+   "label": false,
+   "reason": "not_an_obligation"
+  },
+  {
+   "sample_id": "P012",
+   "label": false,
+   "reason": "structural",
+   "note": "front-matter blob: the RFC number, the editor and the obsoletes list"
+  },
+  {
+   "sample_id": "P013",
+   "label": true
+  },
+  {
+   "sample_id": "P014",
+   "label": true
+  },
+  {
+   "sample_id": "P015",
+   "label": true,
+   "note": "'For example' introduces it but the MUST NOT is a real prohibition"
+  },
+  {
+   "sample_id": "P016",
+   "label": true
+  },
+  {
+   "sample_id": "P017",
+   "label": true
+  },
+  {
+   "sample_id": "P018",
+   "label": true
+  },
+  {
+   "sample_id": "P019",
+   "label": true
+  },
+  {
+   "sample_id": "P020",
+   "label": true
+  },
+  {
+   "sample_id": "P021",
+   "label": true
+  },
+  {
+   "sample_id": "P022",
+   "label": false,
+   "reason": "not_an_obligation"
+  },
+  {
+   "sample_id": "P023",
+   "label": true
+  },
+  {
+   "sample_id": "P024",
+   "label": false,
+   "reason": "not_an_obligation"
+  },
+  {
+   "sample_id": "P025",
+   "label": true
+  },
+  {
+   "sample_id": "P026",
+   "label": true
+  },
+  {
+   "sample_id": "P027",
+   "label": true
+  },
+  {
+   "sample_id": "P028",
+   "label": true
+  },
+  {
+   "sample_id": "P029",
+   "label": true
+  },
+  {
+   "sample_id": "P030",
+   "label": true
+  },
+  {
+   "sample_id": "P031",
+   "label": true
+  },
+  {
+   "sample_id": "P032",
+   "label": false,
+   "reason": "structural",
+   "note": "XDR notation rule: how optional items are written, not what an implementation must do"
+  },
+  {
+   "sample_id": "P033",
+   "label": true
+  },
+  {
+   "sample_id": "P034",
+   "label": true
+  },
+  {
+   "sample_id": "P035",
+   "label": true
+  },
+  {
+   "sample_id": "P036",
+   "label": true
+  },
+  {
+   "sample_id": "P037",
+   "label": true
+  },
+  {
+   "sample_id": "P038",
+   "label": true
+  },
+  {
+   "sample_id": "P039",
+   "label": true
+  },
+  {
+   "sample_id": "P040",
+   "label": true
+  },
+  {
+   "sample_id": "P041",
+   "label": true
+  },
+  {
+   "sample_id": "P042",
+   "label": true
+  },
+  {
+   "sample_id": "P043",
+   "label": true
+  },
+  {
+   "sample_id": "P044",
+   "label": false,
+   "reason": "list_introducer"
+  },
+  {
+   "sample_id": "P045",
+   "label": true
+  },
+  {
+   "sample_id": "P046",
+   "label": true
+  },
+  {
+   "sample_id": "P047",
+   "label": true
+  },
+  {
+   "sample_id": "P048",
+   "label": true
+  },
+  {
+   "sample_id": "P049",
+   "label": true
+  },
+  {
+   "sample_id": "P050",
+   "label": true
+  },
+  {
+   "sample_id": "P051",
+   "label": true
+  },
+  {
+   "sample_id": "P052",
+   "label": true
+  },
+  {
+   "sample_id": "P053",
+   "label": false,
+   "reason": "not_an_obligation",
+   "note": "addresses protocol designers, not implementers"
+  },
+  {
+   "sample_id": "P054",
+   "label": true
+  },
+  {
+   "sample_id": "P055",
+   "label": false,
+   "reason": "not_an_obligation",
+   "note": "status boilerplate: errata and feedback URL"
+  },
+  {
+   "sample_id": "P056",
+   "label": true
+  },
+  {
+   "sample_id": "P057",
+   "label": true
+  },
+  {
+   "sample_id": "P058",
+   "label": true,
+   "note": "trailing quote is a splitter artefact; the obligation is complete"
+  },
+  {
+   "sample_id": "P059",
+   "label": true
+  },
+  {
+   "sample_id": "P060",
+   "label": true
+  },
+  {
+   "sample_id": "P061",
+   "label": false,
+   "reason": "not_an_obligation",
+   "note": "status boilerplate"
+  },
+  {
+   "sample_id": "P062",
+   "label": true
+  },
+  {
+   "sample_id": "P063",
+   "label": true
+  },
+  {
+   "sample_id": "P064",
+   "label": true
+  },
+  {
+   "sample_id": "P065",
+   "label": true
+  },
+  {
+   "sample_id": "P066",
+   "label": false,
+   "reason": "definition_of_keywords",
+   "note": "BCP-14 boilerplate, in the document whose subject is BCP-14"
+  },
+  {
+   "sample_id": "P067",
+   "label": true
+  },
+  {
+   "sample_id": "P068",
+   "label": true
+  },
+  {
+   "sample_id": "P069",
+   "label": true
+  },
+  {
+   "sample_id": "P070",
+   "label": true
+  },
+  {
+   "sample_id": "P071",
+   "label": true
+  },
+  {
+   "sample_id": "P072",
+   "label": true
+  },
+  {
+   "sample_id": "P073",
+   "label": true
+  },
+  {
+   "sample_id": "P074",
+   "label": true
+  },
+  {
+   "sample_id": "P075",
+   "label": true
+  },
+  {
+   "sample_id": "P076",
+   "label": false,
+   "reason": "not_an_obligation"
+  },
+  {
+   "sample_id": "P077",
+   "label": true
+  },
+  {
+   "sample_id": "P078",
+   "label": true
+  },
+  {
+   "sample_id": "P079",
+   "label": true
+  },
+  {
+   "sample_id": "P080",
+   "label": true
+  },
+  {
+   "sample_id": "P081",
+   "label": true
+  },
+  {
+   "sample_id": "P082",
+   "label": true
+  },
+  {
+   "sample_id": "P083",
+   "label": true
+  },
+  {
+   "sample_id": "P084",
+   "label": false,
+   "reason": "not_an_obligation",
+   "note": "a statement about what the document changes, not about an implementation"
+  },
+  {
+   "sample_id": "P085",
+   "label": true,
+   "note": "a field definition that carries a real MUST"
+  },
+  {
+   "sample_id": "P086",
+   "label": false,
+   "reason": "not_an_obligation"
+  },
+  {
+   "sample_id": "P087",
+   "label": true
+  },
+  {
+   "sample_id": "P088",
+   "label": true
+  },
+  {
+   "sample_id": "P089",
+   "label": true
+  },
+  {
+   "sample_id": "P090",
+   "label": true
+  },
+  {
+   "sample_id": "P091",
+   "label": true,
+   "note": "fixes what the value must be, so it constrains an implementation"
+  },
+  {
+   "sample_id": "P092",
+   "label": true
+  },
+  {
+   "sample_id": "P093",
+   "label": true
+  },
+  {
+   "sample_id": "P094",
+   "label": true
+  },
+  {
+   "sample_id": "P095",
+   "label": true
+  },
+  {
+   "sample_id": "P096",
+   "label": true,
+   "note": "points at requirements the document states elsewhere"
+  },
+  {
+   "sample_id": "P097",
+   "label": false,
+   "reason": "not_an_obligation",
+   "note": "describes what the data may be, not what an implementation must do"
+  },
+  {
+   "sample_id": "P098",
+   "label": false,
+   "reason": "not_an_obligation",
+   "note": "advice to the reader"
+  },
+  {
+   "sample_id": "P099",
+   "label": true
+  },
+  {
+   "sample_id": "P100",
+   "label": true
+  },
+  {
+   "sample_id": "P101",
+   "label": false,
+   "reason": "definition_of_keywords",
+   "note": "RFC 2119's glossary row for MUST IMPLEMENT"
+  },
+  {
+   "sample_id": "P102",
+   "label": true
+  },
+  {
+   "sample_id": "P103",
+   "label": true
+  },
+  {
+   "sample_id": "P104",
+   "label": true
+  },
+  {
+   "sample_id": "P105",
+   "label": true,
+   "note": "the mirror of P010; both are emitted, so the pair is also a duplicate"
+  },
+  {
+   "sample_id": "P106",
+   "label": false,
+   "reason": "not_an_obligation"
+  },
+  {
+   "sample_id": "P107",
+   "label": false,
+   "reason": "not_an_obligation",
+   "note": "a cross-reference to where the requirement levels are defined"
+  },
+  {
+   "sample_id": "P108",
+   "label": true
+  },
+  {
+   "sample_id": "P109",
+   "label": false,
+   "reason": "list_introducer"
+  },
+  {
+   "sample_id": "P110",
+   "label": true
+  },
+  {
+   "sample_id": "P111",
+   "label": true
+  },
+  {
+   "sample_id": "P112",
+   "label": true
+  },
+  {
+   "sample_id": "P113",
+   "label": true,
+   "note": "duplicate of P018 apart from one word"
+  },
+  {
+   "sample_id": "P114",
+   "label": true
+  },
+  {
+   "sample_id": "P115",
+   "label": true
+  },
+  {
+   "sample_id": "P116",
+   "label": true
+  },
+  {
+   "sample_id": "P117",
+   "label": false,
+   "reason": "not_an_obligation",
+   "note": "a definition of what an identifier is"
+  },
+  {
+   "sample_id": "P118",
+   "label": true
+  },
+  {
+   "sample_id": "P119",
+   "label": false,
+   "reason": "not_an_obligation"
+  },
+  {
+   "sample_id": "P120",
+   "label": true
+  },
+  {
+   "sample_id": "P121",
+   "label": true
+  },
+  {
+   "sample_id": "P122",
+   "label": true
+  },
+  {
+   "sample_id": "P123",
+   "label": true
+  },
+  {
+   "sample_id": "P124",
+   "label": true
+  },
+  {
+   "sample_id": "P125",
+   "label": true,
+   "note": "a permission granted to the implementer"
+  },
+  {
+   "sample_id": "P126",
+   "label": true
+  },
+  {
+   "sample_id": "P127",
+   "label": true
+  },
+  {
+   "sample_id": "P128",
+   "label": true,
+   "note": "duplicate of P033"
+  },
+  {
+   "sample_id": "P129",
+   "label": true
+  },
+  {
+   "sample_id": "P130",
+   "label": true
+  },
+  {
+   "sample_id": "P131",
+   "label": true
+  },
+  {
+   "sample_id": "P132",
+   "label": true
+  },
+  {
+   "sample_id": "P133",
+   "label": true
+  },
+  {
+   "sample_id": "P134",
+   "label": true
+  },
+  {
+   "sample_id": "P135",
+   "label": true
+  },
+  {
+   "sample_id": "P136",
+   "label": true
+  },
+  {
+   "sample_id": "P137",
+   "label": true
+  },
+  {
+   "sample_id": "P138",
+   "label": true
+  },
+  {
+   "sample_id": "P139",
+   "label": true
+  },
+  {
+   "sample_id": "P140",
+   "label": true
+  },
+  {
+   "sample_id": "P141",
+   "label": true
+  },
+  {
+   "sample_id": "P142",
+   "label": true
+  },
+  {
+   "sample_id": "P143",
+   "label": true,
+   "note": "duplicate of P048"
+  },
+  {
+   "sample_id": "P144",
+   "label": true,
+   "note": "duplicate of P052"
+  },
+  {
+   "sample_id": "P145",
+   "label": true
+  },
+  {
+   "sample_id": "P146",
+   "label": false,
+   "reason": "structural",
+   "note": "the sentence ends at 'MAY send'; the range types it introduces are in the next block"
+  },
+  {
+   "sample_id": "P147",
+   "label": true
+  },
+  {
+   "sample_id": "P148",
+   "label": false,
+   "reason": "not_an_obligation",
+   "note": "status boilerplate"
+  },
+  {
+   "sample_id": "P149",
+   "label": true
+  },
+  {
+   "sample_id": "P150",
+   "label": false,
+   "reason": "not_an_obligation"
+  },
+  {
+   "sample_id": "P151",
+   "label": true
+  },
+  {
+   "sample_id": "P152",
+   "label": true,
+   "note": "duplicate of P057"
+  },
+  {
+   "sample_id": "P153",
+   "label": false,
+   "reason": "not_an_obligation",
+   "note": "status boilerplate"
+  },
+  {
+   "sample_id": "P154",
+   "label": true
+  },
+  {
+   "sample_id": "P155",
+   "label": true
+  },
+  {
+   "sample_id": "P156",
+   "label": true,
+   "note": "TLP boilerplate, but it binds redistribution"
+  },
+  {
+   "sample_id": "P157",
+   "label": true
+  },
+  {
+   "sample_id": "P158",
+   "label": true
+  },
+  {
+   "sample_id": "P159",
+   "label": true
+  },
+  {
+   "sample_id": "P160",
+   "label": false,
+   "reason": "list_introducer"
+  },
+  {
+   "sample_id": "P161",
+   "label": false,
+   "reason": "definition_of_keywords"
+  },
+  {
+   "sample_id": "P162",
+   "label": true
+  },
+  {
+   "sample_id": "P163",
+   "label": true
+  },
+  {
+   "sample_id": "P164",
+   "label": true,
+   "note": "duplicate of P069"
+  },
+  {
+   "sample_id": "P165",
+   "label": true
+  },
+  {
+   "sample_id": "P166",
+   "label": true
+  },
+  {
+   "sample_id": "P167",
+   "label": false,
+   "reason": "not_an_obligation"
+  },
+  {
+   "sample_id": "P168",
+   "label": true
+  },
+  {
+   "sample_id": "P169",
+   "label": true
+  },
+  {
+   "sample_id": "P170",
+   "label": true
+  },
+  {
+   "sample_id": "P171",
+   "label": false,
+   "reason": "not_an_obligation",
+   "note": "status boilerplate"
+  },
+  {
+   "sample_id": "P172",
+   "label": true
+  },
+  {
+   "sample_id": "P173",
+   "label": true,
+   "note": "duplicate of P173's twin in the same list"
+  },
+  {
+   "sample_id": "P174",
+   "label": true
+  },
+  {
+   "sample_id": "P175",
+   "label": true
+  },
+  {
+   "sample_id": "P176",
+   "label": true
+  },
+  {
+   "sample_id": "P177",
+   "label": true
+  },
+  {
+   "sample_id": "P178",
+   "label": true
+  },
+  {
+   "sample_id": "P179",
+   "label": true
+  },
+  {
+   "sample_id": "P180",
+   "label": true
+  },
+  {
+   "sample_id": "P181",
+   "label": false,
+   "reason": "not_an_obligation",
+   "note": "status boilerplate"
+  },
+  {
+   "sample_id": "P182",
+   "label": true
+  },
+  {
+   "sample_id": "P183",
+   "label": true
+  },
+  {
+   "sample_id": "P184",
+   "label": true
+  },
+  {
+   "sample_id": "P185",
+   "label": true
+  },
+  {
+   "sample_id": "P186",
+   "label": true
+  },
+  {
+   "sample_id": "P187",
+   "label": true
+  },
+  {
+   "sample_id": "P188",
+   "label": true
+  },
+  {
+   "sample_id": "P189",
+   "label": true
+  },
+  {
+   "sample_id": "P190",
+   "label": true
+  },
+  {
+   "sample_id": "P191",
+   "label": false,
+   "reason": "not_an_obligation",
+   "note": "describes the push mechanism, not an obligation"
+  },
+  {
+   "sample_id": "P192",
+   "label": false,
+   "reason": "not_an_obligation"
+  },
+  {
+   "sample_id": "P193",
+   "label": false,
+   "reason": "not_an_obligation",
+   "note": "constrains what the naming rules require of a name, not what an implementation does"
+  },
+  {
+   "sample_id": "P194",
+   "label": true
+  },
+  {
+   "sample_id": "P195",
+   "label": true
+  },
+  {
+   "sample_id": "P196",
+   "label": false,
+   "reason": "definition_of_keywords",
+   "note": "RFC 2119's glossary row for MUST NOT"
+  },
+  {
+   "sample_id": "P197",
+   "label": true
+  },
+  {
+   "sample_id": "P198",
+   "label": false,
+   "reason": "structural",
+   "note": "the sentence ends at a comma; the clause that completes it is in the next block"
+  },
+  {
+   "sample_id": "P199",
+   "label": true
+  },
+  {
+   "sample_id": "P200",
+   "label": false,
+   "reason": "definition_of_keywords",
+   "note": "RFC 2119 telling authors when to use a keyword"
+  }
+ ],
+ "sample_file": "eval/results/before-precision-sample.json"
+}

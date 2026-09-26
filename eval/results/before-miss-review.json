@@ -1,0 +1,394 @@
+{
+ "$comment": [
+  "Hand review of every BEFORE miss, so a recall number is not read as a defect count.",
+  "The harness cannot do this: whether a missed sentence binds an implementer is a",
+  "judgement, and the point of the bench is that the judgement is made against the RFC",
+  "text rather than against the tool's behaviour.",
+  "",
+  "`verdict` values:",
+  "  tool_defect      - the sentence binds an implementer and the tool did not return it",
+  "  probe_artifact   - the tool returned the statement; the probe over-captured it",
+  "  label_error      - the sentence does not bind an implementer, or the probe is not",
+  "                     one; this is a fault in the bench, not in the tool",
+  "  unreachable_class- a keyword-free specification, which no keyword-driven pass can find"
+ ],
+ "source": "eval/results/before.json",
+ "totals": {
+  "misses": 48,
+  "label_error": 20,
+  "unreachable_class": 12,
+  "tool_defect": 11,
+  "probe_artifact": 5
+ },
+ "corrected_recall": {
+  "rule": "A miss counts against recall only when the sentence binds an implementer and the tool returned it nowhere. `probe_artifact` means the tool DID return the statement and the probe over-captured it, so it moves to the numerator. `label_error` and `unreachable_class` leave the denominator.",
+  "strict": {
+   "raw": "103/118",
+   "raw_pct": 87.3,
+   "label_errors": 2,
+   "unreachable_class": 0,
+   "probe_artifacts": 5,
+   "tool_defects": 8,
+   "adjusted": "108/116",
+   "adjusted_pct": 93.1
+  },
+  "weak_lowercase": {
+   "raw": "109/129",
+   "raw_pct": 84.5,
+   "label_errors": 17,
+   "unreachable_class": 0,
+   "probe_artifacts": 0,
+   "tool_defects": 3,
+   "adjusted": "109/112",
+   "adjusted_pct": 97.3
+  },
+  "weak_keyword_free": {
+   "raw": "0/13",
+   "raw_pct": 0,
+   "label_errors": 1,
+   "unreachable_class": 12,
+   "probe_artifacts": 0,
+   "tool_defects": 0,
+   "adjusted": "0/0",
+   "adjusted_pct": null
+  }
+ },
+ "misses": [
+  {
+   "id": "G0004",
+   "rfc": 959,
+   "class": "lowercase-modal",
+   "verdict": "label_error",
+   "why": "A flattened table of transfer-type defaults. The last clause ('All hosts must accept the above as the standard defaults') is a real obligation, but the probe is the table, and the tool is right to skip a table."
+  },
+  {
+   "id": "G0008",
+   "rfc": 1034,
+   "class": "lowercase-modal",
+   "verdict": "label_error",
+   "why": "'Each node has a set of resource information, which may be empty.' Describes the protocol; nothing is required of an implementer."
+  },
+  {
+   "id": "G0009",
+   "rfc": 1034,
+   "class": "keyword-free-spec",
+   "verdict": "unreachable_class",
+   "why": "A field definition with no modal token."
+  },
+  {
+   "id": "G0010",
+   "rfc": 1122,
+   "class": "uppercase-modal",
+   "verdict": "tool_defect",
+   "why": "Upper-case SHOULD, and it was found - in non_strict_candidates, with reason `non_prose_block`. The block was classified preformatted because RFC 1122 indents its body text at column 12. `coverage.total_requirements` said 17 while the same text yielded 255 upper-case modal-and-demand candidates. This is the defect the prose-classification fix removes."
+  },
+  {
+   "id": "G0012",
+   "rfc": 1122,
+   "class": "keyword-free-spec",
+   "verdict": "unreachable_class",
+   "why": "States a timeout (4 minutes) with no modal token."
+  },
+  {
+   "id": "G0015",
+   "rfc": 1123,
+   "class": "keyword-free-spec",
+   "verdict": "unreachable_class",
+   "why": "States a give-up time (4-5 days) with no modal token."
+  },
+  {
+   "id": "G0017",
+   "rfc": 1812,
+   "class": "uppercase-modal",
+   "verdict": "tool_defect",
+   "why": "Upper-case MUST in a section the outline lists. Not reproduced by the fixes in this round; open."
+  },
+  {
+   "id": "G0024",
+   "rfc": 2045,
+   "class": "uppercase-modal",
+   "verdict": "tool_defect",
+   "why": "A real MUST NOT inside a block that also holds a numbered encoding table, so the block is not prose. Part of the table limitation, not of the indent defect."
+  },
+  {
+   "id": "G0026",
+   "rfc": 2054,
+   "class": "lowercase-modal",
+   "verdict": "tool_defect",
+   "why": "'WebNFS clients ... should use READDIRPLUS in preference to READDIR.' The document yields ONE candidate in total, so the prose fix should return it."
+  },
+  {
+   "id": "G0028",
+   "rfc": 2119,
+   "class": "uppercase-modal",
+   "verdict": "label_error",
+   "why": "'The effects on security of not implementing a MUST or SHOULD ... may be very subtle.' RFC 2119 discussing its own keywords. A miss here is not a gap in a contract."
+  },
+  {
+   "id": "G0036",
+   "rfc": 2606,
+   "class": "lowercase-modal",
+   "verdict": "label_error",
+   "why": "The probe is a list of reserved TLDs plus a sentence about one of them. Structural."
+  },
+  {
+   "id": "G0038",
+   "rfc": 2615,
+   "class": "uppercase-modal",
+   "verdict": "tool_defect",
+   "why": "A real upper-case MAY in a 1993 RFC whose body is set as a table of options. Open; the option table is the blocker."
+  },
+  {
+   "id": "G0040",
+   "rfc": 2865,
+   "class": "uppercase-modal",
+   "verdict": "tool_defect",
+   "why": "'It is intended to be human readable and MUST NOT affect operation of the protocol.' Anaphoric: 'It' points at the attribute two lines above. A miss caused by anaphora is the documented boundary of the automation, not a defect - recorded so the count is honest."
+  },
+  {
+   "id": "G0041",
+   "rfc": 2865,
+   "class": "uppercase-modal",
+   "verdict": "tool_defect",
+   "why": "'Whenever the gateway address is specified as \"0.0.0.0\" the IP address of the user SHOULD be used as the gateway address.' Self-contained. Open."
+  },
+  {
+   "id": "G0042",
+   "rfc": 2865,
+   "class": "keyword-free-spec",
+   "verdict": "unreachable_class",
+   "why": "A flattened field-table row."
+  },
+  {
+   "id": "G0043",
+   "rfc": 3110,
+   "class": "keyword-free-spec",
+   "verdict": "unreachable_class",
+   "why": "A length encoding rule with no modal token."
+  },
+  {
+   "id": "G0051",
+   "rfc": 3226,
+   "class": "keyword-free-spec",
+   "verdict": "unreachable_class",
+   "why": "An observation about message size, not a rule."
+  },
+  {
+   "id": "G0056",
+   "rfc": 3335,
+   "class": "uppercase-modal",
+   "verdict": "probe_artifact",
+   "why": "The probe begins 'The \"rule\" is: - If a receipt is requested...'. The tool emitted the statement from the dash onward - it is in the list as a requirement and as a candidate. The probe over-captured the lead-in."
+  },
+  {
+   "id": "G0058",
+   "rfc": 3501,
+   "class": "uppercase-modal",
+   "verdict": "tool_defect",
+   "why": "'...in particular, EXAMINE MUST NOT cause messages to lose the \\Recent flag.' Self-contained. Open."
+  },
+  {
+   "id": "G0059",
+   "rfc": 3501,
+   "class": "uppercase-modal",
+   "verdict": "label_error",
+   "why": "The probe is a flattened response-code table ('Contents: OPTIONAL response code human-readable text ...'). Structural."
+  },
+  {
+   "id": "G0062",
+   "rfc": 3986,
+   "class": "lowercase-modal",
+   "verdict": "label_error",
+   "why": "'Many URI schemes include a hierarchical element ... (which may, in turn, delegate it further).' Descriptive."
+  },
+  {
+   "id": "G0068",
+   "rfc": 3989,
+   "class": "lowercase-modal",
+   "verdict": "label_error",
+   "why": "A field-name line plus a sentence. Structural."
+  },
+  {
+   "id": "G0085",
+   "rfc": 4343,
+   "class": "lowercase-modal",
+   "verdict": "tool_defect",
+   "why": "'However, to optimize output, indirect labels may be used to point to names elsewhere in the DNS answer.' A permission. Open."
+  },
+  {
+   "id": "G0089",
+   "rfc": 4506,
+   "class": "keyword-free-spec",
+   "verdict": "unreachable_class",
+   "why": "A data-type width with no modal token."
+  },
+  {
+   "id": "G0090",
+   "rfc": 4635,
+   "class": "keyword-free-spec",
+   "verdict": "unreachable_class",
+   "why": "Describes an available option; no modal token."
+  },
+  {
+   "id": "G0099",
+   "rfc": 5155,
+   "class": "uppercase-modal",
+   "verdict": "tool_defect",
+   "why": "A real upper-case MUST inside a bulleted list of conditions. The list marker costs it. Open."
+  },
+  {
+   "id": "G0113",
+   "rfc": 5322,
+   "class": "keyword-free-spec",
+   "verdict": "unreachable_class",
+   "why": "Explains why a limit exists; no modal token."
+  },
+  {
+   "id": "G0119",
+   "rfc": 5936,
+   "class": "keyword-free-spec",
+   "verdict": "unreachable_class",
+   "why": "States the 65535 octet ceiling with no modal token."
+  },
+  {
+   "id": "G0123",
+   "rfc": 6302,
+   "class": "lowercase-modal",
+   "verdict": "label_error",
+   "why": "A bibliography entry: 'Lee, \"Dual-Stack Lite Broadband Deployments...\", Work in Progress, May 2011.' The bench sampled a numbered References section it should have skipped; the tool skips bibliographies by design and is right to."
+  },
+  {
+   "id": "G0124",
+   "rfc": 6302,
+   "class": "uppercase-modal",
+   "verdict": "probe_artifact",
+   "why": "The tool emitted 'It is RECOMMENDED ... also log:' as a list introducer; the probe ran on into the first bullet. The list is incomplete either way - the hand label classes it a list introducer."
+  },
+  {
+   "id": "G0133",
+   "rfc": 6761,
+   "class": "lowercase-modal",
+   "verdict": "label_error",
+   "why": "A parenthetical rhetorical question and a list number. Structural, and phrased as a question."
+  },
+  {
+   "id": "G0143",
+   "rfc": 7233,
+   "class": "uppercase-modal",
+   "verdict": "probe_artifact",
+   "why": "The probe runs from an ABNF production into 'A server MAY ignore the Range header field.' The tool emitted the MAY; the probe over-captured the grammar."
+  },
+  {
+   "id": "G0153",
+   "rfc": 7624,
+   "class": "lowercase-modal",
+   "verdict": "label_error",
+   "why": "Bibliography entry."
+  },
+  {
+   "id": "G0156",
+   "rfc": 7638,
+   "class": "lowercase-modal",
+   "verdict": "label_error",
+   "why": "Bibliography entry."
+  },
+  {
+   "id": "G0161",
+   "rfc": 7719,
+   "class": "keyword-free-spec",
+   "verdict": "label_error",
+   "why": "'EDNS allows DNS clients and servers to specify message sizes larger than the original 512 octet limit...' Describes what EDNS is. It matched the class only because it contains '512 octet'."
+  },
+  {
+   "id": "G0162",
+   "rfc": 7719,
+   "class": "lowercase-modal",
+   "verdict": "label_error",
+   "why": "A note about a controversial term. The probe also swallowed a preceding parenthetical because the splitter cannot break inside '.)'."
+  },
+  {
+   "id": "G0163",
+   "rfc": 7838,
+   "class": "uppercase-modal",
+   "verdict": "probe_artifact",
+   "why": "The tool emitted 'Octets in the ALPN protocol name MUST NOT be percent-encoded if they are valid token characters except \"%\"'; the probe ran on into the next list number, ', and 2.' Split-boundary artefact of the probe, not a miss."
+  },
+  {
+   "id": "G0168",
+   "rfc": 7858,
+   "class": "lowercase-modal",
+   "verdict": "label_error",
+   "why": "Bibliography entry."
+  },
+  {
+   "id": "G0185",
+   "rfc": 8252,
+   "class": "lowercase-modal",
+   "verdict": "label_error",
+   "why": "'Authenticating the user may involve chaining to other authentication systems.' Descriptive."
+  },
+  {
+   "id": "G0194",
+   "rfc": 8470,
+   "class": "lowercase-modal",
+   "verdict": "label_error",
+   "why": "Bibliography entry."
+  },
+  {
+   "id": "G0196",
+   "rfc": 8484,
+   "class": "keyword-free-spec",
+   "verdict": "unreachable_class",
+   "why": "'This media type restricts the maximum size of the DNS message to 65535 bytes.' A real specification with no modal token anywhere - the class that no keyword-driven pass can reach."
+  },
+  {
+   "id": "G0204",
+   "rfc": 8833,
+   "class": "lowercase-modal",
+   "verdict": "label_error",
+   "why": "Bibliography entry."
+  },
+  {
+   "id": "G0210",
+   "rfc": 8901,
+   "class": "lowercase-modal",
+   "verdict": "label_error",
+   "why": "Bibliography entry."
+  },
+  {
+   "id": "G0229",
+   "rfc": 9117,
+   "class": "lowercase-modal",
+   "verdict": "tool_defect",
+   "why": "'If the latter applies, a network should be designed so it has a congruent topology amongst unicast routes and Flow Specification routes.' A real obligation on lower-case should. Open."
+  },
+  {
+   "id": "G0235",
+   "rfc": 9217,
+   "class": "lowercase-modal",
+   "verdict": "label_error",
+   "why": "One of the document's own open questions. Phrased as a question about design."
+  },
+  {
+   "id": "G0241",
+   "rfc": 9407,
+   "class": "uppercase-modal",
+   "verdict": "probe_artifact",
+   "why": "The probe ends '...we MUST follow this procedure: 1.'; the tool emitted the sentence up to the colon. Split-boundary artefact."
+  },
+  {
+   "id": "G0242",
+   "rfc": 9407,
+   "class": "keyword-free-spec",
+   "verdict": "unreachable_class",
+   "why": "An algorithm step with no modal token."
+  },
+  {
+   "id": "G0249",
+   "rfc": 9461,
+   "class": "lowercase-modal",
+   "verdict": "label_error",
+   "why": "Bibliography entry."
+  }
+ ]
+}

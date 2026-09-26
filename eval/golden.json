@@ -1,0 +1,4480 @@
+{
+ "$meta": {
+  "title": "Golden set: 100 protocols, labelled normative statements, for the RFC -> contract -> code scenario.",
+  "built_at": "2026-09-26",
+  "protocols": 100,
+  "rules": 260,
+  "strict": 118,
+  "weak": 142,
+  "by_class": {
+   "uppercase-modal": 118,
+   "lowercase-modal": 129,
+   "keyword-free-spec": 13
+  },
+  "protocol_selection": "10 equal strata of the corpus by RFC number, 10 evenly spaced per stratum. No document is added, dropped or reordered by hand, so the bench cannot drift toward a family the extractor happens to handle.",
+  "section_selection": "Numbered sections sampled outward from the middle of the document (1/2, 1/4, 3/4, 1/8, 7/8, 3/8, 5/8) until the protocol has three rules or the order runs out. Prose-only kinds are skipped; appendices are not, because appendices hold the field definitions a keyword-driven pass misses.",
+  "labelling": "A candidate is any sentence carrying a modal token matched case-insensitively (must|shall|should|may|required|recommended|optional). Tier is derived from case alone: an upper-case RFC 2119/8174 keyword makes it strict, anything else weak. Selection never looks at case, and no rule is ever taken from the extractor's output.",
+  "matching": "Whitespace-normalised substring containment, applied to probe and candidate alike, because RFC text is hard-wrapped and exact_text keeps the line breaks. Verdicts are reported both ways: normalised and byte-exact.",
+  "tier_separation": "strict is matched ONLY against requirements[].exact_text and weak ONLY against non_strict_candidates.candidates[].exact_text. A provisional hit never counts as a normative one; mixing the two would inflate recall by construction."
+ },
+ "protocols": [
+  {
+   "rfc": 768,
+   "title": "User Datagram Protocol",
+   "published": "1980-08-01",
+   "snapshot_id": "snp_4c742f17b5e9c76471ceb60f",
+   "sections_used": [],
+   "rules": 0,
+   "eligible_sections": 2,
+   "outline_sections": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 792,
+   "title": "Internet Control Message Protocol",
+   "published": "1981-09-01",
+   "snapshot_id": "snp_9f41fe520a7e219492200a75",
+   "sections_used": [],
+   "rules": 0,
+   "eligible_sections": 1,
+   "outline_sections": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 793,
+   "title": "Transmission Control Protocol",
+   "published": "1981-09-01",
+   "snapshot_id": "snp_219c5a1a34c542698df4fc12",
+   "sections_used": [
+    "1.4",
+    "3.3"
+   ],
+   "rules": 3,
+   "eligible_sections": 29,
+   "outline_sections": 30,
+   "sections_probed": 3,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 959,
+   "title": "File Transfer Protocol",
+   "published": "1985-10-01",
+   "snapshot_id": "snp_862934d8fd17826cca63aae9",
+   "sections_used": [
+    "5",
+    "3"
+   ],
+   "rules": 3,
+   "eligible_sections": 9,
+   "outline_sections": 11,
+   "sections_probed": 2,
+   "sections_with_rules": 2,
+   "dangling_headings": [
+    {
+     "number": "5.1",
+     "title": "5.1.  MINIMUM IMPLEMENTATION"
+    },
+    {
+     "number": "5.2",
+     "title": "5.2.  CONNECTIONS"
+    },
+    {
+     "number": "5.3",
+     "title": "5.3.  COMMANDS"
+    },
+    {
+     "number": "5.3.1",
+     "title": "5.3.1.  FTP COMMANDS"
+    },
+    {
+     "number": "5.3.2",
+     "title": "5.3.2.  FTP COMMAND ARGUMENTS"
+    },
+    {
+     "number": "5.4",
+     "title": "5.4.  SEQUENCING OF COMMANDS AND REPLIES"
+    },
+    {
+     "number": "3.1",
+     "title": "3.1.  DATA REPRESENTATION AND STORAGE"
+    },
+    {
+     "number": "3.1.1",
+     "title": "3.1.1.  DATA TYPES"
+    },
+    {
+     "number": "3.1.2",
+     "title": "3.1.2.  DATA STRUCTURES"
+    },
+    {
+     "number": "3.2",
+     "title": "3.2.  ESTABLISHING DATA CONNECTIONS"
+    },
+    {
+     "number": "3.3",
+     "title": "3.3.  DATA CONNECTION MANAGEMENT"
+    },
+    {
+     "number": "3.4",
+     "title": "3.4.  TRANSMISSION MODES"
+    },
+    {
+     "number": "3.4.1",
+     "title": "3.4.1.  STREAM MODE"
+    },
+    {
+     "number": "3.4.2",
+     "title": "3.4.2.  BLOCK MODE"
+    },
+    {
+     "number": "3.4.3",
+     "title": "3.4.3.  COMPRESSED MODE"
+    },
+    {
+     "number": "3.5",
+     "title": "3.5.  ERROR RECOVERY AND RESTART"
+    }
+   ]
+  },
+  {
+   "rfc": 1034,
+   "title": "Domain names - concepts and facilities",
+   "published": "1987-11-01",
+   "snapshot_id": "snp_54878362cc66c6745f60e504",
+   "sections_used": [
+    "4.2.2",
+    "3.6"
+   ],
+   "rules": 3,
+   "eligible_sections": 47,
+   "outline_sections": 50,
+   "sections_probed": 2,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 1122,
+   "title": "Requirements for Internet Hosts - Communication Layers",
+   "published": "1989-10-01",
+   "snapshot_id": "snp_9a996621e99c6e346bc4ace1",
+   "sections_used": [
+    "4"
+   ],
+   "rules": 3,
+   "eligible_sections": 6,
+   "outline_sections": 8,
+   "sections_probed": 1,
+   "sections_with_rules": 1,
+   "dangling_headings": [
+    {
+     "number": "4.1",
+     "title": "4.1  USER DATAGRAM PROTOCOL -- UDP"
+    },
+    {
+     "number": "4.1.1",
+     "title": "4.1.1  INTRODUCTION"
+    },
+    {
+     "number": "4.1.2",
+     "title": "4.1.2  PROTOCOL WALK-THROUGH"
+    },
+    {
+     "number": "4.1.3",
+     "title": "4.1.3  SPECIFIC ISSUES"
+    },
+    {
+     "number": "4.1.4",
+     "title": "4.1.4  UDP/APPLICATION LAYER INTERFACE"
+    },
+    {
+     "number": "4.1.5",
+     "title": "4.1.5  UDP REQUIREMENTS SUMMARY"
+    },
+    {
+     "number": "4.2",
+     "title": "4.2  TRANSMISSION CONTROL PROTOCOL -- TCP"
+    },
+    {
+     "number": "4.2.1",
+     "title": "4.2.1  INTRODUCTION"
+    },
+    {
+     "number": "4.2.2",
+     "title": "4.2.2  PROTOCOL WALK-THROUGH"
+    },
+    {
+     "number": "4.2.3",
+     "title": "4.2.3  SPECIFIC ISSUES"
+    }
+   ]
+  },
+  {
+   "rfc": 1123,
+   "title": "Requirements for Internet Hosts - Application and Support",
+   "published": "1989-10-01",
+   "snapshot_id": "snp_e534aaf570423003ffec804e",
+   "sections_used": [
+    "5"
+   ],
+   "rules": 3,
+   "eligible_sections": 9,
+   "outline_sections": 11,
+   "sections_probed": 1,
+   "sections_with_rules": 1,
+   "dangling_headings": [
+    {
+     "number": "5.1",
+     "title": "5.1  INTRODUCTION"
+    },
+    {
+     "number": "5.2",
+     "title": "5.2  PROTOCOL WALK-THROUGH"
+    },
+    {
+     "number": "5.2.1",
+     "title": "5.2.1  The SMTP Model: RFC-821 Section 2"
+    },
+    {
+     "number": "5.2.2",
+     "title": "5.2.2  Canonicalization: RFC-821 Section 3.1"
+    },
+    {
+     "number": "5.2.3",
+     "title": "5.2.3  VRFY and EXPN Commands: RFC-821 Section 3.3"
+    },
+    {
+     "number": "5.2.4",
+     "title": "5.2.4  SEND, SOML, and SAML Commands: RFC-821 Section 3.4"
+    },
+    {
+     "number": "5.2.5",
+     "title": "5.2.5  HELO Command: RFC-821 Section 3.5"
+    },
+    {
+     "number": "5.2.6",
+     "title": "5.2.6  Mail Relay: RFC-821 Section 3.6"
+    },
+    {
+     "number": "5.2.7",
+     "title": "5.2.7  RCPT Command: RFC-821 Section 4.1.1"
+    },
+    {
+     "number": "5.2.8",
+     "title": "5.2.8  DATA Command: RFC-821 Section 4.1.1"
+    },
+    {
+     "number": "5.2.9",
+     "title": "5.2.9  Command Syntax: RFC-821 Section 4.1.2"
+    },
+    {
+     "number": "5.2.10",
+     "title": "5.2.10  SMTP Replies:  RFC-821 Section 4.2"
+    },
+    {
+     "number": "5.2.11",
+     "title": "5.2.11  Transparency: RFC-821 Section 4.5.2"
+    },
+    {
+     "number": "5.2.12",
+     "title": "5.2.12  WKS Use in MX Processing: RFC-974, p. 5"
+    },
+    {
+     "number": "5.2.13",
+     "title": "5.2.13  RFC-822 Message Specification: RFC-822 Section 4"
+    },
+    {
+     "number": "5.2.14",
+     "title": "5.2.14  RFC-822 Date and Time Specification: RFC-822 Section 5"
+    },
+    {
+     "number": "5.2.15",
+     "title": "5.2.15  RFC-822 Syntax Change: RFC-822 Section 6.1"
+    },
+    {
+     "number": "5.2.16",
+     "title": "5.2.16  RFC-822  Local-part: RFC-822 Section 6.2"
+    },
+    {
+     "number": "5.2.17",
+     "title": "5.2.17  Domain Literals: RFC-822 Section 6.2.3"
+    },
+    {
+     "number": "5.2.18",
+     "title": "5.2.18  Common Address Formatting Errors: RFC-822 Section 6.1"
+    },
+    {
+     "number": "5.2.19",
+     "title": "5.2.19  Explicit Source Routes: RFC-822 Section 6.2.7"
+    },
+    {
+     "number": "5.3",
+     "title": "5.3  SPECIFIC ISSUES"
+    },
+    {
+     "number": "5.3.1",
+     "title": "5.3.1  SMTP Queueing Strategies"
+    },
+    {
+     "number": "5.3.2",
+     "title": "5.3.2  Timeouts in SMTP"
+    },
+    {
+     "number": "5.3.3",
+     "title": "5.3.3  Reliable Mail Receipt"
+    },
+    {
+     "number": "5.3.4",
+     "title": "5.3.4  Reliable Mail Transmission"
+    },
+    {
+     "number": "5.3.5",
+     "title": "5.3.5  Domain Name Support"
+    },
+    {
+     "number": "5.3.6",
+     "title": "5.3.6  Mailing Lists and Aliases"
+    },
+    {
+     "number": "5.3.7",
+     "title": "5.3.7  Mail Gatewaying"
+    },
+    {
+     "number": "5.3.8",
+     "title": "5.3.8  Maximum Message Size"
+    },
+    {
+     "number": "5.4",
+     "title": "5.4  SMTP REQUIREMENTS SUMMARY"
+    }
+   ]
+  },
+  {
+   "rfc": 1812,
+   "title": "Requirements for IP Version 4 Routers",
+   "published": "1995-06-01",
+   "snapshot_id": "snp_cbc74005d637bf93fd001cd4",
+   "sections_used": [
+    "5.2.4.2",
+    "4.2.2.2"
+   ],
+   "rules": 3,
+   "eligible_sections": 197,
+   "outline_sections": 199,
+   "sections_probed": 2,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 1939,
+   "title": "Post Office Protocol - Version 3",
+   "published": "1996-05-01",
+   "snapshot_id": "snp_22418ae6f8fbced4ab75dcaf",
+   "sections_used": [
+    "9",
+    "5"
+   ],
+   "rules": 3,
+   "eligible_sections": 17,
+   "outline_sections": 19,
+   "sections_probed": 2,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 2045,
+   "title": "Multipurpose Internet Mail Extensions (MIME) Part One: Format of Internet Message Bodies",
+   "published": "1996-11-01",
+   "snapshot_id": "snp_f142a01579aac6e2c3e6d3fa",
+   "sections_used": [
+    "5.2",
+    "6.7"
+   ],
+   "rules": 3,
+   "eligible_sections": 33,
+   "outline_sections": 36,
+   "sections_probed": 3,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 2052,
+   "title": "A DNS RR for specifying the location of services (DNS SRV)",
+   "published": "1996-10-01",
+   "snapshot_id": "snp_665a0b2356ae69b575226042",
+   "sections_used": [],
+   "rules": 0,
+   "eligible_sections": 1,
+   "outline_sections": 4,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 2054,
+   "title": "WebNFS Client Specification",
+   "published": "1996-10-01",
+   "snapshot_id": "snp_6a9226dadc8f1505addd7a1d",
+   "sections_used": [
+    "4.3",
+    "9.1"
+   ],
+   "rules": 3,
+   "eligible_sections": 26,
+   "outline_sections": 29,
+   "sections_probed": 3,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 2119,
+   "title": "Key words for use in RFCs to Indicate Requirement Levels",
+   "published": "1997-03-01",
+   "snapshot_id": "snp_67b2a4b629ec8041bf8cc686",
+   "sections_used": [
+    "7",
+    "6"
+   ],
+   "rules": 2,
+   "eligible_sections": 4,
+   "outline_sections": 7,
+   "sections_probed": 4,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 2181,
+   "title": "Clarifications to the DNS Specification",
+   "published": "1997-07-01",
+   "snapshot_id": "snp_69c20b854ef99d6e1ae1972b",
+   "sections_used": [
+    "6.2",
+    "5.3"
+   ],
+   "rules": 3,
+   "eligible_sections": 33,
+   "outline_sections": 36,
+   "sections_probed": 2,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 2300,
+   "title": "Internet Official Protocol Standards",
+   "published": "1998-05-01",
+   "snapshot_id": "snp_380b7079e7fb85fc5152f3cf",
+   "sections_used": [
+    "6.2",
+    "4.1"
+   ],
+   "rules": 3,
+   "eligible_sections": 35,
+   "outline_sections": 39,
+   "sections_probed": 2,
+   "sections_with_rules": 2,
+   "dangling_headings": [
+    {
+     "number": "4.1.1",
+     "title": "4.1.1.  Standard Protocol"
+    },
+    {
+     "number": "4.1.2",
+     "title": "4.1.2.  Draft Standard Protocol"
+    },
+    {
+     "number": "4.1.3",
+     "title": "4.1.3.  Proposed Standard Protocol"
+    },
+    {
+     "number": "4.1.4",
+     "title": "4.1.4.  Experimental Protocol"
+    },
+    {
+     "number": "4.1.5",
+     "title": "4.1.5.  Informational Protocol"
+    },
+    {
+     "number": "4.1.6",
+     "title": "4.1.6.  Historic Protocol"
+    }
+   ]
+  },
+  {
+   "rfc": 2606,
+   "title": "Reserved Top Level DNS Names",
+   "published": "1999-06-01",
+   "snapshot_id": "snp_47aff5238fe44d7d615bf7e1",
+   "sections_used": [
+    "2"
+   ],
+   "rules": 1,
+   "eligible_sections": 8,
+   "outline_sections": 13,
+   "sections_probed": 7,
+   "sections_with_rules": 1,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 2615,
+   "title": "PPP over SONET/SDH",
+   "published": "1999-06-01",
+   "snapshot_id": "snp_81e65a24a5d02a3bbb54a3ce",
+   "sections_used": [
+    "6",
+    "2",
+    "5"
+   ],
+   "rules": 3,
+   "eligible_sections": 11,
+   "outline_sections": 17,
+   "sections_probed": 6,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 2865,
+   "title": "Remote Authentication Dial In User Service (RADIUS)",
+   "published": "2000-06-01",
+   "snapshot_id": "snp_309955bb46dc2b5a46fd100a",
+   "sections_used": [
+    "5.22",
+    "5.3"
+   ],
+   "rules": 3,
+   "eligible_sections": 76,
+   "outline_sections": 81,
+   "sections_probed": 2,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 3110,
+   "title": "RSA/SHA-1 SIGs and RSA KEYs in the Domain Name System (DNS)",
+   "published": "2001-05-01",
+   "snapshot_id": "snp_8d5cd4dd897091cfd3976f7c",
+   "sections_used": [
+    "2",
+    "1",
+    "3"
+   ],
+   "rules": 3,
+   "eligible_sections": 10,
+   "outline_sections": 15,
+   "sections_probed": 6,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 3225,
+   "title": "Indicating Resolver Support of DNSSEC",
+   "published": "2001-12-01",
+   "snapshot_id": "snp_d3f52d29d731ae451fee4167",
+   "sections_used": [
+    "2",
+    "1",
+    "3"
+   ],
+   "rules": 3,
+   "eligible_sections": 7,
+   "outline_sections": 12,
+   "sections_probed": 6,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 3226,
+   "title": "DNSSEC and IPv6 A6 aware server/resolver message size requirements",
+   "published": "2001-12-01",
+   "snapshot_id": "snp_8649da887edb7c3cc50cb86e",
+   "sections_used": [
+    "2.1.1",
+    "2.3"
+   ],
+   "rules": 3,
+   "eligible_sections": 16,
+   "outline_sections": 21,
+   "sections_probed": 6,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 3261,
+   "title": "SIP: Session Initiation Protocol",
+   "published": "2002-07-03",
+   "snapshot_id": "snp_2c75afe208e5686f62c1b344",
+   "sections_used": [
+    "20.3",
+    "12.2.2"
+   ],
+   "rules": 3,
+   "eligible_sections": 317,
+   "outline_sections": 322,
+   "sections_probed": 2,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 3335,
+   "title": "MIME-based Secure Peer-to-Peer Business Data Interchange over the Internet",
+   "published": "2002-09-16",
+   "snapshot_id": "snp_a2c9f181f35c08679a322752",
+   "sections_used": [
+    "5.3.2.3",
+    "2.2.3",
+    "6.2"
+   ],
+   "rules": 3,
+   "eligible_sections": 55,
+   "outline_sections": 60,
+   "sections_probed": 5,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 3501,
+   "title": "INTERNET MESSAGE ACCESS PROTOCOL - VERSION 4rev1",
+   "published": "2003-03-18",
+   "snapshot_id": "snp_550df2b280c75be4d7309eff",
+   "sections_used": [
+    "6.3.2",
+    "7.1.3",
+    "2.3.1.2"
+   ],
+   "rules": 3,
+   "eligible_sections": 102,
+   "outline_sections": 107,
+   "sections_probed": 4,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 3986,
+   "title": "Uniform Resource Identifier (URI): Generic Syntax",
+   "published": "2005-01-25",
+   "snapshot_id": "snp_e6db0994ba2809f835c1d819",
+   "sections_used": [
+    "5.2",
+    "3.2",
+    "4.2"
+   ],
+   "rules": 3,
+   "eligible_sections": 74,
+   "outline_sections": 81,
+   "sections_probed": 6,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 3988,
+   "title": "Maximum Transmission Unit Signalling Extensions for the Label Distribution Protocol",
+   "published": "2005-02-02",
+   "snapshot_id": "snp_3fb56853264b95587450a4ec",
+   "sections_used": [
+    "5.1",
+    "2.3"
+   ],
+   "rules": 2,
+   "eligible_sections": 20,
+   "outline_sections": 26,
+   "sections_probed": 7,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 3989,
+   "title": "Middlebox Communications (MIDCOM) Protocol Semantics",
+   "published": "2005-02-18",
+   "snapshot_id": "snp_8f7a22babba83ac226d4b8ea",
+   "sections_used": [
+    "3.3",
+    "2.3.2",
+    "2.1.6"
+   ],
+   "rules": 3,
+   "eligible_sections": 85,
+   "outline_sections": 91,
+   "sections_probed": 4,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 4034,
+   "title": "Resource Records for the DNS Security Extensions",
+   "published": "2005-03-29",
+   "snapshot_id": "snp_34f4b1998263c4cbc5350bed",
+   "sections_used": [
+    "4.1.1",
+    "6",
+    "2.1.2"
+   ],
+   "rules": 3,
+   "eligible_sections": 55,
+   "outline_sections": 61,
+   "sections_probed": 4,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 4035,
+   "title": "Protocol Modifications for the DNS Security Extensions",
+   "published": "2005-03-29",
+   "snapshot_id": "snp_0f94942a9a0aa131f20200b6",
+   "sections_used": [
+    "4.2",
+    "5.3.2"
+   ],
+   "rules": 3,
+   "eligible_sections": 65,
+   "outline_sections": 71,
+   "sections_probed": 3,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 4113,
+   "title": "Management Information Base for the User Datagram Protocol (UDP)",
+   "published": "2005-06-10",
+   "snapshot_id": "snp_59262a90f8efcfff5856e966",
+   "sections_used": [
+    "3"
+   ],
+   "rules": 1,
+   "eligible_sections": 16,
+   "outline_sections": 22,
+   "sections_probed": 7,
+   "sections_with_rules": 1,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 4120,
+   "title": "The Kerberos Network Authentication Service (V5)",
+   "published": "2005-07-15",
+   "snapshot_id": "snp_aedcb14057cd82ea14fb3910",
+   "sections_used": [
+    "5.2.4",
+    "3.2.2"
+   ],
+   "rules": 3,
+   "eligible_sections": 134,
+   "outline_sections": 140,
+   "sections_probed": 2,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 4271,
+   "title": "A Border Gateway Protocol 4 (BGP-4)",
+   "published": "2006-01-13",
+   "snapshot_id": "snp_0e130d076b954c7de6255441",
+   "sections_used": [
+    "8.2.1",
+    "5.1.6"
+   ],
+   "rules": 3,
+   "eligible_sections": 80,
+   "outline_sections": 86,
+   "sections_probed": 2,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 4291,
+   "title": "IP Version 6 Addressing Architecture",
+   "published": "2006-02-17",
+   "snapshot_id": "snp_279c9fd64847a545d20d88ae",
+   "sections_used": [
+    "2.5.7",
+    "2.5.1"
+   ],
+   "rules": 3,
+   "eligible_sections": 31,
+   "outline_sections": 37,
+   "sections_probed": 2,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 4343,
+   "title": "Domain Name System (DNS) Case Insensitivity Clarification",
+   "published": "2006-01-11",
+   "snapshot_id": "snp_f096c8c75aaae1eb0d51ab90",
+   "sections_used": [
+    "4.1",
+    "3"
+   ],
+   "rules": 2,
+   "eligible_sections": 18,
+   "outline_sections": 24,
+   "sections_probed": 7,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 4506,
+   "title": "XDR: External Data Representation Standard",
+   "published": "2006-05-12",
+   "snapshot_id": "snp_761ed09b6d2dd26a82ce2b69",
+   "sections_used": [
+    "4.16",
+    "4.6"
+   ],
+   "rules": 3,
+   "eligible_sections": 39,
+   "outline_sections": 45,
+   "sections_probed": 2,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 4635,
+   "title": "HMAC SHA (Hashed Message Authentication Code, Secure Hash Algorithm) TSIG Algorithm Identifiers",
+   "published": "2006-08-31",
+   "snapshot_id": "snp_74a57bfab2f50ff339dc4f8a",
+   "sections_used": [
+    "3",
+    "2",
+    "4"
+   ],
+   "rules": 3,
+   "eligible_sections": 11,
+   "outline_sections": 17,
+   "sections_probed": 6,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 4636,
+   "title": "Foreign Agent Error Extension for Mobile IPv4",
+   "published": "2006-10-10",
+   "snapshot_id": "snp_3e6ae2ab97d5863a9959a5e9",
+   "sections_used": [
+    "7",
+    "4",
+    "5"
+   ],
+   "rules": 3,
+   "eligible_sections": 12,
+   "outline_sections": 18,
+   "sections_probed": 6,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 4764,
+   "title": "The EAP-PSK Protocol: A Pre-Shared Key Extensible Authentication Protocol (EAP) Method",
+   "published": "2007-01-18",
+   "snapshot_id": "snp_457db36280acd072d3dd1eaf",
+   "sections_used": [
+    "6.1.2",
+    "8.10"
+   ],
+   "rules": 3,
+   "eligible_sections": 66,
+   "outline_sections": 72,
+   "sections_probed": 3,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 5155,
+   "title": "DNS Security (DNSSEC) Hashed Authenticated Denial of Existence",
+   "published": "2008-03-06",
+   "snapshot_id": "snp_575da75ef64b46ed0ea77724",
+   "sections_used": [
+    "7.2.8",
+    "10.2",
+    "12.1.4"
+   ],
+   "rules": 3,
+   "eligible_sections": 80,
+   "outline_sections": 85,
+   "sections_probed": 5,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 5246,
+   "title": "The Transport Layer Security (TLS) Protocol Version 1.2",
+   "published": "2008-08-15",
+   "snapshot_id": "snp_4b4261b1b1c9e477ed798d23",
+   "sections_used": [
+    "6",
+    "4.3"
+   ],
+   "rules": 3,
+   "eligible_sections": 66,
+   "outline_sections": 71,
+   "sections_probed": 4,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 5280,
+   "title": "Internet X.509 Public Key Infrastructure Certificate and Certificate Revocation List (CRL) Profile",
+   "published": "2008-05-08",
+   "snapshot_id": "snp_cb30b04b163b38c28da4813e",
+   "sections_used": [
+    "5.1.1",
+    "4.1.2.6"
+   ],
+   "rules": 3,
+   "eligible_sections": 105,
+   "outline_sections": 110,
+   "sections_probed": 2,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 5321,
+   "title": "Simple Mail Transfer Protocol",
+   "published": "2008-10-01",
+   "snapshot_id": "snp_9cd4595575f6375314f49689",
+   "sections_used": [
+    "4.2.1",
+    "4.5.4.1"
+   ],
+   "rules": 3,
+   "eligible_sections": 132,
+   "outline_sections": 137,
+   "sections_probed": 3,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 5322,
+   "title": "Internet Message Format",
+   "published": "2008-10-01",
+   "snapshot_id": "snp_8996a5b41e6d706ee4aabc88",
+   "sections_used": [
+    "4",
+    "2.1.1"
+   ],
+   "rules": 3,
+   "eligible_sections": 70,
+   "outline_sections": 75,
+   "sections_probed": 4,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 5780,
+   "title": "NAT Behavior Discovery Using Session Traversal Utilities for NAT (STUN)",
+   "published": "2010-05-18",
+   "snapshot_id": "snp_b308f5e4b2d67869556c57f3",
+   "sections_used": [
+    "6",
+    "3.5"
+   ],
+   "rules": 3,
+   "eligible_sections": 47,
+   "outline_sections": 51,
+   "sections_probed": 2,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 5936,
+   "title": "DNS Zone Transfer Protocol (AXFR)",
+   "published": "2010-06-28",
+   "snapshot_id": "snp_7ae8d96b84fc36eb852bf3c9",
+   "sections_used": [
+    "3.2",
+    "7",
+    "2"
+   ],
+   "rules": 3,
+   "eligible_sections": 43,
+   "outline_sections": 47,
+   "sections_probed": 4,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 6265,
+   "title": "HTTP State Management Mechanism",
+   "published": "2011-04-27",
+   "snapshot_id": "snp_d2c07ad0d23d82a43d9a153e",
+   "sections_used": [
+    "5.2.4",
+    "5.1.1"
+   ],
+   "rules": 2,
+   "eligible_sections": 61,
+   "outline_sections": 65,
+   "sections_probed": 7,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 6302,
+   "title": "Logging Recommendations for Internet-Facing Servers",
+   "published": "2011-06-30",
+   "snapshot_id": "snp_56e2c08e126c344976508757",
+   "sections_used": [
+    "3",
+    "5.2",
+    "2"
+   ],
+   "rules": 3,
+   "eligible_sections": 8,
+   "outline_sections": 12,
+   "sections_probed": 4,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 6648,
+   "title": "Deprecating the \"X-\" Prefix and Similar Constructs in Application Protocols",
+   "published": "2012-06-26",
+   "snapshot_id": "snp_0d8a997f9db91018e892cbe4",
+   "sections_used": [
+    "4",
+    "2"
+   ],
+   "rules": 3,
+   "eligible_sections": 13,
+   "outline_sections": 17,
+   "sections_probed": 4,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 6672,
+   "title": "DNAME Redirection in the DNS",
+   "published": "2012-06-18",
+   "snapshot_id": "snp_625836ec55b5fd05838739f4",
+   "sections_used": [
+    "3.1",
+    "2.2",
+    "4"
+   ],
+   "rules": 3,
+   "eligible_sections": 38,
+   "outline_sections": 42,
+   "sections_probed": 6,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 6761,
+   "title": "Special-Use Domain Names",
+   "published": "2013-02-20",
+   "snapshot_id": "snp_64b1e978c271ae1c348cb7bb",
+   "sections_used": [
+    "6.3",
+    "5"
+   ],
+   "rules": 3,
+   "eligible_sections": 17,
+   "outline_sections": 21,
+   "sections_probed": 2,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 6762,
+   "title": "Multicast DNS",
+   "published": "2013-02-20",
+   "snapshot_id": "snp_5e229aeb98f86399e0603312",
+   "sections_used": [
+    "7.2",
+    "6"
+   ],
+   "rules": 3,
+   "eligible_sections": 80,
+   "outline_sections": 84,
+   "sections_probed": 4,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 7230,
+   "title": "Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing",
+   "published": "2014-06-06",
+   "snapshot_id": "snp_7400ed76c5529ee4bc90dab0",
+   "sections_used": [
+    "3.2.6",
+    "8.3.2",
+    "6.3.1"
+   ],
+   "rules": 3,
+   "eligible_sections": 96,
+   "outline_sections": 101,
+   "sections_probed": 7,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 7231,
+   "title": "Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content",
+   "published": "2014-06-06",
+   "snapshot_id": "snp_38ddeb1c4ac7b145867ef0d2",
+   "sections_used": [
+    "6.4.3",
+    "4.3.4"
+   ],
+   "rules": 3,
+   "eligible_sections": 145,
+   "outline_sections": 150,
+   "sections_probed": 2,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 7233,
+   "title": "Hypertext Transfer Protocol (HTTP/1.1): Range Requests",
+   "published": "2014-06-06",
+   "snapshot_id": "snp_23555b3e667e2814ea217a20",
+   "sections_used": [
+    "3.1",
+    "2.1"
+   ],
+   "rules": 3,
+   "eligible_sections": 34,
+   "outline_sections": 39,
+   "sections_probed": 4,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 7234,
+   "title": "Hypertext Transfer Protocol (HTTP/1.1): Caching",
+   "published": "2014-06-06",
+   "snapshot_id": "snp_7ff63313f4238d1951fff00a",
+   "sections_used": [
+    "5.2.2.3",
+    "4.3.2",
+    "4"
+   ],
+   "rules": 3,
+   "eligible_sections": 74,
+   "outline_sections": 79,
+   "sections_probed": 4,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 7258,
+   "title": "Pervasive Monitoring Is an Attack",
+   "published": "2014-05-12",
+   "snapshot_id": "snp_47ea0ee401a56ad7cb6477d7",
+   "sections_used": [
+    "1"
+   ],
+   "rules": 1,
+   "eligible_sections": 7,
+   "outline_sections": 11,
+   "sections_probed": 7,
+   "sections_with_rules": 1,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 7411,
+   "title": "Multicast Listener Extensions for Mobile IPv6 (MIPv6) and Proxy Mobile IPv6 (PMIPv6) Fast Handovers",
+   "published": "2014-11-30",
+   "snapshot_id": "snp_299144915100a81411d15d61",
+   "sections_used": [
+    "4.2.3",
+    "5.6"
+   ],
+   "rules": 3,
+   "eligible_sections": 33,
+   "outline_sections": 37,
+   "sections_probed": 3,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 7624,
+   "title": "Confidentiality in the Face of Pervasive Surveillance: A Threat Model and Problem Statement",
+   "published": "2015-08-20",
+   "snapshot_id": "snp_5c557b59dc9e2ce41714ae42",
+   "sections_used": [
+    "7.2",
+    "5"
+   ],
+   "rules": 2,
+   "eligible_sections": 23,
+   "outline_sections": 27,
+   "sections_probed": 7,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 7638,
+   "title": "JSON Web Key (JWK) Thumbprint",
+   "published": "2015-09-08",
+   "snapshot_id": "snp_8301184c3b9ed2724966b00a",
+   "sections_used": [
+    "3.2",
+    "8.2",
+    "3.2.2"
+   ],
+   "rules": 3,
+   "eligible_sections": 20,
+   "outline_sections": 24,
+   "sections_probed": 6,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 7680,
+   "title": "A One-Way Loss Metric for IP Performance Metrics (IPPM)",
+   "published": "2016-01-29",
+   "snapshot_id": "snp_04ad7b50402168b7dd145655",
+   "sections_used": [
+    "2.5",
+    "2.8.1"
+   ],
+   "rules": 2,
+   "eligible_sections": 34,
+   "outline_sections": 38,
+   "sections_probed": 7,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 7719,
+   "title": "DNS Terminology",
+   "published": "2015-12-15",
+   "snapshot_id": "snp_9bbe960b2ced27965551d1b3",
+   "sections_used": [
+    "8",
+    "4",
+    "2"
+   ],
+   "rules": 3,
+   "eligible_sections": 15,
+   "outline_sections": 19,
+   "sections_probed": 4,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 7838,
+   "title": "HTTP Alternative Services",
+   "published": "2016-04-07",
+   "snapshot_id": "snp_ff8bc3e93971d2be656fed0a",
+   "sections_used": [
+    "3",
+    "2.1"
+   ],
+   "rules": 3,
+   "eligible_sections": 30,
+   "outline_sections": 34,
+   "sections_probed": 4,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 7858,
+   "title": "Specification for DNS over Transport Layer Security (TLS)",
+   "published": "2016-05-17",
+   "snapshot_id": "snp_04dfe952b95614dca12e8017",
+   "sections_used": [
+    "5",
+    "3.3",
+    "9.1"
+   ],
+   "rules": 3,
+   "eligible_sections": 21,
+   "outline_sections": 25,
+   "sections_probed": 3,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 7872,
+   "title": "Observations on the Dropping of Packets with IPv6 Extension Headers in the Real World",
+   "published": "2016-06-21",
+   "snapshot_id": "snp_11e6e9ac207d80b382b91a65",
+   "sections_used": [
+    "Appendix A"
+   ],
+   "rules": 1,
+   "eligible_sections": 11,
+   "outline_sections": 15,
+   "sections_probed": 7,
+   "sections_with_rules": 1,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 7873,
+   "title": "Domain Name System (DNS) Cookies",
+   "published": "2016-05-27",
+   "snapshot_id": "snp_d171cb106042a947328ad32e",
+   "sections_used": [
+    "5.2.3",
+    "3.2",
+    "9"
+   ],
+   "rules": 3,
+   "eligible_sections": 40,
+   "outline_sections": 44,
+   "sections_probed": 3,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 7919,
+   "title": "Negotiated Finite Field Diffie-Hellman Ephemeral Parameters for Transport Layer Security (TLS)",
+   "published": "2016-08-10",
+   "snapshot_id": "snp_f84ff8581037622be8444e03",
+   "sections_used": [
+    "8.2",
+    "5.1",
+    "3"
+   ],
+   "rules": 3,
+   "eligible_sections": 32,
+   "outline_sections": 36,
+   "sections_probed": 4,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 7929,
+   "title": "DNS-Based Authentication of Named Entities (DANE) Bindings for OpenPGP",
+   "published": "2016-08-05",
+   "snapshot_id": "snp_016c223af60056e679c8af59",
+   "sections_used": [
+    "7",
+    "5.1"
+   ],
+   "rules": 3,
+   "eligible_sections": 32,
+   "outline_sections": 36,
+   "sections_probed": 6,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 8078,
+   "title": "Managing DS Records from the Parent via CDS/CDNSKEY",
+   "published": "2017-03-10",
+   "snapshot_id": "snp_5a84921b52d3765729acc27c",
+   "sections_used": [
+    "3.4",
+    "2",
+    "1.2"
+   ],
+   "rules": 3,
+   "eligible_sections": 22,
+   "outline_sections": 26,
+   "sections_probed": 4,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 8174,
+   "title": "Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words",
+   "published": "2017-05-18",
+   "snapshot_id": "snp_f294fe93fe63b7f0e942195f",
+   "sections_used": [
+    "2"
+   ],
+   "rules": 1,
+   "eligible_sections": 6,
+   "outline_sections": 10,
+   "sections_probed": 6,
+   "sections_with_rules": 1,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 8252,
+   "title": "OAuth 2.0 for Native Apps",
+   "published": "2017-10-04",
+   "snapshot_id": "snp_a56867ec1fd34447ba0e3c40",
+   "sections_used": [
+    "8.5",
+    "7.1",
+    "4.1"
+   ],
+   "rules": 3,
+   "eligible_sections": 32,
+   "outline_sections": 36,
+   "sections_probed": 4,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 8445,
+   "title": "Interactive Connectivity Establishment (ICE): A Protocol for Network Address Translator (NAT) Traversal",
+   "published": "2018-07-19",
+   "snapshot_id": "snp_1a1a328e1b0e1a3b344a6ce5",
+   "sections_used": [
+    "5.1.2",
+    "19.3",
+    "12.1"
+   ],
+   "rules": 3,
+   "eligible_sections": 130,
+   "outline_sections": 134,
+   "sections_probed": 7,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 8447,
+   "title": "IANA Registry Updates for TLS and DTLS",
+   "published": "2018-08-10",
+   "snapshot_id": "snp_6e214673766b45d4bb2591a0",
+   "sections_used": [
+    "12",
+    "18"
+   ],
+   "rules": 3,
+   "eligible_sections": 23,
+   "outline_sections": 27,
+   "sections_probed": 3,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 8448,
+   "title": "Example Handshake Traces for TLS 1.3",
+   "published": "2019-01-14",
+   "snapshot_id": "snp_cca6b18e340b371797bb6139",
+   "sections_used": [],
+   "rules": 0,
+   "eligible_sections": 14,
+   "outline_sections": 18,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 8470,
+   "title": "Using Early Data in HTTP",
+   "published": "2018-09-21",
+   "snapshot_id": "snp_52ef8859ed6936640f414ab9",
+   "sections_used": [
+    "6.1",
+    "4",
+    "8.2"
+   ],
+   "rules": 3,
+   "eligible_sections": 19,
+   "outline_sections": 23,
+   "sections_probed": 5,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 8484,
+   "title": "DNS Queries over HTTPS (DoH)",
+   "published": "2018-10-19",
+   "snapshot_id": "snp_4fbda4ef3af506e49aa1cbb1",
+   "sections_used": [
+    "6",
+    "10"
+   ],
+   "rules": 3,
+   "eligible_sections": 29,
+   "outline_sections": 33,
+   "sections_probed": 3,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 8610,
+   "title": "Concise Data Definition Language (CDDL): A Notational Convention to Express Concise Binary Object Representation (CBOR) and JSON Data Structures",
+   "published": "2019-06-12",
+   "snapshot_id": "snp_c18ea434e149b2140238e8c6",
+   "sections_used": [
+    "6.1",
+    "3.5.3"
+   ],
+   "rules": 2,
+   "eligible_sections": 59,
+   "outline_sections": 63,
+   "sections_probed": 7,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 8659,
+   "title": "DNS Certification Authority Authorization (CAA) Resource Record",
+   "published": "2019-11-19",
+   "snapshot_id": "snp_e5d27d93e66ec6e2be4c211e",
+   "sections_used": [
+    "4.1",
+    "6.3"
+   ],
+   "rules": 3,
+   "eligible_sections": 33,
+   "outline_sections": 37,
+   "sections_probed": 3,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 8833,
+   "title": "Application-Layer Protocol Negotiation (ALPN) for WebRTC",
+   "published": "2021-01-18",
+   "snapshot_id": "snp_67f296188ca4848f886f2a39",
+   "sections_used": [
+    "4",
+    "6.1",
+    "3"
+   ],
+   "rules": 3,
+   "eligible_sections": 11,
+   "outline_sections": 15,
+   "sections_probed": 6,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 8834,
+   "title": "Media Transport and Use of RTP in WebRTC",
+   "published": "2021-01-18",
+   "snapshot_id": "snp_358cd1c023786a81f15e0310",
+   "sections_used": [
+    "4.9",
+    "4.2",
+    "5.1.4"
+   ],
+   "rules": 3,
+   "eligible_sections": 56,
+   "outline_sections": 60,
+   "sections_probed": 6,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 8901,
+   "title": "Multi-Signer DNSSEC Models",
+   "published": "2020-09-24",
+   "snapshot_id": "snp_69e0adf1838f7a5072cc620f",
+   "sections_used": [
+    "2",
+    "13.1"
+   ],
+   "rules": 2,
+   "eligible_sections": 26,
+   "outline_sections": 30,
+   "sections_probed": 7,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 8902,
+   "title": "TLS Authentication Using Intelligent Transport System (ITS) Certificates",
+   "published": "2020-09-30",
+   "snapshot_id": "snp_360f0ff72293ae8b4ba634f4",
+   "sections_used": [
+    "7.5",
+    "5",
+    "7.2"
+   ],
+   "rules": 3,
+   "eligible_sections": 24,
+   "outline_sections": 28,
+   "sections_probed": 7,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 8959,
+   "title": "The \"secret-token\" URI Scheme",
+   "published": "2021-01-29",
+   "snapshot_id": "snp_d45d77aaa8f14113d0408875",
+   "sections_used": [
+    "4",
+    "2"
+   ],
+   "rules": 2,
+   "eligible_sections": 12,
+   "outline_sections": 16,
+   "sections_probed": 7,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 9000,
+   "title": "QUIC: A UDP-Based Multiplexed and Secure Transport",
+   "published": "2021-05-27",
+   "snapshot_id": "snp_daefad637d9ef7551b34e66c",
+   "sections_used": [
+    "13.4.2.1",
+    "8.2.1"
+   ],
+   "rules": 3,
+   "eligible_sections": 211,
+   "outline_sections": 215,
+   "sections_probed": 2,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 9002,
+   "title": "QUIC Loss Detection and Congestion Control",
+   "published": "2021-05-27",
+   "snapshot_id": "snp_380b72a40f5b7ee7d740f4fd",
+   "sections_used": [
+    "6.2.4",
+    "7.6.2"
+   ],
+   "rules": 3,
+   "eligible_sections": 57,
+   "outline_sections": 61,
+   "sections_probed": 3,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 9110,
+   "title": "HTTP Semantics",
+   "published": "2022-06-06",
+   "snapshot_id": "snp_c8a5d27287354e11ca3d3739",
+   "sections_used": [
+    "12.1"
+   ],
+   "rules": 1,
+   "eligible_sections": 297,
+   "outline_sections": 303,
+   "sections_probed": 7,
+   "sections_with_rules": 1,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 9112,
+   "title": "HTTP/1.1",
+   "published": "2022-06-06",
+   "snapshot_id": "snp_5936682967eea2cf67446573",
+   "sections_used": [
+    "8",
+    "3.3",
+    "2.3"
+   ],
+   "rules": 3,
+   "eligible_sections": 66,
+   "outline_sections": 72,
+   "sections_probed": 4,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 9113,
+   "title": "HTTP/2",
+   "published": "2022-06-06",
+   "snapshot_id": "snp_b42a2c55a80b2a971369fad6",
+   "sections_used": [
+    "9.2.1",
+    "6.5"
+   ],
+   "rules": 3,
+   "eligible_sections": 103,
+   "outline_sections": 107,
+   "sections_probed": 6,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 9117,
+   "title": "Revised Validation Procedure for BGP Flow Specifications",
+   "published": "2021-08-23",
+   "snapshot_id": "snp_cb8ed0963005ec4800636b2b",
+   "sections_used": [
+    "5",
+    "3",
+    "4.1"
+   ],
+   "rules": 3,
+   "eligible_sections": 16,
+   "outline_sections": 20,
+   "sections_probed": 6,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 9118,
+   "title": "Enhanced JSON Web Token (JWT) Claim Constraints for Secure Telephone Identity Revisited (STIR) Certificates",
+   "published": "2021-08-23",
+   "snapshot_id": "snp_a1fd711a7b5d4d8373191982",
+   "sections_used": [
+    "3",
+    "1"
+   ],
+   "rules": 3,
+   "eligible_sections": 16,
+   "outline_sections": 20,
+   "sections_probed": 4,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 9217,
+   "title": "Current Open Questions in Path-Aware Networking",
+   "published": "2022-03-16",
+   "snapshot_id": "snp_89772a0eb611ada62773f86e",
+   "sections_used": [
+    "2.5",
+    "2.2",
+    "2.7"
+   ],
+   "rules": 3,
+   "eligible_sections": 18,
+   "outline_sections": 22,
+   "sections_probed": 7,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 9221,
+   "title": "An Unreliable Datagram Extension to QUIC",
+   "published": "2022-03-31",
+   "snapshot_id": "snp_674774e9c0b30b000a0bc605",
+   "sections_used": [
+    "5.3",
+    "3"
+   ],
+   "rules": 3,
+   "eligible_sections": 21,
+   "outline_sections": 25,
+   "sections_probed": 2,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 9407,
+   "title": "Tetrys: An On-the-Fly Network Coding Protocol",
+   "published": "2023-06-12",
+   "snapshot_id": "snp_97d885e13ec6ee9849b4c60e",
+   "sections_used": [
+    "5.3.1.1",
+    "4.1"
+   ],
+   "rules": 3,
+   "eligible_sections": 37,
+   "outline_sections": 41,
+   "sections_probed": 2,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 9422,
+   "title": "The LIMITS SMTP Service Extension",
+   "published": "2024-02-07",
+   "snapshot_id": "snp_3a34f95140050ff7bd287ada",
+   "sections_used": [
+    "3.2",
+    "3.6"
+   ],
+   "rules": 2,
+   "eligible_sections": 27,
+   "outline_sections": 31,
+   "sections_probed": 7,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 9458,
+   "title": "Oblivious HTTP",
+   "published": "2024-01-12",
+   "snapshot_id": "snp_f6eb8ed1b594d42c3939f31e",
+   "sections_used": [
+    "6.3",
+    "3",
+    "9.5"
+   ],
+   "rules": 3,
+   "eligible_sections": 53,
+   "outline_sections": 57,
+   "sections_probed": 5,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 9461,
+   "title": "Service Binding Mapping for DNS Servers",
+   "published": "2023-11-06",
+   "snapshot_id": "snp_71a2984f354a1efb566e0e9e",
+   "sections_used": [
+    "10.2",
+    "8.1.1"
+   ],
+   "rules": 2,
+   "eligible_sections": 25,
+   "outline_sections": 29,
+   "sections_probed": 7,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 9462,
+   "title": "Discovery of Designated Resolvers",
+   "published": "2023-11-06",
+   "snapshot_id": "snp_edff51c746c409ef7845ff42",
+   "sections_used": [
+    "6.2",
+    "4.1"
+   ],
+   "rules": 3,
+   "eligible_sections": 27,
+   "outline_sections": 31,
+   "sections_probed": 2,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 9520,
+   "title": "Negative Caching of DNS Resolution Failures",
+   "published": "2023-12-22",
+   "snapshot_id": "snp_3cb4c0a7941ad5657ab4805b",
+   "sections_used": [
+    "2.7",
+    "2",
+    "5"
+   ],
+   "rules": 3,
+   "eligible_sections": 27,
+   "outline_sections": 31,
+   "sections_probed": 3,
+   "sections_with_rules": 3,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 9650,
+   "title": "Revision to Registration Procedures for IS-IS Neighbor Link-Attribute Bit Values",
+   "published": "2024-08-26",
+   "snapshot_id": "snp_f9fd8e5c84abb8ce226e55ec",
+   "sections_used": [],
+   "rules": 0,
+   "eligible_sections": 10,
+   "outline_sections": 14,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 9651,
+   "title": "Structured Field Values for HTTP",
+   "published": "2024-09-30",
+   "snapshot_id": "snp_21571fcc13d1a8e71e26e39d",
+   "sections_used": [
+    "3.3.2",
+    "2.3"
+   ],
+   "rules": 2,
+   "eligible_sections": 68,
+   "outline_sections": 72,
+   "sections_probed": 7,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  },
+  {
+   "rfc": 9999,
+   "title": "Remote ATtestation procedureS (RATS) Conceptual Message Wrapper (CMW)",
+   "published": "2026-07-14",
+   "snapshot_id": "snp_83ec1cb92ab517a1fb67d067",
+   "sections_used": [
+    "4.2",
+    "3.1.1"
+   ],
+   "rules": 2,
+   "eligible_sections": 57,
+   "outline_sections": 61,
+   "sections_probed": 7,
+   "sections_with_rules": 2,
+   "dangling_headings": []
+  }
+ ],
+ "rules": [
+  {
+   "id": "G0001",
+   "rfc": 793,
+   "section": "1.4",
+   "tier": "weak",
+   "kw": "required",
+   "class": "lowercase-modal",
+   "probe": "Although considerable freedom is permitted to TCP implementors to design interfaces which are appropriate to a particular operating system environment, a minimum functionality is required at the TCP/user interface for any valid implementation.",
+   "why": "Modal token written in lower case (\"required\") in section 1.4. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0002",
+   "rfc": 793,
+   "section": "3.3",
+   "tier": "weak",
+   "kw": "must",
+   "class": "lowercase-modal",
+   "probe": "Since the space is finite, all arithmetic dealing with sequence numbers must be performed modulo 2**32.",
+   "why": "Modal token written in lower case (\"must\") in section 3.3. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0003",
+   "rfc": 793,
+   "section": "3.3",
+   "tier": "weak",
+   "kw": "must",
+   "class": "lowercase-modal",
+   "probe": "However, even when the receive window is zero, a TCP must process the RST and URG fields of all incoming segments.",
+   "why": "Modal token written in lower case (\"must\") in section 3.3. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0004",
+   "rfc": 959,
+   "section": "5",
+   "tier": "weak",
+   "kw": "must",
+   "class": "lowercase-modal",
+   "probe": "The default values for transfer parameters are: TYPE - ASCII Non-print MODE - Stream STRU - File All hosts must accept the above as the standard defaults.",
+   "why": "Modal token written in lower case (\"must\") in section 5. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0005",
+   "rfc": 959,
+   "section": "5",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "Servers are under no obligation to provide for editing of command lines and may require that it be done in the user host.",
+   "why": "Modal token written in lower case (\"may\") in section 5. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0006",
+   "rfc": 959,
+   "section": "3",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "It is not always clear how the sender should send data, and the receiver store it.",
+   "why": "Modal token written in lower case (\"should\") in section 3. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0007",
+   "rfc": 1034,
+   "section": "4.2.2",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "Once the proper name for the new subzone is selected, the new owners should be required to demonstrate redundant name server support.",
+   "why": "Modal token written in lower case (\"should\") in section 4.2.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0008",
+   "rfc": 1034,
+   "section": "3.6",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "Each node has a set of resource information, which may be empty.",
+   "why": "Modal token written in lower case (\"may\") in section 3.6. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0009",
+   "rfc": 1034,
+   "section": "3.6",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "This field is a 32 bit integer in units of seconds, an is primarily used by resolvers when they cache RRs.",
+   "why": "No modal token anywhere in the sentence, in section 3.6: it still fixes a bound or a definition an implementer must honour. No keyword-driven extractor can find it by design, so a miss means the contract has no way to express specifications that are not phrased as obligations."
+  },
+  {
+   "id": "G0010",
+   "rfc": 1122,
+   "section": "4",
+   "tier": "strict",
+   "kw": "SHOULD",
+   "class": "uppercase-modal",
+   "probe": "If a datagram arrives addressed to a UDP port for which there is no pending LISTEN call, UDP SHOULD send an ICMP Port Unreachable message.",
+   "why": "Upper-case SHOULD in section 4 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0011",
+   "rfc": 1122,
+   "section": "4",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "However, new options may be defined in the future, and UDP need not and should not make any assumptions about the format or content of options it passes to or from the application; an exception to this might be an IP-layer security option.",
+   "why": "Modal token written in lower case (\"may\") in section 4. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0012",
+   "rfc": 1122,
+   "section": "4",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "The graceful close algorithm of TCP requires that the connection state remain defined on (at least) one end of the connection, for a timeout period of 2xMSL, i.e., 4 minutes.",
+   "why": "No modal token anywhere in the sentence, in section 4: it still fixes a bound or a definition an implementer must honour. No keyword-driven extractor can find it by design, so a miss means the contract has no way to express specifications that are not phrased as obligations."
+  },
+  {
+   "id": "G0013",
+   "rfc": 1123,
+   "section": "5",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "RFC-822 supercedes an older standard, RFC-733, that may still be in use in a few places, although it is obsolete.",
+   "why": "Modal token written in lower case (\"may\") in section 5. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0014",
+   "rfc": 1123,
+   "section": "5",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "With the advent of the domain system and of mail routing using mail-exchange (MX) resource records, implementors should now think of delivering mail to a user at a domain, which may or may not be a particular host.",
+   "why": "Modal token written in lower case (\"should\") in section 5. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0015",
+   "rfc": 1123,
+   "section": "5",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "Retries continue until the message is transmitted or the sender gives up; the give-up time generally needs to be at least 4-5 days.",
+   "why": "No modal token anywhere in the sentence, in section 5: it still fixes a bound or a definition an implementer must honour. No keyword-driven extractor can find it by design, so a miss means the contract has no way to express specifications that are not phrased as obligations."
+  },
+  {
+   "id": "G0016",
+   "rfc": 1812,
+   "section": "5.2.4.2",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "In the case of a host that is not also a router, this may be the configured default router.",
+   "why": "Modal token written in lower case (\"may\") in section 5.2.4.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0017",
+   "rfc": 1812,
+   "section": "4.2.2.2",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "When a router inserts its address into such an option, it MUST use the IP address of the logical interface on which the packet is being sent.",
+   "why": "Upper-case MUST in section 4.2.2.2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0018",
+   "rfc": 1812,
+   "section": "4.2.2.2",
+   "tier": "strict",
+   "kw": "MUST NOT",
+   "class": "uppercase-modal",
+   "probe": "Which of the router's addresses is used as the router-id MUST NOT change (even across reboots) unless changed by the network manager.",
+   "why": "Upper-case MUST NOT in section 4.2.2.2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0019",
+   "rfc": 1939,
+   "section": "9",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "Any text occurring after this reply may be ignored by the client.",
+   "why": "Modal token written in lower case (\"may\") in section 9. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0020",
+   "rfc": 1939,
+   "section": "5",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "The client may now issue any of the following POP3 commands repeatedly.",
+   "why": "Modal token written in lower case (\"may\") in section 5. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0021",
+   "rfc": 1939,
+   "section": "5",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "Minimal implementations should just end that line of the response with a CRLF pair.",
+   "why": "Modal token written in lower case (\"should\") in section 5. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0022",
+   "rfc": 2045,
+   "section": "5.2",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "Plain US-ASCII text may still be assumed in the absence of a MIME-Version or the presence of an syntactically invalid Content-Type header field, but the sender's intent might have been otherwise.",
+   "why": "Modal token written in lower case (\"may\") in section 5.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0023",
+   "rfc": 2045,
+   "section": "6.7",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "A body which is entirely US-ASCII may also be encoded in Quoted-Printable to ensure the integrity of the data should the message pass through a character-translating, and/or line-wrapping gateway.",
+   "why": "Modal token written in lower case (\"may\") in section 6.7. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0024",
+   "rfc": 2045,
+   "section": "6.7",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "(3) (White Space) Octets with values of 9 and 32 MAY be represented as US-ASCII TAB (HT) and SPACE characters, respectively, but MUST NOT be so represented at the end of an encoded line.",
+   "why": "Upper-case MAY in section 6.7 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0025",
+   "rfc": 2054,
+   "section": "4.3",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "Browser programs that display directory contents as a list will usually display more than just the filename; a different icon may be displayed if the entry is a directory or a file.",
+   "why": "Modal token written in lower case (\"may\") in section 4.3. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0026",
+   "rfc": 2054,
+   "section": "4.3",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "WebNFS clients that require attribute information for directory entries should use READDIRPLUS in preference to READDIR.",
+   "why": "Modal token written in lower case (\"should\") in section 4.3. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0027",
+   "rfc": 2054,
+   "section": "9.1",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "To keep the number of READ requests to a minimum, a WebNFS client should use the maximum transfer size that it and the server can support.",
+   "why": "Modal token written in lower case (\"should\") in section 9.1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0028",
+   "rfc": 2119,
+   "section": "7",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "The effects on security of not implementing a MUST or SHOULD, or doing something the specification says MUST NOT or SHOULD NOT be done may be very subtle.",
+   "why": "Upper-case MUST in section 7 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0029",
+   "rfc": 2119,
+   "section": "6",
+   "tier": "weak",
+   "kw": "must",
+   "class": "lowercase-modal",
+   "probe": "Imperatives of the type defined in this memo must be used with care and sparingly.",
+   "why": "Modal token written in lower case (\"must\") in section 6. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0030",
+   "rfc": 2181,
+   "section": "6.2",
+   "tier": "weak",
+   "kw": "must",
+   "class": "lowercase-modal",
+   "probe": "In particular the NXT (\"next\") RR type contains information about which names exist in a zone, and hence which do not, and thus must necessarily relate to the zone in which it exists.",
+   "why": "Modal token written in lower case (\"must\") in section 6.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0031",
+   "rfc": 2181,
+   "section": "6.2",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "Where a subzone is secure, the KEY and SIG records will be present, and authoritative, in that zone, but should also always be present in the parent zone (if secure).",
+   "why": "Modal token written in lower case (\"should\") in section 6.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0032",
+   "rfc": 2181,
+   "section": "5.3",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "It should be noted that DNS Security is still very new, and there is, as yet, little experience with it.",
+   "why": "Modal token written in lower case (\"should\") in section 5.3. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0033",
+   "rfc": 2300,
+   "section": "6.2",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "An Internet host should support all of RFC-1112, except for the IGMP protocol itself which is optional; see RFC-1122 for more details.",
+   "why": "Modal token written in lower case (\"should\") in section 6.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0034",
+   "rfc": 2300,
+   "section": "6.2",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "However, both implementors and users should be aware that RIP has some serious technical limitations as a routing protocol.",
+   "why": "Modal token written in lower case (\"should\") in section 6.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0035",
+   "rfc": 2300,
+   "section": "4.1",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "Comments and test results should be submitted to the IESG.",
+   "why": "Modal token written in lower case (\"should\") in section 4.1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0036",
+   "rfc": 2606,
+   "section": "2",
+   "tier": "weak",
+   "kw": "recommended",
+   "class": "lowercase-modal",
+   "probe": ".test .example .invalid .localhost \".test\" is recommended for use in testing of current or new DNS related code.",
+   "why": "Modal token written in lower case (\"recommended\") in section 2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0037",
+   "rfc": 2615,
+   "section": "6",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "A user may cause up to a 100% increase in the bandwidth required for transmitting his or her packets by filling the packet with flag and/or escape characters.",
+   "why": "Modal token written in lower case (\"may\") in section 6. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0038",
+   "rfc": 2615,
+   "section": "2",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "For backwards compatibility with RFC 1619 (STS-3c-SPE/VC-4 only), the scrambler MAY have an on/off capability where the scrambler is bypassed entirely when it is in the off mode.",
+   "why": "Upper-case MAY in section 2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0039",
+   "rfc": 2615,
+   "section": "5",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "Regarding the FCS length, with one exception, the 32-bit FCS MUST be used for all SONET/SDH rates.",
+   "why": "Upper-case MUST in section 5 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0040",
+   "rfc": 2865,
+   "section": "5.22",
+   "tier": "strict",
+   "kw": "MUST NOT",
+   "class": "uppercase-modal",
+   "probe": "It is intended to be human readable and MUST NOT affect operation of the protocol.",
+   "why": "Upper-case MUST NOT in section 5.22 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0041",
+   "rfc": 2865,
+   "section": "5.22",
+   "tier": "strict",
+   "kw": "SHOULD",
+   "class": "uppercase-modal",
+   "probe": "Whenever the gateway address is specified as \"0.0.0.0\" the IP address of the user SHOULD be used as the gateway address.",
+   "why": "Upper-case SHOULD in section 5.22 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0042",
+   "rfc": 2865,
+   "section": "5.3",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "String The String field is 16 octets, and contains the CHAP Response from the user.",
+   "why": "No modal token anywhere in the sentence, in section 5.3: it still fixes a bound or a definition an implementer must honour. No keyword-driven extractor can find it by design, so a miss means the contract has no way to express specifications that are not phrased as obligations."
+  },
+  {
+   "id": "G0043",
+   "rfc": 3110,
+   "section": "2",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "Its length in octets is represented as one octet if it is in the range of 1 to 255 and by a zero octet followed by a two octet unsigned length if it is longer than 255 bytes.",
+   "why": "No modal token anywhere in the sentence, in section 2: it still fixes a bound or a definition an implementer must honour. No keyword-driven extractor can find it by design, so a miss means the contract has no way to express specifications that are not phrased as obligations."
+  },
+  {
+   "id": "G0044",
+   "rfc": 3110,
+   "section": "1",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "Furthermore, future advances in cryptanalysis and/or computer speeds may require a stronger hash everywhere.",
+   "why": "Modal token written in lower case (\"may\") in section 1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0045",
+   "rfc": 3110,
+   "section": "3",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "The FF octet MUST be repeated the maximum number of times such that the value of the quantity being exponentiated is one octet shorter than the value of n.",
+   "why": "Upper-case MUST in section 3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0046",
+   "rfc": 3225,
+   "section": "2",
+   "tier": "weak",
+   "kw": "must",
+   "class": "lowercase-modal",
+   "probe": "When a query from such a resolver is received for a DNSSEC signed zone, the DNSSEC specification indicates the nameserver must respond with the appropriate DNSSEC security RRs.",
+   "why": "Modal token written in lower case (\"must\") in section 2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0047",
+   "rfc": 3225,
+   "section": "1",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "This document discusses a method to avoid these negative impacts, namely DNSSEC-aware servers should only respond with SIG, KEY, and/or NXT RRs when there is an explicit indication from the resolver that it can understand those RRs.",
+   "why": "Modal token written in lower case (\"should\") in section 1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0048",
+   "rfc": 3225,
+   "section": "3",
+   "tier": "strict",
+   "kw": "MUST NOT",
+   "class": "uppercase-modal",
+   "probe": "The DO bit cleared (set to zero) indicates the resolver is unprepared to handle DNSSEC security RRs and those RRs MUST NOT be returned in the response (unless DNSSEC security RRs are explicitly queried for).",
+   "why": "Upper-case MUST NOT in section 3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0049",
+   "rfc": 3226,
+   "section": "2.1.1",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "As only one TSIG or SIG(0) can be attached to each DNS answer the size increase of message authentication is not significant, but may still lead to a truncation.",
+   "why": "Modal token written in lower case (\"may\") in section 2.1.1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0050",
+   "rfc": 3226,
+   "section": "2.3",
+   "tier": "weak",
+   "kw": "must",
+   "class": "lowercase-modal",
+   "probe": "Each name server must periodically update its information about the high level servers.",
+   "why": "Modal token written in lower case (\"must\") in section 2.3. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0051",
+   "rfc": 3226,
+   "section": "2.3",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "Large TLDs (and many high-visibility SLDs) often have enough servers that either A6 or KEY records would cause the NS response to overflow the 512 byte limit.",
+   "why": "No modal token anywhere in the sentence, in section 2.3: it still fixes a bound or a definition an implementer must honour. No keyword-driven extractor can find it by design, so a miss means the contract has no way to express specifications that are not phrased as obligations."
+  },
+  {
+   "id": "G0052",
+   "rfc": 3261,
+   "section": "20.3",
+   "tier": "strict",
+   "kw": "SHOULD",
+   "class": "uppercase-modal",
+   "probe": "If no Accept-Language header field is present, the server SHOULD assume all languages are acceptable to the client.",
+   "why": "Upper-case SHOULD in section 20.3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0053",
+   "rfc": 3261,
+   "section": "12.2.2",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "Based on the To tag, the UAS MAY either accept or reject the request.",
+   "why": "Upper-case MAY in section 12.2.2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0054",
+   "rfc": 3261,
+   "section": "12.2.2",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "Requests that do not change in any way the state of a dialog may be received within a dialog (for example, an OPTIONS request).",
+   "why": "Modal token written in lower case (\"may\") in section 12.2.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0055",
+   "rfc": 3335,
+   "section": "5.3.2.3",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "When errors occur processing the received message content, the \"disposition-field\" should be set to the \"processed\" \"disposition- type\" value and the \"error\" \"disposition-modifier\" value.",
+   "why": "Modal token written in lower case (\"should\") in section 5.3.2.3. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0056",
+   "rfc": 3335,
+   "section": "2.2.3",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "The \"rule\" is: - If a receipt is requested, explicitly specifying that the receipt be signed, then the receipt MUST be returned with a signature.",
+   "why": "Upper-case MUST in section 2.2.3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0057",
+   "rfc": 3335,
+   "section": "6.2",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "In the long term, additional Internet-EDI standards may be developed to simplify the process of establishing a trading partnership, including the third party authentication of trading partners, as well as attributes of the trading relationship.",
+   "why": "Modal token written in lower case (\"may\") in section 6.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0058",
+   "rfc": 3501,
+   "section": "6.3.2",
+   "tier": "strict",
+   "kw": "MUST NOT",
+   "class": "uppercase-modal",
+   "probe": "No changes to the permanent state of the mailbox, including per-user state, are permitted; in particular, EXAMINE MUST NOT cause messages to lose the \\Recent flag.",
+   "why": "Upper-case MUST NOT in section 6.3.2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0059",
+   "rfc": 3501,
+   "section": "7.1.3",
+   "tier": "strict",
+   "kw": "OPTIONAL",
+   "class": "uppercase-modal",
+   "probe": "Contents: OPTIONAL response code human-readable text The BAD response indicates an error message from the server.",
+   "why": "Upper-case OPTIONAL in section 7.1.3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0060",
+   "rfc": 3501,
+   "section": "2.3.1.2",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "This position MUST be ordered by ascending unique identifier.",
+   "why": "Upper-case MUST in section 2.3.1.2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0061",
+   "rfc": 3986,
+   "section": "5.2",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "Applications may implement relative reference resolution by using some other algorithm, provided that the results match what would be given by this one.",
+   "why": "Modal token written in lower case (\"may\") in section 5.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0062",
+   "rfc": 3986,
+   "section": "3.2",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "Many URI schemes include a hierarchical element for a naming authority so that governance of the name space defined by the remainder of the URI is delegated to that authority (which may, in turn, delegate it further).",
+   "why": "Modal token written in lower case (\"may\") in section 3.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0063",
+   "rfc": 3986,
+   "section": "4.2",
+   "tier": "weak",
+   "kw": "must",
+   "class": "lowercase-modal",
+   "probe": "Such a segment must be preceded by a dot-segment (e.g., \"./this:that\") to make a relative- path reference.",
+   "why": "Modal token written in lower case (\"must\") in section 4.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0064",
+   "rfc": 3988,
+   "section": "5.1",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "Changes in MTU for sections of an LSP may cause intermediate LSRs to generate unsolicited label Mapping messages to advertise the new MTU.",
+   "why": "Modal token written in lower case (\"may\") in section 5.1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0065",
+   "rfc": 3988,
+   "section": "2.3",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "L MAY (because of policy or for other reasons) advertise a smaller MTU than it has computed, but L MUST NOT advertise a larger MTU.",
+   "why": "Upper-case MAY in section 2.3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0066",
+   "rfc": 3989,
+   "section": "3.3",
+   "tier": "weak",
+   "kw": "must not",
+   "class": "lowercase-modal",
+   "probe": "A compliant agent implementation of a MIDCOM protocol must not use any optional transaction that is not supported by the middlebox.",
+   "why": "Modal token written in lower case (\"must not\") in section 3.3. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0067",
+   "rfc": 3989,
+   "section": "2.3.2",
+   "tier": "weak",
+   "kw": "optional",
+   "class": "lowercase-modal",
+   "probe": "The transaction returns the reserved IP addresses and the optional ranges of port numbers to the agent.",
+   "why": "Modal token written in lower case (\"optional\") in section 2.3.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0068",
+   "rfc": 3989,
+   "section": "2.1.6",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "- Maximum number of simultaneous MIDCOM sessions The list of middlebox capabilities may be extended by a concrete protocol specification with further information useful for the agent.",
+   "why": "Modal token written in lower case (\"may\") in section 2.1.6. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0069",
+   "rfc": 4034,
+   "section": "4.1.1",
+   "tier": "strict",
+   "kw": "MUST NOT",
+   "class": "uppercase-modal",
+   "probe": "A sender MUST NOT use DNS name compression on the Next Domain Name field when transmitting an NSEC RR.",
+   "why": "Upper-case MUST NOT in section 4.1.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0070",
+   "rfc": 4034,
+   "section": "6",
+   "tier": "weak",
+   "kw": "required",
+   "class": "lowercase-modal",
+   "probe": "A canonical name order is required to construct the NSEC name chain.",
+   "why": "Modal token written in lower case (\"required\") in section 6. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0071",
+   "rfc": 4034,
+   "section": "2.1.2",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "The Protocol Field MUST have value 3, and the DNSKEY RR MUST be treated as invalid during signature verification if it is found to be some value other than 3.",
+   "why": "Upper-case MUST in section 2.1.2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0072",
+   "rfc": 4035,
+   "section": "4.2",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "A security-aware resolver's support for signature verification MUST include support for verification of wildcard owner names.",
+   "why": "Upper-case MUST in section 4.2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0073",
+   "rfc": 4035,
+   "section": "4.2",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "When attempting to retrieve a missing DS, a security-aware iterative-mode resolver MUST query the name servers for the parent zone, not the child zone.",
+   "why": "Upper-case MUST in section 4.2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0074",
+   "rfc": 4035,
+   "section": "5.3.2",
+   "tier": "strict",
+   "kw": "MUST NOT",
+   "class": "uppercase-modal",
+   "probe": "When reconstructing the original NSEC RRset for the delegation from the parent zone, the NSEC RRs MUST NOT be combined with NSEC RRs from the child zone.",
+   "why": "Upper-case MUST NOT in section 5.3.2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0075",
+   "rfc": 4113,
+   "section": "3",
+   "tier": "weak",
+   "kw": "must",
+   "class": "lowercase-modal",
+   "probe": "For an application that is willing to accept both IPv4 and IPv6 datagrams, the value of this object must be ''h (a zero-length octet-string), with the value of the corresponding instance of the udpEndpointLocalAddressType object being unknown(0).",
+   "why": "Modal token written in lower case (\"must\") in section 3. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0076",
+   "rfc": 4120,
+   "section": "5.2.4",
+   "tier": "strict",
+   "kw": "SHOULD",
+   "class": "uppercase-modal",
+   "probe": "Some integer members of types SHOULD be constrained to values representable in 32 bits, for compatibility with reasonable implementation limits.",
+   "why": "Upper-case SHOULD in section 5.2.4 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0077",
+   "rfc": 4120,
+   "section": "3.2.2",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "The client MAY re-use any tickets it holds until they expire.",
+   "why": "Upper-case MAY in section 3.2.2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0078",
+   "rfc": 4120,
+   "section": "3.2.2",
+   "tier": "strict",
+   "kw": "SHOULD",
+   "class": "uppercase-modal",
+   "probe": "If a sequence number is to be included, it SHOULD be randomly chosen so that even after many messages have been exchanged it is not likely to collide with other sequence numbers in use.",
+   "why": "Upper-case SHOULD in section 3.2.2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0079",
+   "rfc": 4271,
+   "section": "8.2.1",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "BGP MUST maintain a separate FSM for each configured peer.",
+   "why": "Upper-case MUST in section 8.2.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0080",
+   "rfc": 4271,
+   "section": "8.2.1",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "There may be more than one connection between a pair of peers if the connections are configured to use a different pair of IP addresses.",
+   "why": "Modal token written in lower case (\"may\") in section 8.2.1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0081",
+   "rfc": 4271,
+   "section": "5.1.6",
+   "tier": "strict",
+   "kw": "SHOULD",
+   "class": "uppercase-modal",
+   "probe": "If an aggregate excludes at least some of the AS numbers present in the AS_PATH of the routes that are aggregated as a result of dropping the AS_SET, the aggregated route, when advertised to the peer, SHOULD include the ATOMIC_AGGREGATE attribute.",
+   "why": "Upper-case SHOULD in section 5.1.6 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0082",
+   "rfc": 4291,
+   "section": "2.5.7",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "Existing implementations and deployments may continue to use this prefix.",
+   "why": "Modal token written in lower case (\"may\") in section 2.5.7. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0083",
+   "rfc": 4291,
+   "section": "2.5.1",
+   "tier": "weak",
+   "kw": "required",
+   "class": "lowercase-modal",
+   "probe": "They are required to be unique within a subnet prefix.",
+   "why": "Modal token written in lower case (\"required\") in section 2.5.1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0084",
+   "rfc": 4291,
+   "section": "2.5.1",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "The same interface identifier may be used on multiple interfaces on a single node, as long as they are attached to different subnets.",
+   "why": "Modal token written in lower case (\"may\") in section 2.5.1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0085",
+   "rfc": 4343,
+   "section": "4.1",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "However, to optimize output, indirect labels may be used to point to names elsewhere in the DNS answer.",
+   "why": "Modal token written in lower case (\"may\") in section 4.1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0086",
+   "rfc": 4343,
+   "section": "3",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "A lookup string octet with a lowercase ASCII letter value MUST similarly match the identical value and also match the corresponding value in the uppercase ASCII letter range.",
+   "why": "Upper-case MUST in section 3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0087",
+   "rfc": 4506,
+   "section": "4.16",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "They are also useful in unions, where some arms may contain data and others do not.",
+   "why": "Modal token written in lower case (\"may\") in section 4.16. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0088",
+   "rfc": 4506,
+   "section": "4.6",
+   "tier": "weak",
+   "kw": "should not",
+   "class": "lowercase-modal",
+   "probe": "According to IEEE specifications, the \"NaN\" (not a number) is system dependent and should not be interpreted within XDR as anything other than \"NaN\".",
+   "why": "Modal token written in lower case (\"should not\") in section 4.6. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0089",
+   "rfc": 4506,
+   "section": "4.6",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "The standard defines the floating-point data type \"float\" (32 bits or 4 bytes).",
+   "why": "No modal token anywhere in the sentence, in section 4.6: it still fixes a bound or a definition an implementer must honour. No keyword-driven extractor can find it by design, so a miss means the contract has no way to express specifications that are not phrased as obligations."
+  },
+  {
+   "id": "G0090",
+   "rfc": 4635,
+   "section": "3",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "HMAC SHA-1 truncated to 96 bits is an option available in several IETF protocols, including IPsec and TLS.",
+   "why": "No modal token anywhere in the sentence, in section 3: it still fixes a bound or a definition an implementer must honour. No keyword-driven extractor can find it by design, so a miss means the contract has no way to express specifications that are not phrased as obligations."
+  },
+  {
+   "id": "G0091",
+   "rfc": 4635,
+   "section": "2",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "Implementations that support TSIG MUST also implement HMAC SHA1 and HMAC SHA256 and MAY implement gss-tsig and the other algorithms listed below.",
+   "why": "Upper-case MUST in section 2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0092",
+   "rfc": 4635,
+   "section": "4",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "Local policies MAY require the rejection of TSIGs, even though they use an algorithm for which implementation is mandatory.",
+   "why": "Upper-case MAY in section 4 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0093",
+   "rfc": 4636,
+   "section": "7",
+   "tier": "weak",
+   "kw": "must",
+   "class": "lowercase-modal",
+   "probe": "If, in the future, additional status codes are defined for Mobile IPv4, the definition for each new status code must indicate whether the new status code is allowable for use in the FA Error Extension.",
+   "why": "Modal token written in lower case (\"must\") in section 7. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0094",
+   "rfc": 4636,
+   "section": "4",
+   "tier": "weak",
+   "kw": "must not",
+   "class": "lowercase-modal",
+   "probe": "Status codes for use with the FA Error extensions must not be differently defined for use in the Code field of Registration Reply messages.",
+   "why": "Modal token written in lower case (\"must not\") in section 4. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0095",
+   "rfc": 4636,
+   "section": "5",
+   "tier": "strict",
+   "kw": "SHOULD",
+   "class": "uppercase-modal",
+   "probe": "If a mobile node receives a successful Registration Reply (status code 0 or 1), with a FA Error Extension indicating that the foreign agent is not honoring said Registration Reply, the mobile node SHOULD then send a deregistration message to the home agent.",
+   "why": "Upper-case SHOULD in section 5 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0096",
+   "rfc": 4764,
+   "section": "6.1.2",
+   "tier": "weak",
+   "kw": "must",
+   "class": "lowercase-modal",
+   "probe": "Once the server has sent a DONE_SUCCESS, it must keep sending this value for R.",
+   "why": "Modal token written in lower case (\"must\") in section 6.1.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0097",
+   "rfc": 4764,
+   "section": "8.10",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "Such protection may be provided by appropriate repositories for the PSK, whose choice is outside the scope of this document.",
+   "why": "Modal token written in lower case (\"may\") in section 8.10. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0098",
+   "rfc": 4764,
+   "section": "8.10",
+   "tier": "weak",
+   "kw": "must",
+   "class": "lowercase-modal",
+   "probe": "The PSK used by EAP-PSK must be cryptographically separated from keys used by other protocols, otherwise the security of EAP-PSK may be compromised.",
+   "why": "Modal token written in lower case (\"must\") in section 8.10. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0099",
+   "rfc": 5155,
+   "section": "7.2.8",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "If the following conditions are all true: o the QNAME equals the owner name of an existing NSEC3 RR, and o no RR types exist at the QNAME, nor at any descendant of QNAME, then the response MUST be constructed as a Name Error response (Section 7.2.2).",
+   "why": "Upper-case MUST in section 7.2.8 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0100",
+   "rfc": 5155,
+   "section": "10.2",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "If a DNAME RR is present at node N, there MUST be no data at any descendant of N.",
+   "why": "Upper-case MUST in section 10.2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0101",
+   "rfc": 5155,
+   "section": "12.1.4",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "Since validators should treat responses containing NSEC3 RRs with high iteration values as insecure, presence of just one signed NSEC3 RR with a high iteration value in a zone provides attackers with a possible downgrade attack.",
+   "why": "Modal token written in lower case (\"should\") in section 12.1.4. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0102",
+   "rfc": 5246,
+   "section": "6",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "At each layer, messages may include fields for length, description, and content.",
+   "why": "Modal token written in lower case (\"may\") in section 6. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0103",
+   "rfc": 5246,
+   "section": "6",
+   "tier": "weak",
+   "kw": "must",
+   "class": "lowercase-modal",
+   "probe": "Any protocol designed for use over TLS must be carefully designed to deal with all possible attacks against it.",
+   "why": "Modal token written in lower case (\"must\") in section 6. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0104",
+   "rfc": 5246,
+   "section": "4.3",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "The size of the vector may be specified at documentation time or left unspecified until runtime.",
+   "why": "Modal token written in lower case (\"may\") in section 4.3. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0105",
+   "rfc": 5280,
+   "section": "5.1.1",
+   "tier": "weak",
+   "kw": "required",
+   "class": "lowercase-modal",
+   "probe": "The CertificateList is a SEQUENCE of three required fields.",
+   "why": "Modal token written in lower case (\"required\") in section 5.1.1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0106",
+   "rfc": 5280,
+   "section": "4.1.2.6",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "The subject name MAY be carried in the subject field and/or the subjectAltName extension.",
+   "why": "Upper-case MAY in section 4.1.2.6 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0107",
+   "rfc": 5280,
+   "section": "4.1.2.6",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "The DN MUST be unique for each subject entity certified by the one CA as defined by the issuer field.",
+   "why": "Upper-case MUST in section 4.1.2.6 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0108",
+   "rfc": 5321,
+   "section": "4.2.1",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "An SMTP client that wants to know approximately what kind of error occurred (e.g., mail system error, command syntax error) may examine the second digit.",
+   "why": "Modal token written in lower case (\"may\") in section 4.2.1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0109",
+   "rfc": 5321,
+   "section": "4.2.1",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "However, the error condition is temporary, and the action may be requested again.",
+   "why": "Modal token written in lower case (\"may\") in section 4.2.1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0110",
+   "rfc": 5321,
+   "section": "4.5.4.1",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "In a typical system, the program that composes a message has some method for requesting immediate attention for a new piece of outgoing mail, while mail that cannot be transmitted immediately MUST be queued and periodically retried by the sender.",
+   "why": "Upper-case MUST in section 4.5.4.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0111",
+   "rfc": 5322,
+   "section": "4",
+   "tier": "strict",
+   "kw": "MUST NOT",
+   "class": "uppercase-modal",
+   "probe": "Though these syntactic forms MUST NOT be generated according to the grammar in section 3, they MUST be accepted and parsed by a conformant receiver.",
+   "why": "Upper-case MUST NOT in section 4 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0112",
+   "rfc": 5322,
+   "section": "2.1.1",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "Each line of characters MUST be no more than 998 characters, and SHOULD be no more than 78 characters, excluding the CRLF.",
+   "why": "Upper-case MUST in section 2.1.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0113",
+   "rfc": 5322,
+   "section": "2.1.1",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "The 998 character limit is due to limitations in many implementations that send, receive, or store IMF messages which simply cannot handle more than 998 characters on a line.",
+   "why": "No modal token anywhere in the sentence, in section 2.1.1: it still fixes a bound or a definition an implementer must honour. No keyword-driven extractor can find it by design, so a miss means the contract has no way to express specifications that are not phrased as obligations."
+  },
+  {
+   "id": "G0114",
+   "rfc": 5780,
+   "section": "6",
+   "tier": "strict",
+   "kw": "SHOULD",
+   "class": "uppercase-modal",
+   "probe": "A server implementing the NAT Behavior Discovery usage SHOULD be configured with two separate IP addresses on the public Internet.",
+   "why": "Upper-case SHOULD in section 6 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0115",
+   "rfc": 5780,
+   "section": "6",
+   "tier": "strict",
+   "kw": "MUST NOT",
+   "class": "uppercase-modal",
+   "probe": "A server with only one IP address MUST NOT be advertised using the SRV service name \"stun-behavior\" or \"stun-behaviors\".",
+   "why": "Upper-case MUST NOT in section 6 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0116",
+   "rfc": 5780,
+   "section": "3.5",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "To diagnose this behavior, STUN messages may be sent with the PADDING attribute, which simply inserts additional space into the message.",
+   "why": "Modal token written in lower case (\"may\") in section 3.5. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0117",
+   "rfc": 5936,
+   "section": "3.2",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "The AXFR response MUST contain the cut point NS resource record set registered with the zone whether it agrees with the authoritative set or not.",
+   "why": "Upper-case MUST in section 3.2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0118",
+   "rfc": 5936,
+   "section": "7",
+   "tier": "strict",
+   "kw": "SHOULD",
+   "class": "uppercase-modal",
+   "probe": "An implementation SHOULD, in its documentation, encourage operators to periodically review AXFR clients and servers it has made notes about repeatedly, as old software gets updated from time to time.",
+   "why": "Upper-case SHOULD in section 7 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0119",
+   "rfc": 5936,
+   "section": "2",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "The upper limit on the permissible size of a DNS message over TCP is only restricted by the TCP framing defined in Section 4.2.2 of RFC 1035, which specifies a two-octet message length field, understood to be unsigned, and thus causing a limit of 65535 octets.",
+   "why": "No modal token anywhere in the sentence, in section 2: it still fixes a bound or a definition an implementer must honour. No keyword-driven extractor can find it by design, so a miss means the contract has no way to express specifications that are not phrased as obligations."
+  },
+  {
+   "id": "G0120",
+   "rfc": 6265,
+   "section": "5.2.4",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "If the attribute-name case-insensitively matches the string \"Path\", the user agent MUST process the cookie-av as follows.",
+   "why": "Upper-case MUST in section 5.2.4 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0121",
+   "rfc": 6265,
+   "section": "5.1.1",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "The user agent MUST use an algorithm equivalent to the following algorithm to parse a cookie-date.",
+   "why": "Upper-case MUST in section 5.1.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0122",
+   "rfc": 6302,
+   "section": "3",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "ISP deploying IP address sharing techniques should also deploy a corresponding logging architecture to maintain records of the relation between a customer's identity and IP/port resources utilized.",
+   "why": "Modal token written in lower case (\"should\") in section 3. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0123",
+   "rfc": 6302,
+   "section": "5.2",
+   "tier": "weak",
+   "kw": "May",
+   "class": "lowercase-modal",
+   "probe": "Lee, \"Dual- Stack Lite Broadband Deployments Following IPv4 Exhaustion\", Work in Progress, May 2011.",
+   "why": "Modal token written in lower case (\"May\") in section 5.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0124",
+   "rfc": 6302,
+   "section": "2",
+   "tier": "strict",
+   "kw": "RECOMMENDED",
+   "class": "uppercase-modal",
+   "probe": "It is RECOMMENDED as best current practice that Internet-facing servers logging incoming IP addresses from inbound IP traffic also log: o The source port number.",
+   "why": "Upper-case RECOMMENDED in section 2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0125",
+   "rfc": 6648,
+   "section": "4",
+   "tier": "strict",
+   "kw": "SHOULD",
+   "class": "uppercase-modal",
+   "probe": "SHOULD establish registries with potentially unlimited value- spaces, defining both permanent and provisional registries if appropriate.",
+   "why": "Upper-case SHOULD in section 4 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0126",
+   "rfc": 6648,
+   "section": "4",
+   "tier": "strict",
+   "kw": "SHOULD NOT",
+   "class": "uppercase-modal",
+   "probe": "SHOULD NOT prohibit parameters with an \"X-\" prefix or similar constructs from being registered.",
+   "why": "Upper-case SHOULD NOT in section 4 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0127",
+   "rfc": 6648,
+   "section": "2",
+   "tier": "strict",
+   "kw": "MUST NOT",
+   "class": "uppercase-modal",
+   "probe": "Implementations of application protocols MUST NOT make any assumptions about the status of a parameter, nor take automatic action regarding a parameter, based solely on the presence or absence of \"X-\" or a similar construct in the parameter's name.",
+   "why": "Upper-case MUST NOT in section 2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0128",
+   "rfc": 6672,
+   "section": "3.1",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "Servers MUST be able to answer a query for a synthesized CNAME.",
+   "why": "Upper-case MUST in section 3.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0129",
+   "rfc": 6672,
+   "section": "2.2",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "The name being sought may be the original query name or a name that is the result of a CNAME resource record being followed or a previously encountered DNAME.",
+   "why": "Modal token written in lower case (\"may\") in section 2.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0130",
+   "rfc": 6672,
+   "section": "4",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "Not only is the specification clear on this point, but using an alias in either of these positions neither works as well as might be hoped, nor well fulfills the ambition that may have led to this approach.",
+   "why": "Modal token written in lower case (\"may\") in section 4. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0131",
+   "rfc": 6761,
+   "section": "6.3",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "Users may assume that IPv4 and IPv6 address queries for localhost names will always resolve to the respective IP loopback address.",
+   "why": "Modal token written in lower case (\"may\") in section 6.3. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0132",
+   "rfc": 6761,
+   "section": "6.3",
+   "tier": "strict",
+   "kw": "SHOULD NOT",
+   "class": "uppercase-modal",
+   "probe": "Name resolution APIs SHOULD NOT send queries for localhost names to their configured caching DNS server(s).",
+   "why": "Upper-case SHOULD NOT in section 6.3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0133",
+   "rfc": 6761,
+   "section": "5",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "(For example, if a human user enters such a name, should the application software reject it with an error message?) 3.",
+   "why": "Modal token written in lower case (\"should\") in section 5. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0134",
+   "rfc": 6762,
+   "section": "7.2",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "In this case, it should issue a Multicast DNS query containing a question and as many Known-Answer records as will fit.",
+   "why": "Modal token written in lower case (\"should\") in section 7.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0135",
+   "rfc": 6762,
+   "section": "7.2",
+   "tier": "strict",
+   "kw": "SHOULD",
+   "class": "uppercase-modal",
+   "probe": "If the responder receives additional Known-Answer packets with the TC bit set, it SHOULD extend the delay as necessary to ensure a pause of 400-500 ms after the last such packet before it sends its answer.",
+   "why": "Upper-case SHOULD in section 7.2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0136",
+   "rfc": 6762,
+   "section": "6",
+   "tier": "weak",
+   "kw": "must",
+   "class": "lowercase-modal",
+   "probe": "When a Multicast DNS responder constructs and sends a Multicast DNS response message, the Resource Record Sections of that message must contain only records for which that responder is explicitly authoritative.",
+   "why": "Modal token written in lower case (\"must\") in section 6. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0137",
+   "rfc": 7230,
+   "section": "3.2.6",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "Recipients that process the value of a quoted-string MUST handle a quoted-pair as if it were replaced by the octet following the backslash.",
+   "why": "Upper-case MUST in section 3.2.6 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0138",
+   "rfc": 7230,
+   "section": "8.3.2",
+   "tier": "weak",
+   "kw": "required",
+   "class": "lowercase-modal",
+   "probe": "Encoding considerations: HTTP messages enclosed by this type are in \"binary\" format; use of an appropriate Content-Transfer-Encoding is required when transmitted via email.",
+   "why": "Modal token written in lower case (\"required\") in section 8.3.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0139",
+   "rfc": 7230,
+   "section": "6.3.1",
+   "tier": "strict",
+   "kw": "MUST NOT",
+   "class": "uppercase-modal",
+   "probe": "A proxy MUST NOT automatically retry non-idempotent requests.",
+   "why": "Upper-case MUST NOT in section 6.3.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0140",
+   "rfc": 7231,
+   "section": "6.4.3",
+   "tier": "strict",
+   "kw": "SHOULD",
+   "class": "uppercase-modal",
+   "probe": "The server SHOULD generate a Location header field in the response containing a URI reference for the different URI.",
+   "why": "Upper-case SHOULD in section 6.4.3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0141",
+   "rfc": 7231,
+   "section": "4.3.4",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "If the target resource does not have a current representation and the PUT successfully creates one, then the origin server MUST inform the user agent by sending a 201 (Created) response.",
+   "why": "Upper-case MUST in section 4.3.4 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0142",
+   "rfc": 7231,
+   "section": "4.3.4",
+   "tier": "strict",
+   "kw": "SHOULD",
+   "class": "uppercase-modal",
+   "probe": "A service that selects a proper URI on behalf of the client, after receiving a state-changing request, SHOULD be implemented using the POST method rather than PUT.",
+   "why": "Upper-case SHOULD in section 4.3.4 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0143",
+   "rfc": 7233,
+   "section": "3.1",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "Range = byte-ranges-specifier / other-ranges-specifier other-ranges-specifier = other-range-unit \"=\" other-range-set other-range-set = 1*VCHAR A server MAY ignore the Range header field.",
+   "why": "Upper-case MAY in section 3.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0144",
+   "rfc": 7233,
+   "section": "3.1",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "A proxy MAY discard a Range header field that contains a range unit it does not understand.",
+   "why": "Upper-case MAY in section 3.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0145",
+   "rfc": 7233,
+   "section": "2.1",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "Since there is no predefined limit to the length of a payload, recipients MUST anticipate potentially large decimal numerals and prevent parsing errors due to integer conversion overflows.",
+   "why": "Upper-case MUST in section 2.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0146",
+   "rfc": 7234,
+   "section": "5.2.2.3",
+   "tier": "strict",
+   "kw": "MUST NOT",
+   "class": "uppercase-modal",
+   "probe": "The \"no-store\" response directive indicates that a cache MUST NOT store any part of either the immediate request or response.",
+   "why": "Upper-case MUST NOT in section 5.2.2.3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0147",
+   "rfc": 7234,
+   "section": "4.3.2",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "Each client in the request chain may have its own cache, so it is common for a cache at an intermediary to receive conditional requests from other (outbound) caches.",
+   "why": "Modal token written in lower case (\"may\") in section 4.3.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0148",
+   "rfc": 7234,
+   "section": "4",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "When more than one suitable response is stored, a cache MUST use the most recent response (as determined by the Date header field).",
+   "why": "Upper-case MUST in section 4 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0149",
+   "rfc": 7258,
+   "section": "1",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "An attack may change the content of the communication, record the content or external characteristics of the communication, or through correlation with other communication events, reveal information the parties did not intend to be revealed.",
+   "why": "Modal token written in lower case (\"may\") in section 1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0150",
+   "rfc": 7411,
+   "section": "4.2.3",
+   "tier": "strict",
+   "kw": "SHOULD",
+   "class": "uppercase-modal",
+   "probe": "Immediately thereafter, the NMAG SHOULD update its MLD membership state based on the membership reported in the Multicast Mobility Option.",
+   "why": "Upper-case SHOULD in section 4.2.3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0151",
+   "rfc": 7411,
+   "section": "4.2.3",
+   "tier": "strict",
+   "kw": "SHOULD",
+   "class": "uppercase-modal",
+   "probe": "Following the reattachment, it SHOULD immediately issue an MLD General Query to learn about multicast subscriptions of the newly arrived MN.",
+   "why": "Upper-case SHOULD in section 4.2.3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0152",
+   "rfc": 7411,
+   "section": "5.6",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "Access routers (MAGs) MUST support MLDv2 and IGMPv3.",
+   "why": "Upper-case MUST in section 5.6 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0153",
+   "rfc": 7624,
+   "section": "7.2",
+   "tier": "weak",
+   "kw": "May",
+   "class": "lowercase-modal",
+   "probe": "Rose, \"Post Office Protocol - Version 3\", STD 53, RFC 1939, DOI 10.17487/RFC1939, May 1996, <http://www.rfc-editor.org/info/rfc1939>.",
+   "why": "Modal token written in lower case (\"May\") in section 7.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0154",
+   "rfc": 7624,
+   "section": "5",
+   "tier": "weak",
+   "kw": "must",
+   "class": "lowercase-modal",
+   "probe": "Given these disclosures, we must consider a broader threat model.",
+   "why": "Modal token written in lower case (\"must\") in section 5. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0155",
+   "rfc": 7638,
+   "section": "3.2",
+   "tier": "weak",
+   "kw": "required",
+   "class": "lowercase-modal",
+   "probe": "Only the required members of a key's representation are used when computing its JWK Thumbprint value.",
+   "why": "Modal token written in lower case (\"required\") in section 3.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0156",
+   "rfc": 7638,
+   "section": "8.2",
+   "tier": "weak",
+   "kw": "May",
+   "class": "lowercase-modal",
+   "probe": "Polk, \"Internet X.509 Public Key Infrastructure Certificate and Certificate Revocation List (CRL) Profile\", RFC 5280, DOI 10.17487/RFC5280, May 2008, <http://www.rfc-editor.org/info/rfc5280>.",
+   "why": "Modal token written in lower case (\"May\") in section 8.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0157",
+   "rfc": 7638,
+   "section": "3.2.2",
+   "tier": "weak",
+   "kw": "Optional",
+   "class": "lowercase-modal",
+   "probe": "Optional members of JWKs are intentionally not included in the JWK Thumbprint computation so that their absence or presence in the JWK does not alter the resulting value.",
+   "why": "Modal token written in lower case (\"Optional\") in section 3.2.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0158",
+   "rfc": 7680,
+   "section": "2.5",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "{Comment: Note that, for many applications of these metrics, there may be no harm in treating a large delay as packet loss.",
+   "why": "Modal token written in lower case (\"may\") in section 2.5. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0159",
+   "rfc": 7680,
+   "section": "2.8.1",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "The exact Type-P used to make the measurements MUST be accurately reported.",
+   "why": "Upper-case MUST in section 2.8.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0160",
+   "rfc": 7719,
+   "section": "8",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "Nevertheless, if a zone that should be signed contains any RRsets that are not signed (or opted out), those RRsets will be treated as bogus, so the whole zone needs to be handled in some way.",
+   "why": "Modal token written in lower case (\"should\") in section 8. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0161",
+   "rfc": 7719,
+   "section": "4",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "EDNS allows DNS clients and servers to specify message sizes larger than the original 512 octet limit, to expand the response code space, and potentially to carry additional options that affect the handling of a DNS query.",
+   "why": "No modal token anywhere in the sentence, in section 4: it still fixes a bound or a definition an implementer must honour. No keyword-driven extractor can find it by design, so a miss means the contract has no way to express specifications that are not phrased as obligations."
+  },
+  {
+   "id": "G0162",
+   "rfc": 7719,
+   "section": "2",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "(Note that this example might change in the future.) Note that the term \"public suffix\" is controversial in the DNS community for many reasons, and may be significantly changed in the future.",
+   "why": "Modal token written in lower case (\"may\") in section 2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0163",
+   "rfc": 7838,
+   "section": "3",
+   "tier": "strict",
+   "kw": "MUST NOT",
+   "class": "uppercase-modal",
+   "probe": "Octets in the ALPN protocol name MUST NOT be percent-encoded if they are valid token characters except \"%\", and 2.",
+   "why": "Upper-case MUST NOT in section 3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0164",
+   "rfc": 7838,
+   "section": "3",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "That is, the values (alt-value) they appear in MUST be processed as if the unknown parameter was not present.",
+   "why": "Upper-case MUST in section 3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0165",
+   "rfc": 7838,
+   "section": "2.1",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "Clients MUST have reasonable assurances that the alternative service is under control of and valid for the whole origin.",
+   "why": "Upper-case MUST in section 2.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0166",
+   "rfc": 7858,
+   "section": "5",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "Clients and servers should support connection keepalive (reuse) and out-of-order processing to amortize connection setup costs.",
+   "why": "Modal token written in lower case (\"should\") in section 5. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0167",
+   "rfc": 7858,
+   "section": "3.3",
+   "tier": "strict",
+   "kw": "SHOULD",
+   "class": "uppercase-modal",
+   "probe": "In order to minimize latency, clients SHOULD pipeline multiple queries over a TLS session.",
+   "why": "Upper-case SHOULD in section 3.3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0168",
+   "rfc": 7858,
+   "section": "9.1",
+   "tier": "weak",
+   "kw": "May",
+   "class": "lowercase-modal",
+   "probe": "Saint-Andre, \"Recommendations for Secure Use of Transport Layer Security (TLS) and Datagram Transport Layer Security (DTLS)\", BCP 195, RFC 7525, May 2015, <https://www.rfc-editor.org/info/bcp195>.",
+   "why": "Modal token written in lower case (\"May\") in section 9.1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0169",
+   "rfc": 7872,
+   "section": "Appendix A",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "The WIPv6LD dataset should be processed in the same way as the Alexa dataset, starting from Appendix A.2.",
+   "why": "Modal token written in lower case (\"should\") in section Appendix A. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0170",
+   "rfc": 7873,
+   "section": "5.2.3",
+   "tier": "strict",
+   "kw": "SHALL",
+   "class": "uppercase-modal",
+   "probe": "If the server responds choosing (2) or (3) above, it SHALL generate its own COOKIE option containing both the Client Cookie copied from the request and a Server Cookie it has generated, and it will add this COOKIE option to the response's OPT record.",
+   "why": "Upper-case SHALL in section 5.2.3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0171",
+   "rfc": 7873,
+   "section": "3.2",
+   "tier": "weak",
+   "kw": "required",
+   "class": "lowercase-modal",
+   "probe": "Among these burdens are pre-agreement and key distribution between client and server, keeping track of server-side key state, and required time synchronization between client and server.",
+   "why": "Modal token written in lower case (\"required\") in section 3.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0172",
+   "rfc": 7873,
+   "section": "9",
+   "tier": "weak",
+   "kw": "must",
+   "class": "lowercase-modal",
+   "probe": "802.11 link (Wi-Fi), any device in the vicinity that could receive and decode the 802.11 transmissions must be considered \"on path\".",
+   "why": "Modal token written in lower case (\"must\") in section 9. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0173",
+   "rfc": 7919,
+   "section": "8.2",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "TLS implementations using FFDHE key exchange should consider the strength of the group they negotiate.",
+   "why": "Modal token written in lower case (\"should\") in section 8.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0174",
+   "rfc": 7919,
+   "section": "5.1",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "Peers MUST validate each other's public key Y (dh_Ys offered by the server or dh_Yc offered by the client) by ensuring that 1 < Y < p-1.",
+   "why": "Upper-case MUST in section 5.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0175",
+   "rfc": 7919,
+   "section": "3",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "If the client also supports and wants to offer ECDHE key exchange, it MUST use a single Supported Groups extension to include all supported groups (both ECDHE and FFDHE groups).",
+   "why": "Upper-case MUST in section 3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0176",
+   "rfc": 7929,
+   "section": "7",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "Without manual verification of the OpenPGP key obtained via DANE, this retrieved key should only be used for encryption if the only other alternative is sending the message in plaintext.",
+   "why": "Modal token written in lower case (\"should\") in section 7. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0177",
+   "rfc": 7929,
+   "section": "7",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "Each of these components should attempt to encrypt an unencrypted outgoing message whenever possible.",
+   "why": "Modal token written in lower case (\"should\") in section 7. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0178",
+   "rfc": 7929,
+   "section": "5.1",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "If no OpenPGP public keys are known for an email address, an OPENPGPKEY DNS lookup MAY be performed to seek the OpenPGP public key that corresponds to that email address.",
+   "why": "Upper-case MAY in section 5.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0179",
+   "rfc": 8078,
+   "section": "3.4",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "The parent should verify that the challenge is published by all the child's nameservers and should test for this challenge from various diverse network locations to increase the security of this method as much as possible.",
+   "why": "Modal token written in lower case (\"should\") in section 3.4. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0180",
+   "rfc": 8078,
+   "section": "2",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "As these CDS/CDNSKEY use cases create or end the trust relationship between the parent and child, these use cases should be carefully implemented and monitored.",
+   "why": "Modal token written in lower case (\"should\") in section 2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0181",
+   "rfc": 8078,
+   "section": "1.2",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "Turning off DNSSEC reduces the security of the domain and thus should only be done carefully, and that decision should be fully under the child domain's control.",
+   "why": "Modal token written in lower case (\"should\") in section 1.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0182",
+   "rfc": 8174,
+   "section": "2",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "This document defines these words as they should be interpreted in IETF documents.",
+   "why": "Modal token written in lower case (\"should\") in section 2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0183",
+   "rfc": 8252,
+   "section": "8.5",
+   "tier": "weak",
+   "kw": "should not",
+   "class": "lowercase-modal",
+   "probe": "Secrets that are statically included as part of an app distributed to multiple users should not be treated as confidential secrets, as one user may inspect their copy and learn the shared secret.",
+   "why": "Modal token written in lower case (\"should not\") in section 8.5. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0184",
+   "rfc": 8252,
+   "section": "7.1",
+   "tier": "weak",
+   "kw": "must",
+   "class": "lowercase-modal",
+   "probe": "When there are multiple apps by the same publisher, care must be taken so that each scheme is unique within that group.",
+   "why": "Modal token written in lower case (\"must\") in section 7.1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0185",
+   "rfc": 8252,
+   "section": "4.1",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "Authenticating the user may involve chaining to other authentication systems.",
+   "why": "Modal token written in lower case (\"may\") in section 4.1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0186",
+   "rfc": 8445,
+   "section": "5.1.2",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "Each candidate for a data stream MUST have a unique priority that MUST be a positive integer between 1 and (2**31 - 1).",
+   "why": "Upper-case MUST in section 5.1.2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0187",
+   "rfc": 8445,
+   "section": "19.3",
+   "tier": "weak",
+   "kw": "required",
+   "class": "lowercase-modal",
+   "probe": "This attack is mitigated by DNS security, though DNSSEC is not required to address it.",
+   "why": "Modal token written in lower case (\"required\") in section 19.3. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0188",
+   "rfc": 8445,
+   "section": "12.1",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "An ICE agent MAY send data on any valid pair before selected pairs have been produced for the data stream.",
+   "why": "Upper-case MAY in section 12.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0189",
+   "rfc": 8447,
+   "section": "12",
+   "tier": "strict",
+   "kw": "REQUIRED",
+   "class": "uppercase-modal",
+   "probe": "IESG Approval is REQUIRED for a Y->N transition.",
+   "why": "Upper-case REQUIRED in section 12 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0190",
+   "rfc": 8447,
+   "section": "18",
+   "tier": "weak",
+   "kw": "Required",
+   "class": "lowercase-modal",
+   "probe": "The change to Specification Required from IETF Review lowers the amount of review provided by the WG for cipher suites and supported groups.",
+   "why": "Modal token written in lower case (\"Required\") in section 18. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0191",
+   "rfc": 8447,
+   "section": "18",
+   "tier": "weak",
+   "kw": "should not",
+   "class": "lowercase-modal",
+   "probe": "Their review should not be taken as an endorsement of the cipher suite, extension, supported group, etc.",
+   "why": "Modal token written in lower case (\"should not\") in section 18. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0192",
+   "rfc": 8470,
+   "section": "6.1",
+   "tier": "strict",
+   "kw": "MUST NOT",
+   "class": "uppercase-modal",
+   "probe": "A gateway MUST NOT forward requests that were received in early data unless it knows that the origin server it will forward to understands the Early-Data header field and will correctly generate a 425 (Too Early) status code.",
+   "why": "Upper-case MUST NOT in section 6.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0193",
+   "rfc": 8470,
+   "section": "4",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "If the server rejects early data at the TLS layer, a client MUST start sending again as though the connection were new.",
+   "why": "Upper-case MUST in section 4 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0194",
+   "rfc": 8470,
+   "section": "8.2",
+   "tier": "weak",
+   "kw": "May",
+   "class": "lowercase-modal",
+   "probe": "Thomson, Ed., \"Hypertext Transfer Protocol Version 2 (HTTP/2)\", RFC 7540, DOI 10.17487/RFC7540, May 2015, <https://www.rfc-editor.org/info/rfc7540>.",
+   "why": "Modal token written in lower case (\"May\") in section 8.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0195",
+   "rfc": 8484,
+   "section": "6",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "DoH servers using this media type MUST ignore the value given for the EDNS UDP payload size in DNS requests.",
+   "why": "Upper-case MUST in section 6 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0196",
+   "rfc": 8484,
+   "section": "6",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "This media type restricts the maximum size of the DNS message to 65535 bytes.",
+   "why": "No modal token anywhere in the sentence, in section 6: it still fixes a bound or a definition an implementer must honour. No keyword-driven extractor can find it by design, so a miss means the contract has no way to express specifications that are not phrased as obligations."
+  },
+  {
+   "id": "G0197",
+   "rfc": 8484,
+   "section": "10",
+   "tier": "strict",
+   "kw": "SHOULD NOT",
+   "class": "uppercase-modal",
+   "probe": "To mitigate the possibility of deadlock, the authentication given DoH servers SHOULD NOT rely on DNS-based references to external resources in the TLS handshake.",
+   "why": "Upper-case SHOULD NOT in section 10 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0198",
+   "rfc": 8610,
+   "section": "6.1",
+   "tier": "weak",
+   "kw": "must",
+   "class": "lowercase-modal",
+   "probe": "Each entry in the subregistry must include the name of the control operator (by convention given with the leading dot) and a reference to its documentation.",
+   "why": "Modal token written in lower case (\"must\") in section 6.1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0199",
+   "rfc": 8610,
+   "section": "3.5.3",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "For certain group expressions, more than one member in the map may match.",
+   "why": "Modal token written in lower case (\"may\") in section 3.5.3. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0200",
+   "rfc": 8659,
+   "section": "4.1",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "An FQDN MAY have multiple CAA RRs associated with it, and a given Property Tag MAY be specified more than once across those RRs.",
+   "why": "Upper-case MAY in section 4.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0201",
+   "rfc": 8659,
+   "section": "4.1",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "Applications that interpret CAA records MUST ignore the value of all reserved flag bits.",
+   "why": "Upper-case MUST in section 4.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0202",
+   "rfc": 8659,
+   "section": "6.3",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "The CA MAY interpret that as preventing issuance.",
+   "why": "Upper-case MAY in section 6.3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0203",
+   "rfc": 8833,
+   "section": "4",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "Implementations MAY choose to limit concurrent access to input devices during confidential communications sessions.",
+   "why": "Upper-case MAY in section 4 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0204",
+   "rfc": 8833,
+   "section": "6.1",
+   "tier": "weak",
+   "kw": "May",
+   "class": "lowercase-modal",
+   "probe": "Rescorla, \"Datagram Transport Layer Security (DTLS) Extension to Establish Keys for the Secure Real-time Transport Protocol (SRTP)\", RFC 5764, DOI 10.17487/RFC5764, May 2010, <https://www.rfc-editor.org/info/rfc5764>.",
+   "why": "Modal token written in lower case (\"May\") in section 6.1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0205",
+   "rfc": 8833,
+   "section": "3",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "Media that is produced from a session using the \"c-webrtc\" identifier MUST only be displayed to users.",
+   "why": "Upper-case MUST in section 3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0206",
+   "rfc": 8834,
+   "section": "4.9",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "Each RTP endpoint MUST have at least one RTCP CNAME, and that RTCP CNAME MUST be unique within the RTCPeerConnection.",
+   "why": "Upper-case MUST in section 4.9 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0207",
+   "rfc": 8834,
+   "section": "4.2",
+   "tier": "strict",
+   "kw": "MUST NOT",
+   "class": "uppercase-modal",
+   "probe": "WebRTC endpoints MUST NOT send packets using the basic RTP/AVP profile or the RTP/AVPF profile; they MUST employ the full RTP/SAVPF profile to protect all RTP and RTCP packets that are generated.",
+   "why": "Upper-case MUST NOT in section 4.2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0208",
+   "rfc": 8834,
+   "section": "5.1.4",
+   "tier": "strict",
+   "kw": "SHOULD",
+   "class": "uppercase-modal",
+   "probe": "Receivers that detect that encoder-decoder synchronization has been lost SHOULD generate an RPSI feedback message if the codec being used supports reference-picture selection.",
+   "why": "Upper-case SHOULD in section 5.1.4 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0209",
+   "rfc": 8901,
+   "section": "2",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "In these deployments, there is a single signing entity (which may be the zone owner, one of the providers, or a separate entity), while the providers act as secondary authoritative servers for the zone.",
+   "why": "Modal token written in lower case (\"may\") in section 2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0210",
+   "rfc": 8901,
+   "section": "13.1",
+   "tier": "weak",
+   "kw": "May",
+   "class": "lowercase-modal",
+   "probe": "Wellington, \"Secret Key Transaction Authentication for DNS (TSIG)\", RFC 2845, DOI 10.17487/RFC2845, May 2000, <https://www.rfc-editor.org/info/rfc2845>.",
+   "why": "Modal token written in lower case (\"May\") in section 13.1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0211",
+   "rfc": 8902,
+   "section": "7.5",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "When a CertificateVerify message of this form is used, the HeaderInfo within the Ieee1609Dot2Data MUST have the pduFunctionalType field present and set to tlsHandshake.",
+   "why": "Upper-case MUST in section 7.5 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0212",
+   "rfc": 8902,
+   "section": "5",
+   "tier": "strict",
+   "kw": "SHALL",
+   "class": "uppercase-modal",
+   "probe": "If the application specification for that PSID requires Service Specific Permissions (SSP) for signing a pduFunctionalType of tlsHandshake, this SSP SHALL also be present.",
+   "why": "Upper-case SHALL in section 5 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0213",
+   "rfc": 8902,
+   "section": "7.2",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "Conventions around certificate lifetime differ between ITS certificates and X.509 certificates, and in particular, ITS certificates may be relatively short lived compared with typical X.509 certificates.",
+   "why": "Modal token written in lower case (\"may\") in section 7.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0214",
+   "rfc": 8959,
+   "section": "4",
+   "tier": "weak",
+   "kw": "not recommended",
+   "class": "lowercase-modal",
+   "probe": "This is not recommended practice; applications should evaluate their requirements for entropy and issue tokens correspondingly.",
+   "why": "Modal token written in lower case (\"not recommended\") in section 4. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0215",
+   "rfc": 8959,
+   "section": "2",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "When a token is both generated and presented for authentication, the entire URI MUST be used, without changes.",
+   "why": "Upper-case MUST in section 2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0216",
+   "rfc": 9000,
+   "section": "13.4.2.1",
+   "tier": "strict",
+   "kw": "MUST NOT",
+   "class": "uppercase-modal",
+   "probe": "An endpoint MUST NOT fail ECN validation as a result of processing an ACK frame that does not increase the largest acknowledged packet number.",
+   "why": "Upper-case MUST NOT in section 13.4.2.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0217",
+   "rfc": 9000,
+   "section": "8.2.1",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "An endpoint MAY send multiple PATH_CHALLENGE frames to guard against packet loss.",
+   "why": "Upper-case MAY in section 8.2.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0218",
+   "rfc": 9000,
+   "section": "8.2.1",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "The endpoint MUST use unpredictable data in every PATH_CHALLENGE frame so that it can associate the peer's response with the corresponding PATH_CHALLENGE.",
+   "why": "Upper-case MUST in section 8.2.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0219",
+   "rfc": 9002,
+   "section": "6.2.4",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "When a PTO timer expires, a sender MUST send at least one ack- eliciting packet in the packet number space as a probe.",
+   "why": "Upper-case MUST in section 6.2.4 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0220",
+   "rfc": 9002,
+   "section": "6.2.4",
+   "tier": "strict",
+   "kw": "SHOULD",
+   "class": "uppercase-modal",
+   "probe": "In addition to sending data in the packet number space for which the timer expired, the sender SHOULD send ack-eliciting packets from other packet number spaces with in-flight data, coalescing packets if possible.",
+   "why": "Upper-case SHOULD in section 6.2.4 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0221",
+   "rfc": 9002,
+   "section": "7.6.2",
+   "tier": "strict",
+   "kw": "SHOULD NOT",
+   "class": "uppercase-modal",
+   "probe": "The persistent congestion period SHOULD NOT start until there is at least one RTT sample.",
+   "why": "Upper-case SHOULD NOT in section 7.6.2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0222",
+   "rfc": 9110,
+   "section": "12.1",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "In order to improve the server's guess, a user agent MAY send request header fields that describe its preferences.",
+   "why": "Upper-case MAY in section 12.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0223",
+   "rfc": 9112,
+   "section": "8",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "A server that receives an incomplete request message, usually due to a canceled request or a triggered timeout exception, MAY send an error response prior to closing the connection.",
+   "why": "Upper-case MAY in section 8 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0224",
+   "rfc": 9112,
+   "section": "3.3",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "A server that can uniquely identify an authority from the request context MAY use that identity as a default without this risk.",
+   "why": "Upper-case MAY in section 3.3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0225",
+   "rfc": 9112,
+   "section": "2.3",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "Intermediaries that process HTTP messages (i.e., all intermediaries other than those acting as tunnels) MUST send their own HTTP-version in forwarded messages, unless it is purposefully downgraded as a workaround for an upstream issue.",
+   "why": "Upper-case MUST in section 2.3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0226",
+   "rfc": 9113,
+   "section": "9.2.1",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "An endpoint MAY immediately terminate an HTTP/2 connection that does not meet these TLS requirements with a connection error (Section 5.4.1) of type INADEQUATE_SECURITY.",
+   "why": "Upper-case MAY in section 9.2.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0227",
+   "rfc": 9113,
+   "section": "9.2.1",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "An endpoint MUST treat a TLS renegotiation as a connection error (Section 5.4.1) of type PROTOCOL_ERROR.",
+   "why": "Upper-case MUST in section 9.2.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0228",
+   "rfc": 9113,
+   "section": "6.5",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "A SETTINGS frame MUST be sent by both endpoints at the start of a connection and MAY be sent at any other time by either endpoint over the lifetime of the connection.",
+   "why": "Upper-case MUST in section 6.5 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0229",
+   "rfc": 9117,
+   "section": "5",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "If the latter applies, a network should be designed so it has a congruent topology amongst unicast routes and Flow Specification routes.",
+   "why": "Modal token written in lower case (\"should\") in section 5. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0230",
+   "rfc": 9117,
+   "section": "3",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "In addition, an operator may extend the requirements above for a group of ASes via policy.",
+   "why": "Modal token written in lower case (\"may\") in section 3. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0231",
+   "rfc": 9117,
+   "section": "4.1",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "Also, policy may be useful to permit a specific set of non-empty AS_PATHs (see step b.2.3 in Section 4.1).",
+   "why": "Modal token written in lower case (\"may\") in section 4.1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0232",
+   "rfc": 9118,
+   "section": "3",
+   "tier": "weak",
+   "kw": "optional",
+   "class": "lowercase-modal",
+   "probe": "The Enhanced JWT Claim Constraints certificate extension is optional, but, when present, it constrains the JWT claims that authentication services may include in the PASSporT objects they sign.",
+   "why": "Modal token written in lower case (\"optional\") in section 3. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0233",
+   "rfc": 9118,
+   "section": "3",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "If one of these baseline PASSporT claims appears in the mustExclude list, then the certificate MUST be treated as if the extension was not present.",
+   "why": "Upper-case MUST in section 3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0234",
+   "rfc": 9118,
+   "section": "1",
+   "tier": "weak",
+   "kw": "must not",
+   "class": "lowercase-modal",
+   "probe": "The Enhanced JWT Claim Constraints certificate extension defined in this document includes those capabilities and adds a list of claims that must not be included in a valid PASSporT.",
+   "why": "Modal token written in lower case (\"must not\") in section 1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0235",
+   "rfc": 9217,
+   "section": "2.5",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "Layers The fifth question: how should transport-layer and higher-layer protocols be redesigned to work most effectively over a path-aware networking layer?",
+   "why": "Modal token written in lower case (\"should\") in section 2.5. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0236",
+   "rfc": 9217,
+   "section": "2.2",
+   "tier": "weak",
+   "kw": "must",
+   "class": "lowercase-modal",
+   "probe": "Once endpoints and networks have a shared vocabulary for expressing path properties, the network must have some method for distributing those path properties to the endpoints.",
+   "why": "Modal token written in lower case (\"must\") in section 2.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0237",
+   "rfc": 9217,
+   "section": "2.7",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "In a network providing path selection to the endpoints, however, this assumption no longer holds, as endpoints may react to path properties by selecting alternate paths.",
+   "why": "Modal token written in lower case (\"may\") in section 2.7. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0238",
+   "rfc": 9221,
+   "section": "5.3",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "However, since DATAGRAM frames are inherently unreliable, they MAY be dropped by the receiver if the receiver cannot process them.",
+   "why": "Upper-case MAY in section 5.3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0239",
+   "rfc": 9221,
+   "section": "3",
+   "tier": "strict",
+   "kw": "MUST NOT",
+   "class": "uppercase-modal",
+   "probe": "An endpoint MUST NOT send DATAGRAM frames until it has received the max_datagram_frame_size transport parameter with a non-zero value during the handshake (or during a previous handshake if 0-RTT is used).",
+   "why": "Upper-case MUST NOT in section 3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0240",
+   "rfc": 9221,
+   "section": "3",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "Similarly, an endpoint that receives a DATAGRAM frame that is larger than the value it sent in its max_datagram_frame_size transport parameter MUST terminate the connection with an error of type PROTOCOL_VIOLATION.",
+   "why": "Upper-case MUST in section 3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0241",
+   "rfc": 9407,
+   "section": "5.3.1.1",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "If we want to compress and store this list into the encoding vector, we MUST follow this procedure: 1.",
+   "why": "Upper-case MUST in section 5.3.1.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0242",
+   "rfc": 9407,
+   "section": "5.3.1.1",
+   "tier": "weak",
+   "kw": "none",
+   "class": "keyword-free-spec",
+   "probe": "Compute b, the number of bits needed to store all the elements, which is ceil(log2(max(L))), where max(L) represents the maximum of the elements of the list L; here, it is 2 bits.",
+   "why": "No modal token anywhere in the sentence, in section 5.3.1.1: it still fixes a bound or a definition an implementer must honour. No keyword-driven extractor can find it by design, so a miss means the contract has no way to express specifications that are not phrased as obligations."
+  },
+  {
+   "id": "G0243",
+   "rfc": 9407,
+   "section": "4.1",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "At the beginning of a transmission, a Tetrys encoder MUST choose an initial code rate that adds redundancy as it doesn't know the packet loss rate of the channel.",
+   "why": "Upper-case MUST in section 4.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0244",
+   "rfc": 9422,
+   "section": "3.2",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "Limit names MUST be comprehensible, but also should be kept as short as possible.",
+   "why": "Upper-case MUST in section 3.2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0245",
+   "rfc": 9422,
+   "section": "3.6",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "Servers MAY return updated limits any time the protocol requires clients to reissue the EHLO command.",
+   "why": "Upper-case MAY in section 3.6 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0246",
+   "rfc": 9458,
+   "section": "6.3",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "Servers should account for traffic analysis based on response size or generation time.",
+   "why": "Modal token written in lower case (\"should\") in section 6.3. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0247",
+   "rfc": 9458,
+   "section": "3",
+   "tier": "strict",
+   "kw": "MUST",
+   "class": "uppercase-modal",
+   "probe": "In order to ensure that Clients do not encapsulate messages that other entities can intercept, the key configuration MUST be authenticated and have integrity protection.",
+   "why": "Upper-case MUST in section 3 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0248",
+   "rfc": 9458,
+   "section": "9.5",
+   "tier": "weak",
+   "kw": "Recommended",
+   "class": "lowercase-modal",
+   "probe": "Type URI: https://iana.org/assignments/http-problem-types#ohttp-key Title: Oblivious HTTP key configuration not acceptable Recommended HTTP Status Code: 400 Reference: Section 5.3 of RFC 9458",
+   "why": "Modal token written in lower case (\"Recommended\") in section 9.5. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0249",
+   "rfc": 9461,
+   "section": "10.2",
+   "tier": "weak",
+   "kw": "May",
+   "class": "lowercase-modal",
+   "probe": "Hoffman, \"Specification for DNS over Transport Layer Security (TLS)\", RFC 7858, DOI 10.17487/RFC7858, May 2016, <https://www.rfc-editor.org/info/rfc7858>.",
+   "why": "Modal token written in lower case (\"May\") in section 10.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0250",
+   "rfc": 9461,
+   "section": "8.1.1",
+   "tier": "weak",
+   "kw": "optional",
+   "class": "lowercase-modal",
+   "probe": "However, SVCB-optional clients will generally fall back to insecure DNS in this case, exposing all DNS traffic to attacks.",
+   "why": "Modal token written in lower case (\"optional\") in section 8.1.1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0251",
+   "rfc": 9462,
+   "section": "6.2",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "This may pose challenges for resolvers with a large number of referring IP addresses.",
+   "why": "Modal token written in lower case (\"may\") in section 6.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0252",
+   "rfc": 9462,
+   "section": "4.1",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "A client MAY additionally use a discovered Designated Resolver without either of these methods, based on implementation-specific policy or user input.",
+   "why": "Upper-case MAY in section 4.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0253",
+   "rfc": 9462,
+   "section": "4.1",
+   "tier": "strict",
+   "kw": "MUST NOT",
+   "class": "uppercase-modal",
+   "probe": "In other words, designations are per-resolver and MUST NOT be used to configure the client's universal DNS behavior.",
+   "why": "Upper-case MUST NOT in section 4.1 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0254",
+   "rfc": 9520,
+   "section": "2.7",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "Authoritative servers may return FORMERR when they do not implement EDNS(0), or when EDNS(0) option fields are malformed, but not for unknown EDNS(0) options.",
+   "why": "Modal token written in lower case (\"may\") in section 2.7. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0255",
+   "rfc": 9520,
+   "section": "2",
+   "tier": "weak",
+   "kw": "may",
+   "class": "lowercase-modal",
+   "probe": "Additional conditions may be expected to cause similar resolution failures.",
+   "why": "Modal token written in lower case (\"may\") in section 2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0256",
+   "rfc": 9520,
+   "section": "5",
+   "tier": "strict",
+   "kw": "SHOULD",
+   "class": "uppercase-modal",
+   "probe": "Resolvers SHOULD implement measures to protect themselves and bound the amount of memory devoted to caching resolution failures.",
+   "why": "Upper-case SHOULD in section 5 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0257",
+   "rfc": 9651,
+   "section": "3.3.2",
+   "tier": "weak",
+   "kw": "should",
+   "class": "lowercase-modal",
+   "probe": "If an alternative rounding strategy is desired, this should be specified by the field definition to occur before serialization.",
+   "why": "Modal token written in lower case (\"should\") in section 3.3.2. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0258",
+   "rfc": 9651,
+   "section": "2.3",
+   "tier": "weak",
+   "kw": "required",
+   "class": "lowercase-modal",
+   "probe": "Field specifications are required to be either an Item, List, or Dictionary to preserve extensibility.",
+   "why": "Modal token written in lower case (\"required\") in section 2.3. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  },
+  {
+   "id": "G0259",
+   "rfc": 9999,
+   "section": "4.2",
+   "tier": "strict",
+   "kw": "MAY",
+   "class": "uppercase-modal",
+   "probe": "Other header parameters MAY be added to the header buckets, for example, a kid that identifies the signing key.",
+   "why": "Upper-case MAY in section 4.2 under RFC 2119/8174: binding on an implementer. A contract that omits it lets an implementation be non-conforming without the omission being visible, so a miss is an incomplete contract, not a formatting difference."
+  },
+  {
+   "id": "G0260",
+   "rfc": 9999,
+   "section": "3.1.1",
+   "tier": "weak",
+   "kw": "recommended",
+   "class": "lowercase-modal",
+   "probe": "It is recommended that future specifications extending the RATS conceptual messages add new values to the cm-type using the process defined in Section 9.4.",
+   "why": "Modal token written in lower case (\"recommended\") in section 3.1.1. Obligations phrased this way bind an implementer and belong in a contract, but must not be counted as RFC 2119 requirements; they are only reachable through the provisional channel, and a miss there is a silent gap rather than a wrong number."
+  }
+ ]
+}

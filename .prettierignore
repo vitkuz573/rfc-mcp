@@ -8,3 +8,6 @@ data/
 *.sqlite-shm
 package-lock.json
 CHANGELOG.md
+eval/results/
+eval/corpus.json
+eval/golden.json

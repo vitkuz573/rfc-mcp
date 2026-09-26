@@ -581,6 +581,41 @@ export function classifyCandidateRole(
   return "modal";
 }
 
+/**
+ * Fixed texts the RFC Editor prints around every document, matched in full.
+ *
+ * Two of them are on the end of nearly every modern RFC and neither says anything
+ * about the protocol:
+ *
+ *   - the status notice, whose only verb is a pointer: "Information about the current
+ *     status of this document, any errata, and how to provide feedback on it may be
+ *     obtained at http://www.rfc-editor.org/info/rfcNNNN.";
+ *   - the BCP-13 legal notice, which requires the *redistributor* to reproduce a
+ *     licence: "Code Components extracted from this document must include ... License
+ *     text ...".
+ *
+ * In a 190-item hand-checked sample of the candidate list these two sentences were 55
+ * rows - 29% of the list a pre-2119 reader depends on. A candidate list where a third
+ * of the rows are the same two sentences is not a compliance list, and no amount of
+ * reading the rest of the document compensates for it.
+ *
+ * The match is on the whole sentence, and both texts are fixed strings the RFC Editor
+ * inserts, so this is not a topic filter. It is also counted and reported
+ * (`boilerplate_statements_excluded:N`) rather than applied quietly, because a filter
+ * nobody can see is indistinguishable from a filter that hides a miss.
+ */
+const FIXED_BOILERPLATE: readonly RegExp[] = [
+  /^Information about the current status of this document, any errata, and how to provide feedback on it may be obtained at\b/u,
+  /^Code Components extracted from this document must include (?:Revised|Simplified) BSD License text\b/u,
+  /^This document is part of a family of documents defining\b/u,
+  /^Code Components extracted from this document must include\b.*Trust Legal Provisions/u,
+];
+
+export function isFixedBoilerplate(sentence: string): boolean {
+  const text = sentence.replace(/\s+/gu, " ").trim();
+  return FIXED_BOILERPLATE.some((pattern) => pattern.test(text));
+}
+
 export function analyzeNormative(input: {
   readonly snapshotId: string;
   readonly rfc: number;
@@ -619,6 +654,10 @@ export function analyzeNormative(input: {
       const enumerates = distinctTerms.size >= 3 || META_DISCUSSION.test(sentence.text);
       const inDefinition =
         enumerates || QUOTED_TERM.test(sentence.text) || DEFINITION_SECTIONS.test(sectionTitle.trim());
+      // Mentions are per keyword occurrence, because that is what a mention is: this
+      // many normative terms appear here, at these offsets. Requirements are per
+      // statement, and the two passes used to disagree about that.
+      const sentenceMentions: NormativeMention[] = [];
       for (const match of matches) {
         const term = normalizeTerm(match[0]);
         if (!term) continue;
@@ -679,39 +718,97 @@ export function analyzeNormative(input: {
           }),
         };
         mentions.push(mention);
-
-        if (disposition === "requirement") {
-          const requirementFlagsPending: string[] = [];
-          const beforeKeyword = sentence.text.slice(0, match.index ?? 0);
-          const clause = parseClause(sentence.text, match.index ?? 0, match[0].length);
-          // A list marker is an artefact of the publication format, not part of the
-          // requirement. It is stripped from the clause and reported here, so the
-          // cleanup is visible instead of silently changing what the actor says.
-          if (LIST_MARKER.test(beforeKeyword)) {
-            requirementFlagsPending.push("list_marker_stripped_from_clause");
-          }
-          if (/\bexcept that\b/iu.test(sentence.text.slice(0, (match.index ?? 0) + 200))) {
-            requirementFlagsPending.push("exception_before_keyword");
-          }
-          const hasActor = clause.actor !== null;
-          const hasAction = clause.action !== null;
-          const parseStatus: Requirement["parse_status"] = hasActor && hasAction ? "complete" : "partial";
-          const requirementFlags = [...flags, ...requirementFlagsPending];
-          if (!hasActor) requirementFlags.push("actor_not_explicit");
-          if (!hasAction) requirementFlags.push("action_not_explicit");
-          if (sectionTitle.toLowerCase().includes("requirements notation")) {
-            requirementFlags.push("requirements_notation_section");
-          }
-          requirements.push({
-            ...mention,
-            disposition: "requirement",
-            clause,
-            parse_status: parseStatus,
-            confidence: parseStatus === "complete" ? 0.9 : 0.7,
-            flags: requirementFlags,
-          });
-        }
+        sentenceMentions.push(mention);
       }
+
+      // One requirement per STATEMENT. The candidate extractor was fixed to that in an
+      // earlier round and this one was not, so "EMTU_R MUST be greater than or equal to
+      // 576, SHOULD be either configurable or indefinite, and SHOULD be greater than or
+      // equal to the MTU of the connection" came back three times and
+      // `coverage.total_requirements` - a number callers trust - counted one sentence as
+      // three requirements. 1 411 of 11 640 strict rows corpus-wide, in 96 of 119
+      // documents, were a repeat of a sentence already in the same list.
+      //
+      // A sentence that is discourse ABOUT the requirement language stays a mention. That
+      // decision was already made above, in `inDefinition`, and it is not the collapse
+      // that gets to override it: "the effects of not implementing a MUST or SHOULD may
+      // be subtle" carries two keywords and is still not an obligation.
+      if (inDefinition) continue;
+      const primary = sentenceMentions.find((m) => !m.flags.includes("term_quoted"));
+      if (!primary) continue;
+      const primaryIndex = matches.find((m) => m[0] === primary.term)?.index ?? 0;
+      const primaryTerm = primary.term;
+      const primaryMeta = NORMATIVE_TERMS[primaryTerm];
+      const requirementFlagsPending: string[] = [];
+      const beforeKeyword = sentence.text.slice(0, primaryIndex);
+      const clause = parseClause(sentence.text, primaryIndex, primary.term.length);
+      // A list marker is an artefact of the publication format, not part of the
+      // requirement. It is stripped from the clause and reported here, so the cleanup is
+      // visible instead of silently changing what the actor says.
+      if (LIST_MARKER.test(beforeKeyword)) {
+        requirementFlagsPending.push("list_marker_stripped_from_clause");
+      }
+      if (/\bexcept that\b/iu.test(sentence.text.slice(0, primaryIndex + 200))) {
+        requirementFlagsPending.push("exception_before_keyword");
+      }
+      const hasActor = clause.actor !== null;
+      const hasAction = clause.action !== null;
+      const parseStatus: Requirement["parse_status"] = hasActor && hasAction ? "complete" : "partial";
+      const requirementFlags = [...primary.flags, ...requirementFlagsPending];
+      if (matches.length > 1) requirementFlags.push("keywords_collapsed_to_one_row");
+      if (!hasActor) requirementFlags.push("actor_not_explicit");
+      if (!hasAction) requirementFlags.push("action_not_explicit");
+      if (sectionTitle.toLowerCase().includes("requirements notation")) {
+        requirementFlags.push("requirements_notation_section");
+      }
+      const sentenceCharStart = block.char_start + sentence.start;
+      const sentenceCharEnd = sentenceCharStart + sentence.text.length;
+      requirements.push({
+        ...primary,
+        id: `req_${citationId({
+          snapshotId: input.snapshotId,
+          blockId: block.id,
+          byteStart: sentenceCharStart,
+          quote: sentence.text,
+        }).slice(4, 20)}`,
+        term: primaryTerm,
+        strength: primaryMeta.strength,
+        polarity: primaryMeta.polarity,
+        keywords: sentenceMentions.map((m) => ({
+          term: m.term,
+          strength: m.strength,
+          polarity: m.polarity,
+          char_start: m.span.char_start,
+          char_end: m.span.char_end,
+        })),
+        // The span is the STATEMENT, not one keyword inside it. A caller anchoring a
+        // contract line to this row quotes the sentence, so the citation has to verify
+        // the sentence; a span that covered four letters of it verified nothing about
+        // what the contract would say.
+        span: {
+          byte_start: byteOffsetFromChar(block, sentenceCharStart),
+          byte_end: byteOffsetFromChar(block, sentenceCharEnd),
+          char_start: sentenceCharStart,
+          char_end: sentenceCharEnd,
+          codepoint_start: block.codepoint_start + codePointCount(block.text.slice(0, sentence.start)),
+          codepoint_end:
+            block.codepoint_start + codePointCount(block.text.slice(0, sentence.start + sentence.text.length)),
+          line_start: block.line_start,
+          line_end: block.line_end,
+        },
+        context: contextAround(sentence.text, primaryIndex, primary.term.length, 160),
+        disposition: "requirement",
+        clause,
+        parse_status: parseStatus,
+        confidence: parseStatus === "complete" ? 0.9 : 0.7,
+        flags: requirementFlags,
+        citation_id: citationId({
+          snapshotId: input.snapshotId,
+          blockId: block.id,
+          byteStart: sentenceCharStart,
+          quote: sentence.text,
+        }),
+      });
     }
   }
 
@@ -765,6 +862,7 @@ export function analyzeNormativeCandidates(input: {
   let truncated = false;
   let skippedSections = 0;
   let skippedReferenceBlocks = 0;
+  let boilerplateExcluded = 0;
   let fragments = 0;
   let previousEndedOpen = false;
 
@@ -804,6 +902,10 @@ export function analyzeNormativeCandidates(input: {
       if (candidates.length >= limit) {
         truncated = true;
         break;
+      }
+      if (isFixedBoilerplate(sentence.text)) {
+        boilerplateExcluded += 1;
+        continue;
       }
       const keywordMatches = [...sentence.text.matchAll(CANDIDATE_KEYWORD)];
       if (keywordMatches.length === 0) continue;
@@ -917,6 +1019,7 @@ export function analyzeNormativeCandidates(input: {
   if (scanned === 0) warnings.push("no_blocks_scanned_for_candidates");
   if (skippedSections > 0) warnings.push(`candidate_sections_skipped:${skippedSections}`);
   if (skippedReferenceBlocks > 0) warnings.push(`reference_entry_blocks_skipped:${skippedReferenceBlocks}`);
+  if (boilerplateExcluded > 0) warnings.push(`boilerplate_statements_excluded:${boilerplateExcluded}`);
   if (fragments > 0) {
     warnings.push(
       `sentences_split_across_a_page_break:${fragments}:flagged_continues_previous_block_not_whole_statements`,

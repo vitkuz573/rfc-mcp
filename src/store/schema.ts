@@ -10,7 +10,7 @@
  *  - FTS5 tables are derived and can always be rebuilt from `blocks`.
  */
 
-export const SCHEMA_VERSION = "5";
+export const SCHEMA_VERSION = "6";
 
 /**
  * Schema migrations, applied in order to any existing corpus on open.
@@ -40,6 +40,17 @@ export interface SchemaMigration {
 }
 
 export const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
+  {
+    version: 6,
+    name: "requirement_keywords",
+    columns: [["requirements", "keywords_json", "TEXT NOT NULL DEFAULT '[]'"]],
+    // Rows written before this column existed stored one row per keyword occurrence, so
+    // there is no honest way to recover which rows were the same sentence: the row's own
+    // offsets point at one keyword, not at the statement. The default is `[]` rather than
+    // a reconstruction, and every snapshot is re-derived from stored bytes by
+    // `reanalyze --all` after a rule-version bump, so the corpus does not depend on this
+    // guess. What matters is that the column never claims a keyword list it does not have.
+  },
   {
     version: 5,
     name: "section_furniture_lines",
@@ -287,6 +298,11 @@ CREATE TABLE IF NOT EXISTS requirements (
   action          TEXT,
   exception_text  TEXT,
   flags_json      TEXT NOT NULL,
+  -- Every RFC 2119 keyword in the statement, with its own strength, polarity and
+  -- offsets. The term column is the first one; without this column a sentence with
+  -- three keywords was stored as three rows, and a count callers trust counted one
+  -- statement three times.
+  keywords_json   TEXT NOT NULL DEFAULT '[]',
   char_start      INTEGER NOT NULL,
   char_end        INTEGER NOT NULL,
   byte_start      INTEGER NOT NULL,

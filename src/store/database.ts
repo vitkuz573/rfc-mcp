@@ -648,8 +648,8 @@ export class CorpusStore {
       const insertRequirement = this.stmt(
         `INSERT INTO requirements (id, snapshot_id, rfc, section_id, block_id, term, strength, polarity, exact_text,
            citation_id, parse_status, confidence, actor, condition_text, action, exception_text, flags_json,
-           char_start, char_end, byte_start, byte_end, codepoint_start, codepoint_end, line_start, line_end)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           keywords_json, char_start, char_end, byte_start, byte_end, codepoint_start, codepoint_end, line_start, line_end)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       );
       for (const requirement of bundle.requirements) {
         insertRequirement.run(
@@ -670,6 +670,7 @@ export class CorpusStore {
           requirement.clause.action,
           requirement.clause.exception,
           JSON.stringify(requirement.flags),
+          JSON.stringify(requirement.keywords),
           requirement.span.char_start,
           requirement.span.char_end,
           requirement.span.byte_start,
@@ -1745,6 +1746,7 @@ interface RequirementRow {
   action: string | null;
   exception_text: string | null;
   flags_json: string;
+  keywords_json: string;
   char_start: number;
   char_end: number;
   byte_start: number;
@@ -1765,6 +1767,10 @@ function rowToRequirement(row: RequirementRow, _snapshotId: string): Requirement
     term: row.term as Requirement["term"],
     strength: row.strength as Requirement["strength"],
     polarity: row.polarity as Requirement["polarity"],
+    // A row written before the column existed holds `[]`, and that is reported as
+    // empty rather than reconstructed: the old row's offsets pointed at one keyword, so
+    // there is nothing honest to rebuild a statement-level list from.
+    keywords: (parseJson(row.keywords_json ?? "[]") ?? []) as Requirement["keywords"],
     exact_text: row.exact_text,
     span: {
       char_start: row.char_start,

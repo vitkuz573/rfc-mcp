@@ -251,6 +251,146 @@ describe("parseRfcText", () => {
     expect(result.blocks.every((b) => !/^\s*1\.\s+Intro\s+\.+/mu.test(b.text))).toBe(true);
   });
 
+  it("recognises a typeset page's indented subsection titles", () => {
+    // RFC 1122 and its contemporaries set body text at an eleven-column indent and set
+    // subsection titles by indenting them three columns per level. Treating every
+    // indented line as body text left that outline five entries long - 1 through 5 -
+    // so the statements under those titles were not unreadable but unreachable: no
+    // query returns a section the outline does not name.
+    const typeset = Buffer.from(
+      [
+        "3.  INTERNET LAYER",
+        "",
+        "   3.3  SPECIFIC ISSUES",
+        "",
+        "            A host MUST handle datagrams addressed to a UDP",
+        "            port with no pending LISTEN call.",
+        "",
+        "      3.3.1  Routing Outbound Datagrams",
+        "",
+        "            The route cache MUST be flushed on a metric change.",
+        "",
+        "         3.3.1.1  Local/Remote Decision",
+        "",
+        "            1983 must not be read as a section number here.",
+        "            A host MUST reject a datagram with a bad checksum.",
+        "",
+        "4.  TRANSPORT LAYER",
+        "",
+        "   The transport layer body.",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    const result = parseRfcText({
+      rfc: 1122,
+      snapshotId: "snp_555555555555555555555555",
+      raw: typeset,
+      parserVersion: "test",
+    });
+    const numbers = result.sections.map((s) => s.number);
+    expect(numbers).toContain("3.3");
+    expect(numbers).toContain("3.3.1");
+    expect(numbers).toContain("3.3.1.1");
+    // The paragraph that opens with a bare integer stays body text: a level-1 title in
+    // these documents sits at column 0 and is already found there, so a single
+    // component is never enough to promote an indented line.
+    expect(numbers).not.toContain("1983");
+    expect(result.sections.find((s) => s.number === "3.3.1.1")?.parent_id).toBe(
+      result.sections.find((s) => s.number === "3.3.1")?.id,
+    );
+    expect(result.warnings).toContain("indented_subsection_headings_recognised:3");
+  });
+
+  it("does not promote a contents entry to a section while indented titles are recognised", () => {
+    // The indented-title rule and the contents are the same shape on the page: an
+    // indented numbered line. Without the region check, `   3.3  SPECIFIC ISSUES
+    // ..... 25` would become section 3.3 a second time, above the body, and every
+    // statement under it would appear to live in an empty section.
+    const withIndentedToc = Buffer.from(
+      [
+        "1.  Intro",
+        "",
+        "2.  Middle",
+        "",
+        "3.  Specific Issues",
+        "",
+        "Table of Contents",
+        "",
+        "   1.  Intro ........................................  1",
+        "   3.3  Routing .....................................  2",
+        "",
+        "1.  Intro",
+        "",
+        "   The body.",
+        "",
+        "3.  Specific Issues",
+        "",
+        "   3.3  Routing Outbound Datagrams",
+        "",
+        "            A host MUST flush its route cache.",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    const result = parseRfcText({
+      rfc: 4245,
+      snapshotId: "snp_666666666666666666666666",
+      raw: withIndentedToc,
+      parserVersion: "test",
+    });
+    const routing = result.sections.filter((s) => s.number === "3.3");
+    expect(routing).toHaveLength(1);
+    expect(routing[0]!.text).toContain("MUST flush");
+  });
+
+  it("recognises an underlined section title", () => {
+    // RFCs from 1973 to the mid-1980s were typeset: their titles carry no number and
+    // no fixed name, so no list of known titles can find them. The whole body of
+    // RFC 768 became one section called "Front Matter", and `read(section=...)` could
+    // not address any of it.
+    const underlined = Buffer.from(
+      [
+        "Introduction",
+        "------------",
+        "",
+        "This User Datagram Protocol is defined to make available a",
+        "datagram mode of packet-switched computer communication.",
+        "",
+        "Fields",
+        "------",
+        "",
+        "Source Port is an optional field, when meaningful, it",
+        "indicates the port of the sending process.",
+        "",
+        "Postel                                                          [page 1]",
+        "",
+        "                                                             28 Aug 1980",
+        "User Datagram Protocol                                           RFC 768",
+        "",
+        "Checksum is the 16-bit one's complement of the one's",
+        "complement sum of a pseudo header.",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    const result = parseRfcText({
+      rfc: 768,
+      snapshotId: "snp_777777777777777777777777",
+      raw: underlined,
+      parserVersion: "test",
+    });
+    const numbers = result.sections.map((s) => s.number);
+    expect(numbers).toContain("Introduction");
+    expect(numbers).toContain("Fields");
+    expect(result.warnings).toContain("underlined_headings_recognised:2");
+    // The running date and the running foot of that format were not claimed, so the
+    // date survived into the text a caller copies and `28 August 1980` in a front
+    // matter was read as a section numbered 28.
+    expect(result.blocks.some((b) => /28 Aug 1980/u.test(b.text))).toBe(false);
+    expect(result.sections.some((s) => s.number === "28")).toBe(false);
+  });
+
   it("reports a document whose contents header it could not find", () => {
     const result = parseRfcText({
       rfc: 4245,

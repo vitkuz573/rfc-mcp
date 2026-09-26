@@ -260,6 +260,30 @@ export interface RequirementClause {
 }
 
 export interface Requirement extends NormativeMention {
+  /**
+   * Every RFC 2119 keyword in the statement, each with its own classification.
+   *
+   * A requirement is a *statement*, not a keyword occurrence, and the strict extractor
+   * used to disagree with the candidate extractor about that. The candidate list was
+   * fixed to one row per statement in an earlier round; the strict list was not, so
+   * "EMTU_R MUST be greater than or equal to 576, SHOULD be either configurable or
+   * indefinite, and SHOULD be greater than or equal to the MTU of the connection" came
+   * back three times, and `coverage.total_requirements` counted one sentence as three
+   * requirements. Across the corpus 1 411 of 11 640 strict rows - 12.1%, in 96 of 119
+   * documents - repeated a sentence already present in the same list.
+   *
+   * `term`, `polarity` and `strength` describe the FIRST keyword, which is what a
+   * caller filtering on `term` has always meant. `keywords` carries the rest, so
+   * collapsing loses nothing and "does this statement contain a SHOULD" is still
+   * answerable.
+   */
+  readonly keywords: readonly {
+    readonly term: NormativeTerm;
+    readonly strength: NormativeStrength;
+    readonly polarity: NormativePolarity;
+    readonly char_start: number;
+    readonly char_end: number;
+  }[];
   readonly clause: RequirementClause;
   readonly parse_status: "complete" | "partial" | "heuristic";
   readonly confidence: number;

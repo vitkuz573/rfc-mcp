@@ -1251,11 +1251,9 @@ export class RfcService {
       refresh: input.refresh,
       signal: context.signal,
     });
-    const limit = clamp(
-      input.max_results ?? this.config.limits.maxSearchResults,
-      1,
-      this.config.limits.maxSearchResults,
-    );
+    const asked = input.max_results;
+    const ceiling = this.config.limits.maxPageSize;
+    const limit = clamp(asked ?? Math.min(this.config.limits.maxSearchResults, ceiling), 1, ceiling);
     const generation = this.store.getGeneration();
     const binding = `${generation}|req|${snapshot.id}|${input.scope ?? ""}|${input.term ?? ""}|${input.keyword ?? ""}|${limit}`;
     const offset = input.cursor ? decodeCursor(input.cursor, this.cursorSecret, binding).o : 0;
@@ -1279,6 +1277,12 @@ export class RfcService {
 
     const warningsOut = [...warnings];
     if (!pinned) warningsOut.push("snapshot_not_explicitly_pinned");
+    // A clamp that is not reported is indistinguishable from a smaller corpus. The
+    // caller asked for 500 rows and got 200; the response says so rather than leaving
+    // `limits.applied` as the only place it shows up.
+    if (asked !== undefined && asked > limit) {
+      warningsOut.push(`max_results_clamped:${asked}->${limit}:max_results_accepts_up_to_${ceiling}`);
+    }
 
     const data: Record<string, unknown> = {
       document: record,

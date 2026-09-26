@@ -168,6 +168,26 @@ describe("stdio protocol (legacy 2025 era)", () => {
     expect(result.structuredContent).toBeUndefined();
   });
 
+  it("validates a batch operation against the schema of the tool it names", async () => {
+    const bad = { op: "search", query: "MUST", section: "2" };
+    const rejected = await client.request("tools/call", { name: "batch", arguments: { operations: [bad] } });
+    // A rejected operation is reported per item, so the batch itself still answers.
+    expect(rejected.isError).toBeFalsy();
+    const onlyBad = JSON.parse(rejected.content[0].text);
+    expect(onlyBad.status).toBe("degraded");
+    expect(onlyBad.data.complete).toBe(false);
+    expect(onlyBad.data.results[0].error.code).toBe("INVALID_ARGUMENT");
+    expect(onlyBad.data.results[0].error.message).toContain("section");
+
+    const mixed = await client.request("tools/call", {
+      name: "batch",
+      arguments: { operations: [bad, { op: "status" }] },
+    });
+    const payload = JSON.parse(mixed.content[0].text);
+    expect(payload.status).toBe("partial");
+    expect(payload.data.results.map((r: { status: string }) => r.status)).toEqual(["failed", "ok"]);
+  });
+
   it("rejects an unknown tool argument instead of ignoring it", async () => {
     // A misspelled filter must never be dropped: the caller would receive
     // unfiltered data that looks filtered. The handler re-validates strictly so the

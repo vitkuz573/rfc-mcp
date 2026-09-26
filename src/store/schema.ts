@@ -10,7 +10,41 @@
  *  - FTS5 tables are derived and can always be rebuilt from `blocks`.
  */
 
-export const SCHEMA_VERSION = "1";
+export const SCHEMA_VERSION = "2";
+
+/**
+ * Schema migrations, applied in order to any existing corpus on open.
+ *
+ * `SCHEMA_SQL` only creates missing tables (`CREATE TABLE IF NOT EXISTS`), so a column
+ * added to a table definition never reaches a database that already has that table.
+ * Every step here is therefore written to be idempotent and is checked against the live
+ * schema before it runs, so the same code path serves a fresh database and a corpus
+ * built by an earlier version.
+ */
+export interface SchemaMigration {
+  readonly version: number;
+  readonly name: string;
+  /** Columns to add, as `[table, column, declaration]`. */
+  readonly columns?: readonly (readonly [string, string, string])[];
+  /** Indexes to create; `IF NOT EXISTS` is added by the runner. */
+  readonly indexes?: readonly string[];
+}
+
+export const SCHEMA_MIGRATIONS: readonly SchemaMigration[] = [
+  {
+    version: 2,
+    name: "reference_external_identity",
+    columns: [
+      ["rfc_references", "external_kind", "TEXT"],
+      ["rfc_references", "external_id", "TEXT"],
+      ["rfc_references", "external_publisher", "TEXT"],
+      ["rfc_references", "external_year", "INTEGER"],
+    ],
+    indexes: [
+      "CREATE INDEX IF NOT EXISTS references_by_external ON rfc_references (snapshot_id, target_kind, external_id)",
+    ],
+  },
+];
 
 export const SCHEMA_SQL = `
 PRAGMA foreign_keys = ON;
@@ -227,11 +261,20 @@ CREATE TABLE IF NOT EXISTS rfc_references (
   target       TEXT,
   target_rfc   INTEGER,
   resolution   TEXT NOT NULL,
+  -- Identity of a cited non-IETF document, recovered from the entry text. NULL when the
+  -- entry is an IETF document or when nothing in it designates the target.
+  external_kind      TEXT,
+  external_id        TEXT,
+  external_publisher TEXT,
+  external_year     INTEGER,
   cited_by_json TEXT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS references_by_snapshot ON rfc_references (snapshot_id, relation);
 CREATE INDEX IF NOT EXISTS references_by_target ON rfc_references (target_rfc);
+-- No index over external_id here: SCHEMA_SQL runs before the migrations, and against an
+-- existing corpus this table already exists without that column, so the statement would
+-- fail. Indexes that depend on a migrated column are created by the migration instead.
 
 -- In-body citation sites, normalised. rfc_references keeps them inside a JSON column,
 -- which is fine for reading a single reference but not for asking the inverse question

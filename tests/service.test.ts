@@ -38,7 +38,8 @@ Table of Contents
 
 2.  Requirements
 
-   An implementation MUST emit the X-Trace header.
+   An implementation MUST emit the X-Trace header.  The header format is
+   specified in [FIPS197].
 
    A client SHOULD NOT retry a request after a 503 response.  A server MAY
    log the attempt.
@@ -50,6 +51,10 @@ Table of Contents
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997.
+
+  [FIPS197]  National Institute of Standards and Technology, "Specification
+              for the Advanced Encryption Standard (AES)", FIPS PUB 197,
+              November 2001.
 
 Author's Address
 
@@ -226,6 +231,46 @@ describe("RfcService end to end", () => {
     expect(rfc2119?.relation).toBe("normative");
     expect(rfc2119?.target_rfc).toBe(2119);
     expect((rfc2119?.cited_by ?? []).length).toBeGreaterThan(0);
+  });
+
+  it("gives a cited non-IETF document its own identity instead of calling it unresolved", async () => {
+    const resolved = await service.resolve({ rfc: 9999 });
+    const all = await service.references({ snapshot_id: resolved.data.snapshot.id, max_results: 50 });
+    const references = all.data.references as {
+      label: string;
+      target_kind: string;
+      target: string | null;
+      resolution: string;
+      external: { kind: string; id: string; publisher: string | null; year: number | null } | null;
+      cited_by: unknown[];
+    }[];
+
+    const fips = references.find((reference) => reference.label === "FIPS197");
+    expect(fips?.target_kind).toBe("external");
+    expect(fips?.resolution).toBe("external");
+    expect(fips?.target).toBe("FIPS 197");
+    expect(fips?.external).toEqual({ kind: "standard", id: "FIPS 197", publisher: "NIST", year: null });
+    // It is a real citation, so it keeps its in-body site.
+    expect((fips?.cited_by ?? []).length).toBeGreaterThan(0);
+
+    // An IETF reference is unaffected.
+    const rfc2119 = references.find((reference) => reference.label === "RFC2119");
+    expect(rfc2119?.target_kind).toBe("rfc");
+    expect(rfc2119?.external).toBeNull();
+
+    // The filter can now select exactly these.
+    const externalOnly = await service.references({
+      snapshot_id: resolved.data.snapshot.id,
+      resolution: "external",
+      max_results: 50,
+    });
+    expect((externalOnly.data.references as { label: string }[]).map((r) => r.label)).toEqual(["FIPS197"]);
+
+    // And they appear in the graph as external citations, not as unknown labels.
+    const graph = await service.dependencies({ snapshot_id: resolved.data.snapshot.id, max_edges: 50 });
+    const edges = graph.data.edges as readonly { type: string; to: string }[];
+    const externalEdge = edges.find((e) => e.type === "cites_external");
+    expect(externalEdge?.to).toContain("FIPS 197");
   });
 
   it("verifies a citation against the stored bytes", async () => {

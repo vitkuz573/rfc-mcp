@@ -15,7 +15,7 @@ policy inventory in machine-readable form.
     "corpus_id": "rfc-mcp:<hash>",
     "index_generation": 42,     // monotonic; changes invalidate cursors
     "parser_version": "rfc-text-1.2.0",
-    "extractor_version": "normative-2119-8174-1.1.0",
+    "extractor_version": "normative-2119-8174-1.3.0",
     "observed_at": "2026-09-25T16:04:08.222Z",   // RFC 3339 UTC
     "source_urls": ["https://www.rfc-editor.org/rfc/rfc9110.txt"],
     "freshness": "current" | "cached" | "stale" | "offline"
@@ -162,16 +162,44 @@ normative; a missing actor yields `partial` with `actor_not_explicit`, never an 
 {
   "label": "RFC2119",
   "relation": "normative" | "informative" | "in_body",
+  "target_kind": "rfc" | "subseries" | "external" | "other" | "unknown",
   "target": "rfc-2119",
   "target_rfc": 2119,
-  "resolution": "exact" | "ambiguous" | "unresolved",
+  "resolution": "exact" | "ambiguous" | "external" | "unresolved" | "not_attempted",
+  "external": null,
   "section": "19.1",
   "cited_by": [{ "block_id": "blk_…", "section_id": "sec_…", "offset": 41234 }]
 }
 ```
 
-A normative reference is **not** a dependency. The dependency graph keeps `cites_normative`
-and metadata relations separate, and never emits `inferred` edges.
+### Cited non-IETF documents
+
+A normative reference is often not an RFC. When the entry text designates the document itself,
+that designation becomes the identity and `resolution` is `external`:
+
+```jsonc
+{
+  "label": "FIPS197",
+  "target_kind": "external",
+  "target": "FIPS 197",
+  "resolution": "external",
+  "external": { "kind": "standard", "id": "FIPS 197", "publisher": "NIST", "year": null },
+}
+```
+
+`external.kind` is `standard`, `url` or `publication`. The identity is only ever taken from what
+the entry states — a designation (`FIPS 197`, `ISO/IEC 10646:2003`, `ITU-T X.680`, `ANSI X3.4`,
+`NIST SP 800-38C`, `UAX #15`) or a URL. Nothing is inferred from the label, and an entry with
+neither stays `unresolved`, which means exactly one thing: the target could not be identified.
+Reporting a cited NIST standard as `unresolved` would describe a successful read as a parsing
+failure, which is why the two states are separate.
+
+Where an entry names several designations, the one printed first is the identity; overlapping
+matches resolve to the more specific form, so `Unicode Standard, Version 4.0.1` wins over
+`The Unicode Standard`.
+
+A normative reference is **not** a dependency. The dependency graph keeps `cites_normative`,
+`cites_external` and metadata relations separate, and never emits `inferred` edges.
 
 ## 8. Search grammar
 

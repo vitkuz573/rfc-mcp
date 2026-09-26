@@ -70,6 +70,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The RFCXML reader collects citations from `<xref target="...">`, which is the reason to read
   the XML at all: the target is exact, while the rendered label is presentation. A degraded XML
   parse now states its warnings instead of only flipping the status.
+- A cited non-IETF document now gets its own identity instead of being reported as unresolved.
+  When the entry text designates the document — `FIPS 197`, `ISO/IEC 10646:2003`, `ITU-T X.680`,
+  `ANSI X3.4`, `NIST SP 800-38C`, `UAX #15`, or a URL — the reference is reported with
+  `target_kind: "external"`, `resolution: "external"` and the recovered `external` identity, and
+  appears in the dependency graph as a `cites_external` edge. Across the 60-document corpus this
+  resolves 159 references that were previously lumped in with genuinely unidentifiable ones
+  (unresolved dropped from 196 to 37). The remainder are books and papers with no designation and
+  no URL, and stay `unresolved` — that is what the state means.
+- The store applies schema migrations on open. `SCHEMA_SQL` only creates missing tables, so a
+  column added to an existing table never reached a corpus that already had that table; the
+  reanalyze that introduced the external-identity columns failed loudly rather than corrupting
+  anything. Migrations are now declared, idempotent and checked against the live schema, and an
+  index over a migrated column is created by the migration rather than by the base schema.
 
 ## [0.1.0] — 2026-09-26
 

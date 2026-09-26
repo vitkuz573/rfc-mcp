@@ -9,7 +9,7 @@
 [![node](https://img.shields.io/badge/node-%3E%3D24-5FA04E.svg)](https://nodejs.org)
 [![protocol](https://img.shields.io/badge/MCP-2026--07--28%20%2B%20legacy-8A2BE2.svg)](https://modelcontextprotocol.io)
 [![types](https://img.shields.io/badge/types-strict-informational.svg)](src)
-[![tests](https://img.shields.io/badge/tests-78%20passing-success.svg)](tests)
+[![tests](https://img.shields.io/badge/tests-87%20passing-success.svg)](tests)
 
 |                  |                                                                                                    |
 | ---------------- | -------------------------------------------------------------------------------------------------- |
@@ -168,7 +168,7 @@ evidence discipline and the rule that RFC text is untrusted data.
     "corpus_id": "rfc-mcp:9a3591827422",
     "index_generation": 50,
     "parser_version": "rfc-text-1.2.0",
-    "extractor_version": "normative-2119-8174-1.1.0",
+    "extractor_version": "normative-2119-8174-1.3.0",
     "observed_at": "2026-09-26T16:42:30.669Z",
     "source_urls": ["https://www.rfc-editor.org/rfc/rfc9110.txt"],
     "freshness": "current"
@@ -300,7 +300,7 @@ rfc-mcp vacuum                      # purge stale search-index rows, compact the
 ```sh
 npm ci
 npm run typecheck     # tsc --noEmit, strict
-npm test              # 78 tests: parser, normative, XML, HTTP policy, service, live protocol
+npm test              # 87 tests: parser, normative, XML, store, HTTP policy, service, live protocol
 npm run build         # dist/
 npm run verify        # format check + typecheck + test + build
 ```

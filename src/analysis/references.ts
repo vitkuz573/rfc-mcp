@@ -14,7 +14,15 @@
  * as such.
  */
 
-import type { Block, EdgeType, GraphEdge, GraphNode, ReferenceRecord, Section } from "../core/types.js";
+import type {
+  Block,
+  EdgeType,
+  ExternalReferenceIdentity,
+  GraphEdge,
+  GraphNode,
+  ReferenceRecord,
+  Section,
+} from "../core/types.js";
 import { citationId } from "./citation.js";
 import { shortHash } from "../core/util.js";
 
@@ -68,6 +76,7 @@ export function analyzeReferences(input: {
       target: resolved.target,
       target_rfc: resolved.rfc,
       resolution: resolved.resolution,
+      external: resolved.external,
       cited_by: [],
     };
     ordinal += 1;
@@ -96,7 +105,7 @@ export function analyzeReferences(input: {
       }
       const resolved = resolveTarget(label, block.text.slice(match.index ?? 0, (match.index ?? 0) + label.length + 4));
       if (resolved.rfc === null && resolved.target === null) continue;
-      const record: ReferenceRecord = {
+      const inBody: ReferenceRecord = {
         id: `ref_${shortHash(`${input.snapshotId}|inbody|${label}|${ordinal}`)}`,
         snapshot_id: input.snapshotId,
         rfc: input.rfc,
@@ -109,11 +118,12 @@ export function analyzeReferences(input: {
         target: resolved.target,
         target_rfc: resolved.rfc,
         resolution: resolved.resolution,
+        external: resolved.external,
         cited_by: [{ block_id: block.id, section_id: block.section_id, offset }],
       };
       ordinal += 1;
-      references.push(record);
-      if (resolved.rfc !== null) byLabel.set(lower, record);
+      references.push(inBody);
+      if (resolved.rfc !== null) byLabel.set(lower, inBody);
     }
   }
 
@@ -144,6 +154,131 @@ interface ResolvedTarget {
   readonly target: string | null;
   readonly rfc: number | null;
   readonly resolution: ReferenceRecord["resolution"];
+  readonly external: ExternalReferenceIdentity | null;
+}
+
+/**
+ * Structured designations that identify a cited non-IETF document. Each pattern is
+ * anchored on a literal designation as it is printed in the entry, so an identity is
+ * only ever reported when the text itself states it. Order matters: the more specific
+ * standard designations are tried before the generic URL fallback.
+ */
+const EXTERNAL_PATTERNS: readonly {
+  readonly re: RegExp;
+  readonly build: (m: RegExpExecArray) => ExternalReferenceIdentity;
+}[] = [
+  {
+    re: /\bNIST\s+FIPS\s+PUB(?:LICATION)?\s+(\d{2,4})\b/iu,
+    build: (m) => ({ kind: "standard", id: `FIPS ${m[1]}`, publisher: "NIST", year: null }),
+  },
+  {
+    re: /\bFIPS\s+(?:PUB\s+)?(\d{2,4})\b/iu,
+    build: (m) => ({ kind: "standard", id: `FIPS ${m[1]}`, publisher: "NIST", year: null }),
+  },
+  {
+    re: /\bISO\/IEC\s+(\d{3,5}(?::\d{4})?)\b/iu,
+    build: (m) => ({ kind: "standard", id: `ISO/IEC ${m[1]}`, publisher: "ISO", year: yearOf(m[1]) }),
+  },
+  {
+    re: /\bISO(?:\/IEC)?\s+(\d{3,5}(?::\d{4})?)\b/iu,
+    build: (m) => ({ kind: "standard", id: `ISO ${m[1]}`, publisher: "ISO", year: yearOf(m[1]) }),
+  },
+  {
+    re: /\bITU-T\s+Recommendation\s+([A-Z]\.\d+(?:\.\d+)?)(?:\s*\((\d{4})\))?/iu,
+    build: (m) => ({ kind: "standard", id: `ITU-T ${m[1]}`, publisher: "ITU-T", year: m[2] ? Number(m[2]) : null }),
+  },
+  {
+    re: /\bANSI\s+X3\.4(?:-(\d{4}))?/iu,
+    build: (m) => ({
+      kind: "standard",
+      id: m[1] ? `ANSI X3.4-${m[1]}` : "ANSI X3.4",
+      publisher: "ANSI",
+      year: m[1] ? Number(m[1]) : null,
+    }),
+  },
+  {
+    re: /\bNIST\s+Special\s+Publication\s+(\d{3,4}(?:-\d+)*[A-Za-z]?)/iu,
+    build: (m) => ({ kind: "standard", id: `NIST SP ${m[1]}`, publisher: "NIST", year: null }),
+  },
+  {
+    re: /\bNIST\s+SP\s*(\d{3,4}(?:-\d+)*[A-Za-z]?)/iu,
+    build: (m) => ({ kind: "standard", id: `NIST SP ${m[1]}`, publisher: "NIST", year: null }),
+  },
+  {
+    re: /\bUnicode\s+Standard\s+Annex\s*#\s*(\d{1,2})\b/iu,
+    build: (m) => ({ kind: "standard", id: `UAX #${m[1]}`, publisher: "Unicode Consortium", year: null }),
+  },
+  {
+    re: /\bUnicode\s+Standard,\s*Version\s+(\d+(?:\.\d+)*)/iu,
+    build: (m) => ({ kind: "standard", id: `Unicode ${m[1]}`, publisher: "Unicode Consortium", year: null }),
+  },
+  {
+    re: /\bThe Unicode Standard\b/iu,
+    build: () => ({ kind: "standard", id: "The Unicode Standard", publisher: "Unicode Consortium", year: null }),
+  },
+  {
+    re: /\bUnicode\s+Standard\b/iu,
+    build: () => ({ kind: "standard", id: "Unicode Standard", publisher: "Unicode Consortium", year: null }),
+  },
+];
+
+/**
+ * A URL is still an identity: it names the document that was read. Entries wrap it in
+ * angle brackets and RFC text is free to wrap and hyphenate the line inside them, so the
+ * bracketed form is trimmed before use; a bare URL is accepted as well.
+ */
+const URL_IN_TEXT = /<(https?:[/][/]+[^>]+)>/u;
+const BARE_URL_IN_TEXT = /(https?:[/][/][^\s<>)\]]+)/u;
+
+function urlFrom(text: string): string | null {
+  const bracketed = URL_IN_TEXT.exec(text)?.[1];
+  if (bracketed) {
+    // A URL broken across lines keeps a soft hyphen where the text wrapped; a hyphen that
+    // is not followed by a line break is part of the URL and must survive.
+    const joined = bracketed.replace(/-\s+(?=[a-z0-9/._~:])/giu, "").replace(/\s+/gu, "");
+    if (joined.length > "https://".length + 4) return joined;
+  }
+  const bare = BARE_URL_IN_TEXT.exec(text)?.[1];
+  return bare && bare.length > "https://".length + 4 ? bare : null;
+}
+
+function yearOf(designation: string): number | null {
+  const year = /:(\d{4})$/u.exec(designation)?.[1];
+  return year ? Number(year) : null;
+}
+
+/**
+ * Recovers the identity of a cited non-IETF document from its entry text. Returns
+ * null when nothing in the text designates it, so a reference is never given an
+ * invented identity.
+ */
+export function classifyExternal(text: string): ExternalReferenceIdentity | null {
+  // An entry may name more than one designation ("ITU-T Recommendation X.680 (2002) |
+  // ISO/IEC 8824-1:2002"). Two rules, both deterministic:
+  //   - candidates that overlap describe the same designation, so the longer and more
+  //     specific one wins ("Unicode Standard, Version 4.0.1" over "The Unicode Standard");
+  //   - candidates that do not overlap are separate designations, and the one printed
+  //     first is the one being cited.
+  let best: { readonly start: number; readonly end: number; readonly identity: ExternalReferenceIdentity } | null =
+    null;
+  for (const pattern of EXTERNAL_PATTERNS) {
+    const match = pattern.re.exec(text);
+    if (!match) continue;
+    const start = match.index;
+    const end = start + match[0].length;
+    if (best === null) {
+      best = { start, end, identity: pattern.build(match) };
+      continue;
+    }
+    const overlaps = start < best.end && best.start < end;
+    if ((overlaps && end - start > best.end - best.start) || (!overlaps && start < best.start)) {
+      best = { start, end, identity: pattern.build(match) };
+    }
+  }
+  if (best) return best.identity;
+  const url = urlFrom(text);
+  if (url) return { kind: "url", id: url, publisher: null, year: null };
+  return null;
 }
 
 function resolveTarget(label: string, text: string): ResolvedTarget {
@@ -151,7 +286,8 @@ function resolveTarget(label: string, text: string): ResolvedTarget {
   if (labelMatch) {
     const prefix = labelMatch[1]!.toUpperCase();
     const number = Number.parseInt(labelMatch[2]!, 10);
-    if (prefix === "RFC") return { kind: "rfc", target: `rfc-${number}`, rfc: number, resolution: "exact" };
+    if (prefix === "RFC")
+      return { kind: "rfc", target: `rfc-${number}`, rfc: number, resolution: "exact", external: null };
     if (prefix === "BCP" || prefix === "STD" || prefix === "FYI") {
       const referenced = RFC_IN_TEXT.exec(text)?.[1];
       return {
@@ -159,6 +295,7 @@ function resolveTarget(label: string, text: string): ResolvedTarget {
         target: `${prefix.toLowerCase()}-${number}`,
         rfc: referenced ? Number.parseInt(referenced, 10) : null,
         resolution: referenced ? "exact" : "ambiguous",
+        external: null,
       };
     }
   }
@@ -169,14 +306,43 @@ function resolveTarget(label: string, text: string): ResolvedTarget {
       target: `rfc-${Number.parseInt(rfcMatch[1], 10)}`,
       rfc: Number.parseInt(rfcMatch[1], 10),
       resolution: "exact",
+      external: null,
     };
   const bcp = BCP_IN_TEXT.exec(text)?.[1];
-  if (bcp) return { kind: "subseries", target: `bcp-${Number.parseInt(bcp, 10)}`, rfc: null, resolution: "exact" };
+  if (bcp)
+    return {
+      kind: "subseries",
+      target: `bcp-${Number.parseInt(bcp, 10)}`,
+      rfc: null,
+      resolution: "exact",
+      external: null,
+    };
   const std = STD_IN_TEXT.exec(text)?.[1];
-  if (std) return { kind: "subseries", target: `std-${Number.parseInt(std, 10)}`, rfc: null, resolution: "exact" };
+  if (std)
+    return {
+      kind: "subseries",
+      target: `std-${Number.parseInt(std, 10)}`,
+      rfc: null,
+      resolution: "exact",
+      external: null,
+    };
   const fyi = FYI_IN_TEXT.exec(text)?.[1];
-  if (fyi) return { kind: "subseries", target: `fyi-${Number.parseInt(fyi, 10)}`, rfc: null, resolution: "exact" };
-  return { kind: "other", target: null, rfc: null, resolution: "unresolved" };
+  if (fyi)
+    return {
+      kind: "subseries",
+      target: `fyi-${Number.parseInt(fyi, 10)}`,
+      rfc: null,
+      resolution: "exact",
+      external: null,
+    };
+  // Not an IETF document. If its own text designates it, that designation is the
+  // identity — reporting "unresolved" for a cited FIPS publication would describe a
+  // successful read as a parsing failure.
+  const external = classifyExternal(text);
+  if (external) {
+    return { kind: "external", target: external.id, rfc: null, resolution: "external", external };
+  }
+  return { kind: "other", target: null, rfc: null, resolution: "unresolved", external: null };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -242,14 +408,22 @@ export function buildGraph(input: GraphInput): {
 
   for (const reference of input.references) {
     if (reference.relation === "in_body") continue;
-    const type: EdgeType = reference.relation === "normative" ? "cites_normative" : "cites_informative";
+    // A cited non-IETF document is still a citation. It gets its own edge type so a
+    // reader can tell "cites an external standard" from "cites an RFC we could not
+    // identify", instead of both collapsing into an unresolved label.
+    const type: EdgeType =
+      reference.target_kind === "external"
+        ? "cites_external"
+        : reference.relation === "normative"
+          ? "cites_normative"
+          : "cites_informative";
     const evidence: GraphEdge["evidence"] = {
       source: "rfc_references",
       url: null,
       observed_at: input.observedAt,
     };
     if (reference.target_rfc !== null) pushEdge(reference.target_rfc, type, reference.label, evidence);
-    else pushEdge(null, type, reference.label, evidence, reference.label);
+    else pushEdge(null, type, reference.label, evidence, reference.target ?? reference.label);
   }
 
   for (const rfc of input.metadata.obsoletes) pushEdge(rfc, "obsoletes", "obsoletes", null);

@@ -250,7 +250,24 @@ export interface Requirement extends NormativeMention {
 /* -------------------------------------------------------------------------- */
 
 export type ReferenceRelation = "normative" | "informative" | "in_body" | "metadata";
-export type ReferenceResolution = "exact" | "ambiguous" | "unresolved" | "not_attempted";
+/**
+ * `external` means the entry cites something that is not an IETF document and whose
+ * identity was recovered from the entry text (a standard designation, a publisher, a
+ * URL). It is deliberately distinct from `unresolved`, which means the target could
+ * not be identified at all — conflating the two would report a cited NIST standard as
+ * a parsing failure.
+ */
+export type ReferenceResolution = "exact" | "ambiguous" | "external" | "unresolved" | "not_attempted";
+
+/** Identity of a cited non-IETF document, recovered from the reference entry text. */
+export interface ExternalReferenceIdentity {
+  /** What the designation denotes, not what format it was written in. */
+  readonly kind: "standard" | "url" | "publication";
+  /** The designation as it should be cited, e.g. `FIPS 197`, `ISO/IEC 10646:2003`. */
+  readonly id: string;
+  readonly publisher: string | null;
+  readonly year: number | null;
+}
 
 export interface ReferenceRecord {
   readonly id: string;
@@ -261,16 +278,18 @@ export interface ReferenceRecord {
   readonly label: string;
   readonly raw_text: string;
   readonly relation: ReferenceRelation;
-  readonly target_kind: "rfc" | "subseries" | "other" | "unknown";
+  readonly target_kind: "rfc" | "subseries" | "external" | "other" | "unknown";
   readonly target: string | null;
   readonly target_rfc: number | null;
   readonly resolution: ReferenceResolution;
+  readonly external: ExternalReferenceIdentity | null;
   readonly cited_by: readonly { readonly block_id: string; readonly section_id: string; readonly offset: number }[];
 }
 
 export type EdgeType =
   | "cites_normative"
   | "cites_informative"
+  | "cites_external"
   | "uses_bcp14"
   | "updates"
   | "updated_by"

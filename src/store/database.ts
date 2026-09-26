@@ -24,7 +24,7 @@ import type {
   Span,
 } from "../core/types.js";
 import { contentHash, isoNow, sha256Hex, shortHash } from "../core/util.js";
-import { SCHEMA_SQL, SCHEMA_VERSION } from "./schema.js";
+import { SCHEMA_MIGRATIONS, SCHEMA_SQL, SCHEMA_VERSION } from "./schema.js";
 import type { HttpCacheEntry } from "../upstream/http.js";
 import type { UpstreamAsset as SourceAsset } from "../upstream/sources.js";
 
@@ -90,8 +90,34 @@ export class CorpusStore {
     if (databasePath !== ":memory:") this.db.exec("PRAGMA journal_mode = WAL;");
     this.db.exec("PRAGMA synchronous = NORMAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
     this.db.exec(SCHEMA_SQL);
+    this.applyMigrations();
     this.setMeta("schema_version", SCHEMA_VERSION);
     if (this.getMeta("index_generation") === null) this.setMeta("index_generation", "0");
+  }
+
+  /**
+   * Brings an existing corpus up to the current schema. Each step is checked against the
+   * live schema before it is applied, so a fresh database and one written by an older
+   * build converge on the same shape without either failing.
+   */
+  private applyMigrations(): void {
+    const tableExists = (table: string): boolean =>
+      this.db.prepare("SELECT 1 AS ok FROM sqlite_master WHERE type = 'table' AND name = ?").get(table) !== undefined;
+    const columnExists = (table: string, column: string): boolean =>
+      (this.db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).some((c) => c.name === column);
+
+    for (const migration of SCHEMA_MIGRATIONS) {
+      // The checks are against the live schema rather than a stored version, so the same
+      // path is correct for a fresh database, an older corpus, and a re-run.
+      let changed = false;
+      for (const [table, column, declaration] of migration.columns ?? []) {
+        if (!tableExists(table) || columnExists(table, column)) continue;
+        this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${declaration}`);
+        changed = true;
+      }
+      for (const index of migration.indexes ?? []) this.db.exec(index);
+      if (changed) this.setMeta("schema_migration_version", String(migration.version));
+    }
   }
 
   close(): void {
@@ -599,8 +625,8 @@ export class CorpusStore {
 
       const insertReference = this.stmt(
         `INSERT INTO rfc_references (id, snapshot_id, rfc, section_id, ordinal, label, raw_text, relation, target_kind,
-           target, target_rfc, resolution, cited_by_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           target, target_rfc, resolution, external_kind, external_id, external_publisher, external_year, cited_by_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       );
       const insertReferenceCitation = this.stmt(
         `INSERT OR REPLACE INTO reference_citations (snapshot_id, reference_id, block_id, relation, char_start)
@@ -620,6 +646,10 @@ export class CorpusStore {
           reference.target,
           reference.target_rfc,
           reference.resolution,
+          reference.external?.kind ?? null,
+          reference.external?.id ?? null,
+          reference.external?.publisher ?? null,
+          reference.external?.year ?? null,
           JSON.stringify(reference.cited_by),
         );
         for (const site of reference.cited_by) {
@@ -1700,10 +1730,23 @@ interface ReferenceRow {
   target: string | null;
   target_rfc: number | null;
   resolution: string;
+  external_kind: string | null;
+  external_id: string | null;
+  external_publisher: string | null;
+  external_year: number | null;
   cited_by_json: string;
 }
 
 function rowToReference(row: ReferenceRow, _snapshotId: string): ReferenceRecord {
+  const external =
+    row.external_id === null
+      ? null
+      : {
+          kind: (row.external_kind ?? "publication") as NonNullable<ReferenceRecord["external"]>["kind"],
+          id: row.external_id,
+          publisher: row.external_publisher,
+          year: row.external_year,
+        };
   return {
     id: row.id,
     snapshot_id: row.snapshot_id,
@@ -1717,6 +1760,7 @@ function rowToReference(row: ReferenceRow, _snapshotId: string): ReferenceRecord
     target: row.target,
     target_rfc: row.target_rfc,
     resolution: row.resolution as ReferenceRecord["resolution"],
+    external,
     cited_by: parseJson(row.cited_by_json) ?? [],
   };
 }

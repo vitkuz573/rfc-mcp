@@ -110,7 +110,7 @@ export const RequirementsInputSchema: z.ZodType<RequirementsInput> = z.strictObj
 export const ReferencesInputSchema: z.ZodType<ReferencesInput> = z.strictObject({
   ...AnchorShape,
   relation: z.enum(["normative", "informative", "in_body", "metadata"]).optional(),
-  resolution: z.enum(["exact", "ambiguous", "unresolved", "not_attempted"]).optional(),
+  resolution: z.enum(["exact", "ambiguous", "external", "unresolved", "not_attempted"]).optional(),
   label: z.string().max(80).optional(),
   ...PageShape,
   include_cited_by: z.boolean().optional(),

@@ -9,15 +9,16 @@
 [![node](https://img.shields.io/badge/node-%3E%3D24-5FA04E.svg)](https://nodejs.org)
 [![protocol](https://img.shields.io/badge/MCP-2026--07--28%20%2B%20legacy-8A2BE2.svg)](https://modelcontextprotocol.io)
 [![types](https://img.shields.io/badge/types-strict-informational.svg)](src)
-[![tests](https://img.shields.io/badge/tests-89%20passing-success.svg)](tests)
+[![tests](https://img.shields.io/badge/tests-280%20passing-success.svg)](tests)
+[![M8ven Score](https://m8ven.ai/badge/mcp/vitkuz573-rfc-mcp-16so7l?v=2028045e9d90426112ec6523cd93aea5)](https://m8ven.ai/mcp/vitkuz573-rfc-mcp-16so7l)
 
 |                  |                                                                                                    |
 | ---------------- | -------------------------------------------------------------------------------------------------- |
 | **Tools**        | 15 read-only tools (`rfc_resolve`, `rfc_read`, `rfc_requirements`, `rfc_verify_citation`, …)       |
-| **Resources**    | 10 snapshot-addressed `rfc://` templates                                                           |
+| **Resources**    | 2 fixed + 2 `rfc://snapshot/...` templates (8 `kind`s)                                             |
 | **Prompts**      | 6 reproducible workflows (`/rfc:brief`, `/rfc:requirements_audit`, …)                              |
 | **Sources**      | [RFC Editor](https://www.rfc-editor.org/) + [IETF Datatracker](https://datatracker.ietf.org/) only |
-| **Storage**      | SQLite (built-in) + FTS5, ~54 MB for 17 documents, 7 MB catalog index for all 9 842 RFCs           |
+| **Storage**      | SQLite (built-in) + FTS5; ~10 MB catalog index for all 9 842 RFCs, ~1.2 MB per ingested document   |
 | **Dependencies** | one runtime dependency tree from the official SDK; no native modules                               |
 
 ---
@@ -300,7 +301,7 @@ rfc-mcp vacuum                      # purge stale search-index rows, compact the
 ```sh
 npm ci
 npm run typecheck     # tsc --noEmit, strict
-npm test              # 89 tests: parser, normative, XML, store, HTTP policy, service, live protocol
+npm test              # 280 tests: parser, normative, XML, store, HTTP policy, service, live protocol
 npm run build         # dist/
 npm run verify        # format check + typecheck + test + build
 ```

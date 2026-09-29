@@ -10,7 +10,7 @@
 [![protocol](https://img.shields.io/badge/MCP-2026--07--28%20%2B%20legacy-8A2BE2.svg)](https://modelcontextprotocol.io)
 [![types](https://img.shields.io/badge/types-strict-informational.svg)](src)
 [![tests](https://img.shields.io/badge/tests-280%20passing-success.svg)](tests)
-[![M8ven Score](https://m8ven.ai/badge/mcp/vitkuz573-rfc-mcp-16so7l?v=2028045e9d90426112ec6523cd93aea5)](https://m8ven.ai/mcp/vitkuz573-rfc-mcp-16so7l)
+[![M8ven Score](https://m8ven.ai/badge/mcp/vitkuz573/rfc-mcp)](https://m8ven.ai/mcp/vitkuz573/rfc-mcp)
 
 |                  |                                                                                                    |
 | ---------------- | -------------------------------------------------------------------------------------------------- |

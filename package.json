@@ -52,7 +52,7 @@
     "prepare": "npm run build"
   },
   "dependencies": {
-    "@modelcontextprotocol/server": "2.1.0",
+    "@modelcontextprotocol/server": "2.2.0",
     "zod": "4.6.5"
   },
   "devDependencies": {
